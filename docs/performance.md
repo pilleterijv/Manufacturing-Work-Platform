@@ -22,7 +22,7 @@ The isolated prepared runtime was copied outside the source checkout and used to
 The performance regression script creates one temporary account/equipment/standard, 160 standard-work records, 100 stopped downtime events, and 100 improvement ideas in a local development database. It then verifies:
 
 - Initial overview: eight recent records, exact 160-run total, and no full account/policy/content history payload.
-- History: first page of 100 plus second page of 60, with no duplicates or missing records.
+- History: first page of 100 plus second page of 60, with no duplicates or missing records. Chromium clicks Load more history and verifies all 160 table rows, then advances the browser clock to verify that the scheduled poll requests the small summary endpoint.
 - Summary polling: 222 bytes with no history, people directory, or ideas. Live polling: 234 bytes when no timers are active. Private message content, active timers, and custom shift names affect real response sizes.
 - Excel: all 160 standard-work records, 100 downtime events, and 100 ideas survive streamed export across database batch boundaries. No history pagination limit truncates the export.
 - Background polling uses lightweight views only while the tab is visible; full operational data loads on section entry. Active timer clocks update once per second and stopped history rows are memoized.

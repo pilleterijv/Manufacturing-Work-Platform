@@ -165,6 +165,52 @@ async function main() {
   assert.equal(workbook.getWorksheet("Standard work").rowCount, 161);
   assert.equal(workbook.getWorksheet("Downtime events").rowCount, 101);
   assert.equal(workbook.getWorksheet("Improvement ideas").rowCount, 101);
+  const { chromium } = require("playwright");
+  const browser = await chromium.launch({
+    executablePath: process.env.CHROMIUM_PATH || "/usr/bin/chromium",
+    headless: true,
+    args: ["--no-sandbox"],
+  });
+  try {
+    const context = await browser.newContext();
+    await context.addCookies([
+      {
+        name: "floorwork",
+        value: cookie.split("=")[1],
+        url: origin,
+        httpOnly: true,
+        sameSite: "Strict",
+      },
+    ]);
+    const page = await context.newPage();
+    await page.clock.install();
+    await page.goto(origin);
+    await page
+      .getByRole("heading", { name: "Welcome, Performance.", exact: true })
+      .waitFor();
+    await page
+      .getByRole("button", { name: "☑ Standard work", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Load more history", exact: true })
+      .click();
+    await page.waitForFunction(
+      () => document.querySelectorAll("tbody tr").length === 160,
+    );
+    assert.equal(
+      await page
+        .getByRole("button", { name: "Load more history", exact: true })
+        .count(),
+      0,
+    );
+    const summaryResponse = page.waitForResponse((r) =>
+      r.url().includes("/api/operations?view=summary"),
+    );
+    await page.clock.fastForward(21000);
+    assert.equal((await summaryResponse).status(), 200);
+  } finally {
+    await browser.close();
+  }
   const html = await (await fetch(origin)).text();
   const scripts = [
     ...new Set(
