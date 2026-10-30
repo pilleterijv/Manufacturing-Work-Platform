@@ -95,6 +95,8 @@ async function main() {
       },
     });
   }
+  await db.session.deleteMany({ where: { expires: { lt: new Date() } } });
+  await db.rate.deleteMany({ where: { expires: { lt: new Date() } } });
   console.log("Database ready. No application accounts were created.");
 }
 main()

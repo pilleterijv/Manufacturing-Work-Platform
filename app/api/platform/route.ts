@@ -16,24 +16,43 @@ import {
   cyclesSchema,
   videoUrl,
 } from "@/lib/rules";
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const u = await requireUser();
     const g = await grants(u);
+    const overview = new URL(req.url).searchParams.get("view") === "overview";
+    const kinds = [
+      ...(g.includes("work") || g.includes("analytics") ? ["run"] : []),
+      ...(g.includes("studies") || g.includes("analytics") ? ["study"] : []),
+      ...(g.includes("audits") ? ["audit"] : []),
+    ];
+    const scope = {
+      ...(g.includes("analytics") ? {} : { userId: u.id }),
+      kind: { in: kinds },
+    };
+    const [counts, followUps] = await Promise.all([
+      db.record.groupBy({ by: ["kind"], where: scope, _count: { _all: true } }),
+      db.record.count({
+        where: { ...scope, data: { path: ["followUp"], equals: true } },
+      }),
+    ]);
+
     const [equipment, standards, records, content, users, policies] =
       await Promise.all([
         db.equipment.findMany({ orderBy: { name: "asc" } }),
-        db.standard.findMany({
-          orderBy: [{ title: "asc" }, { revision: "desc" }],
-        }),
+        overview
+          ? []
+          : db.standard.findMany({
+              orderBy: [{ title: "asc" }, { revision: "desc" }],
+            }),
         db.record.findMany({
-          where: g.includes("analytics") ? {} : { userId: u.id },
+          where: scope,
           orderBy: { created: "desc" },
-          take: 2000,
+          take: overview ? 8 : 2000,
           include: { user: { select: { name: true } } },
         }),
-        db.content.findMany({ where: { active: true } }),
-        g.includes("users")
+        overview ? [] : db.content.findMany({ where: { active: true } }),
+        !overview && g.includes("users")
           ? db.user.findMany({
               select: {
                 id: true,
@@ -45,9 +64,15 @@ export async function GET() {
               },
             })
           : [],
-        g.includes("permissions") ? db.policy.findMany() : [],
+        !overview && g.includes("permissions") ? db.policy.findMany() : [],
       ]);
     return Response.json({
+      overview: {
+        runs: counts.find((c) => c.kind === "run")?._count._all ?? 0,
+        studies: counts.find((c) => c.kind === "study")?._count._all ?? 0,
+        audits: counts.find((c) => c.kind === "audit")?._count._all ?? 0,
+        followUps,
+      },
       equipment,
       standards,
       records: records.filter((r) =>

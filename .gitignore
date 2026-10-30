@@ -8,3 +8,6 @@ uploads/
 *.tsbuildinfo
 next-env.d.ts
 *.zip
+.floorwork/
+.measurements/
+dist/

@@ -1,6 +1,18 @@
 services:
   db:
     image: postgres:17-alpine
+    command:
+      [
+        "postgres",
+        "-c",
+        "shared_buffers=64MB",
+        "-c",
+        "work_mem=4MB",
+        "-c",
+        "maintenance_work_mem=32MB",
+        "-c",
+        "max_connections=40",
+      ]
     environment:
       POSTGRES_DB: work_rebuild
       POSTGRES_USER: work

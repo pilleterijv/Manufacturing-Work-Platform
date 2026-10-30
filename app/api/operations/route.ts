@@ -15,10 +15,38 @@ import {
   ideaSchema,
   ideaStatuses,
 } from "@/lib/operations-rules";
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const u = await requireUser();
     const g = await grants(u);
+    const view = z
+      .enum(["full", "summary", "live"])
+      .parse(new URL(req.url).searchParams.get("view") ?? "full");
+    if (view !== "full") {
+      const [setting, notifications, active] = await Promise.all([
+        db.setting.findUniqueOrThrow({ where: { key: "shifts" } }),
+        db.notification.findMany({
+          where: { userId: u.id },
+          orderBy: { createdAt: "desc" },
+          take: 100,
+        }),
+        view === "live" && g.includes("downtime")
+          ? db.downtime.findMany({
+              where: { endedAt: null },
+              include: {
+                starter: { select: { name: true } },
+                stopper: { select: { name: true } },
+              },
+            })
+          : [],
+      ]);
+      return Response.json({
+        config: setting.value,
+        notifications,
+        serverNow: new Date().toISOString(),
+        ...(view === "live" ? { active } : {}),
+      });
+    }
     const [reasons, setting, downtime, ideas, people, notifications] =
       await Promise.all([
         g.includes("downtime")
@@ -80,14 +108,7 @@ export async function GET() {
       reasons,
       config: setting.value,
       serverNow: now.toISOString(),
-      downtime: all.map((d) => ({
-        ...d,
-        slices: splitDowntime(
-          d.startedAt,
-          d.endedAt ?? now,
-          d.shiftConfig as ShiftConfig,
-        ),
-      })),
+      downtime: all,
       ideas,
       people,
       notifications,

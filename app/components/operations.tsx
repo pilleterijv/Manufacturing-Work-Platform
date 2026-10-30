@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, memo } from "react";
 import { Temporal } from "@js-temporal/polyfill";
 import {
   durationText,
@@ -9,68 +9,15 @@ import {
   ideaStatuses,
   localToday,
 } from "@/lib/operations-rules";
+import {
+  type Person,
+  type DownEvent,
+  type Idea,
+  type OperationsData,
+  emptyOperations,
+} from "@/lib/operations-types";
 import type { leadershipReport } from "@/lib/leadership";
-export type Person = { id: string; name: string; username?: string };
-export type DownEvent = {
-  id: string;
-  equipmentId: string;
-  reasonName: string;
-  reasonId: string;
-  equipmentSnapshot: EquipmentSnapshot;
-  shiftConfig: ShiftConfig;
-  startedAt: string;
-  endedAt: string | null;
-  starter: { name: string };
-  stopper: { name: string } | null;
-};
-export type Idea = {
-  id: string;
-  title: string;
-  equipmentSnapshot: EquipmentSnapshot;
-  currentState: string;
-  proposal: string;
-  dueDate: string;
-  status: string;
-  version: number;
-  createdAt: string;
-  createdBy: string;
-  pilot: Person;
-  validator: Person;
-  submitter: Person;
-  creator: Person;
-  participants: { user: Person }[];
-};
-export type OperationsData = {
-  reasons: { id: string; name: string; active: boolean }[];
-  config: ShiftConfig;
-  serverNow: string;
-  downtime: DownEvent[];
-  ideas: Idea[];
-  people: Person[];
-  notifications: {
-    id: string;
-    ideaId: string;
-    message: string;
-    createdAt: string;
-    readAt: string | null;
-  }[];
-};
-export const emptyOperations: OperationsData = {
-  reasons: [],
-  config: {
-    timezone: "America/Chicago",
-    shifts: [
-      { name: "Shift 1", startMinute: 360 },
-      { name: "Shift 2", startMinute: 840 },
-      { name: "Shift 3", startMinute: 1320 },
-    ],
-  },
-  serverNow: new Date().toISOString(),
-  downtime: [],
-  ideas: [],
-  people: [],
-  notifications: [],
-};
+
 type Save = (body: unknown) => Promise<boolean>;
 function Field({
   label,
@@ -151,10 +98,14 @@ export function Downtime({
   const selected = data.downtime.find(
     (d) => d.equipmentId === equipmentId && !d.endedAt,
   );
-  const visible = data.downtime.filter(
-      (d) => !department || d.equipmentSnapshot.department === department,
+  const visible = useMemo(
+      () =>
+        data.downtime.filter(
+          (d) => !department || d.equipmentSnapshot.department === department,
+        ),
+      [data.downtime, department],
     ),
-    active = visible.filter((d) => !d.endedAt);
+    active = useMemo(() => visible.filter((d) => !d.endedAt), [visible]);
   return (
     <>
       <section className="panel">
@@ -283,55 +234,13 @@ export function Downtime({
             </tr>
           </thead>
           <tbody>
-            {visible.map((d) => {
-              const end = d.endedAt ? +new Date(d.endedAt) : now;
-              const slices = splitDowntime(
-                d.startedAt,
-                new Date(Math.max(+new Date(d.startedAt), end)),
-                d.shiftConfig,
-              );
-              return (
-                <tr key={d.id}>
-                  <td>
-                    <strong>{d.equipmentSnapshot.name}</strong>
-                    <small>
-                      {d.equipmentSnapshot.department} /{" "}
-                      {d.equipmentSnapshot.line}
-                    </small>
-                  </td>
-                  <td>
-                    {d.reasonName}
-                    {!d.endedAt && (
-                      <small className="badge warn">In progress</small>
-                    )}
-                  </td>
-                  <td>
-                    {new Date(d.startedAt).toLocaleString()}
-                    <small>
-                      {d.endedAt
-                        ? new Date(d.endedAt).toLocaleString()
-                        : "Still down"}
-                    </small>
-                  </td>
-                  <td>{durationText((end - +new Date(d.startedAt)) / 1000)}</td>
-                  <td>
-                    {d.starter.name}
-                    <small>
-                      {d.stopper ? `Stopped: ${d.stopper.name}` : "—"}
-                    </small>
-                  </td>
-                  <td>
-                    {slices.map((s, i) => (
-                      <div className="shift-line" key={i}>
-                        {s.shiftDate} · {s.shift}
-                        <strong>{(s.seconds / 60).toFixed(2)} min</strong>
-                      </div>
-                    ))}
-                    <small>{d.shiftConfig.timezone}</small>
-                  </td>
-                </tr>
-              );
-            })}
+            {visible.map((d) => (
+              <DowntimeHistoryRow
+                key={d.id}
+                d={d}
+                now={d.endedAt ? +new Date(d.endedAt) : now}
+              />
+            ))}
           </tbody>
         </table>
         {!visible.length && (
@@ -1115,3 +1024,52 @@ export function Leadership({
     </>
   );
 }
+
+const DowntimeHistoryRow = memo(function DowntimeHistoryRow({
+  d,
+  now,
+}: {
+  d: DownEvent;
+  now: number;
+}) {
+  const end = d.endedAt ? +new Date(d.endedAt) : now;
+  const slices = splitDowntime(
+    d.startedAt,
+    new Date(Math.max(+new Date(d.startedAt), end)),
+    d.shiftConfig,
+  );
+  return (
+    <tr key={d.id}>
+      <td>
+        <strong>{d.equipmentSnapshot.name}</strong>
+        <small>
+          {d.equipmentSnapshot.department} / {d.equipmentSnapshot.line}
+        </small>
+      </td>
+      <td>
+        {d.reasonName}
+        {!d.endedAt && <small className="badge warn">In progress</small>}
+      </td>
+      <td>
+        {new Date(d.startedAt).toLocaleString()}
+        <small>
+          {d.endedAt ? new Date(d.endedAt).toLocaleString() : "Still down"}
+        </small>
+      </td>
+      <td>{durationText((end - +new Date(d.startedAt)) / 1000)}</td>
+      <td>
+        {d.starter.name}
+        <small>{d.stopper ? `Stopped: ${d.stopper.name}` : "—"}</small>
+      </td>
+      <td>
+        {slices.map((s, i) => (
+          <div className="shift-line" key={i}>
+            {s.shiftDate} · {s.shift}
+            <strong>{(s.seconds / 60).toFixed(2)} min</strong>
+          </div>
+        ))}
+        <small>{d.shiftConfig.timezone}</small>
+      </td>
+    </tr>
+  );
+});

@@ -34,6 +34,7 @@
     "@types/pg": "^8.15.6",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "esbuild": "^0.28.2",
     "playwright": "^1.58.2",
     "prettier": "^3.9.10",
     "prisma": "6.19.3",
