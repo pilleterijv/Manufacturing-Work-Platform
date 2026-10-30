@@ -1,6 +1,14 @@
 "use client";
 import { useEffect, useState, useRef, FormEvent } from "react";
 import { stats, capabilities, roles, Capability } from "@/lib/rules";
+import {
+  Downtime,
+  ImprovementIdeas,
+  Notifications,
+  Leadership,
+  OperationsData,
+  emptyOperations,
+} from "./components/operations";
 type User = {
   id: string;
   name: string;
@@ -104,6 +112,7 @@ export default function Home() {
   const [user, setUser] = useState<User | null>(null),
     [loaded, setLoaded] = useState(false),
     [data, setData] = useState<Data>(empty),
+    [operations, setOperations] = useState<OperationsData>(emptyOperations),
     [tab, setTab] = useState("Overview"),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
@@ -111,9 +120,14 @@ export default function Home() {
   async function refresh() {
     const account = await api("/api/account");
     setUser(account.user);
-    if (account.user && !account.user.mustChange)
-      setData(await api("/api/platform"));
-    else setData(empty);
+    if (account.user && !account.user.mustChange) {
+      const [platform, ops] = await Promise.all([
+        api("/api/platform"),
+        api("/api/operations"),
+      ]);
+      setData(platform);
+      setOperations(ops);
+    } else setData(empty);
     setLoaded(true);
   }
   useEffect(() => {
@@ -122,12 +136,12 @@ export default function Home() {
       setLoaded(true);
     });
   }, []);
-  async function save(body: unknown) {
+  async function save(body: unknown, path = "/api/platform") {
     setBusy(true);
     setError("");
     setNotice("");
     try {
-      await api("/api/platform", body);
+      await api(path, body);
       await refresh();
       setNotice("Saved to the database.");
       return true;
@@ -151,6 +165,15 @@ export default function Home() {
       setBusy(false);
     }
   }
+  useEffect(() => {
+    if (!user || user.mustChange) return;
+    const timer = setInterval(() => {
+      api("/api/operations")
+        .then(setOperations)
+        .catch((e) => setError(e.message));
+    }, 20000);
+    return () => clearInterval(timer);
+  }, [user?.id, user?.mustChange]);
   if (!loaded) return <main className="loading">Opening Floorwork…</main>;
   if (!user || user.mustChange)
     return (
@@ -263,12 +286,23 @@ export default function Home() {
     ["Training", null, "▷"],
     ["Troubleshooting", null, "◇"],
     ["Analytics", "analytics", "▥"],
+    ["Downtime", "downtime", "◷"],
+    ["Leadership dashboard", "leadership", "◫"],
+    ["Improvement ideas", "ideas", "✧"],
+    ["Notifications", null, "✉"],
     ["Manage", "manage", "⊞"],
     ["Accounts", "users", "♙"],
     ["Permissions", "permissions", "⚙"],
     ["My account", null, "○"],
   ];
   const descriptions: Record<string, string> = {
+    Downtime:
+      "Track stoppages, understand shift losses, and keep the floor moving.",
+    "Leadership dashboard":
+      "One view across operations, with a department-level lens.",
+    "Improvement ideas":
+      "Turn floor-level observations into owned, validated improvements.",
+    Notifications: "Your assignments and messages, in one place.",
     Overview: "A clear view of the work that moves your floor forward.",
     "Standard work":
       "Follow each step. Verify the result. Capture the evidence.",
@@ -311,6 +345,12 @@ export default function Home() {
               >
                 <span>{icon}</span>
                 {name}
+                {name === "Notifications" &&
+                  operations.notifications.some((n) => !n.readAt) && (
+                    <span className="notification-count">
+                      {operations.notifications.filter((n) => !n.readAt).length}
+                    </span>
+                  )}
                 {tab === name && <b>•</b>}
               </button>
             ))}
@@ -394,6 +434,39 @@ export default function Home() {
               manage={g.includes("manage")}
               save={save}
               busy={busy}
+            />
+          )}
+          {tab === "Downtime" && (
+            <Downtime
+              data={operations}
+              equipment={data.equipment}
+              admin={user.role === "Admin"}
+              save={(b) => save(b, "/api/operations")}
+              busy={busy}
+            />
+          )}
+          {tab === "Improvement ideas" && (
+            <ImprovementIdeas
+              data={operations}
+              equipment={data.equipment}
+              userId={user.id}
+              admin={user.role === "Admin"}
+              save={(b) => save(b, "/api/operations")}
+              busy={busy}
+            />
+          )}
+          {tab === "Notifications" && (
+            <Notifications
+              data={operations}
+              save={(b) => save(b, "/api/operations")}
+              busy={busy}
+              openIdea={() => setTab("Improvement ideas")}
+            />
+          )}
+          {tab === "Leadership dashboard" && (
+            <Leadership
+              timezone={operations.config.timezone}
+              canExport={g.includes("export")}
             />
           )}
           {tab === "Manage" && <Manage data={data} save={save} busy={busy} />}

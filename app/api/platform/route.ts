@@ -247,7 +247,16 @@ export async function POST(req: Request) {
       if (!(await db.equipment.findUnique({ where: { id: v.equipmentId } })))
         throw new HttpError(400, "Select equipment");
       await db.record.create({
-        data: { kind: "study", userId: u.id, data: v },
+        data: {
+          kind: "study",
+          userId: u.id,
+          data: {
+            ...v,
+            equipmentSnapshot: await db.equipment.findUniqueOrThrow({
+              where: { id: v.equipmentId },
+            }),
+          },
+        },
       });
     }
     if (action === "policy") {

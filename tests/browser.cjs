@@ -245,7 +245,7 @@ async function main() {
   assert.equal(exportResponse.status(), 200);
   const workbook = new Excel.Workbook();
   await workbook.xlsx.load(await exportResponse.body());
-  assert.equal(workbook.worksheets.length, 6);
+  assert.equal(workbook.worksheets.length, 9);
   assert(workbook.getWorksheet("Audit cycles").rowCount > 1);
   const operator = await browser.newContext();
   await login(operator, users[3].username);
@@ -593,7 +593,7 @@ async function main() {
   assert.equal(html.headers()["x-content-type-options"], "nosniff");
   assert.equal(errors.length, 0, errors.join("\n"));
   console.log(
-    "PASS: real login, photos, standard runs, timers, audits, immutable revisions, training, six-sheet Excel, four roles, role revocation, CSRF, upload validation, size limits, account provisioning, forced password change, session replay, CSP, and mobile layout.",
+    "PASS: real login, photos, standard runs, timers, audits, immutable revisions, training, nine-sheet Excel, four roles, role revocation, CSRF, upload validation, size limits, account provisioning, forced password change, session replay, CSP, and mobile layout.",
   );
 }
 main()

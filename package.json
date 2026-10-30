@@ -11,7 +11,8 @@
     "db:generate": "prisma generate",
     "db:setup": "tsx scripts/setup.ts",
     "user:create": "tsx scripts/create-admin.ts",
-    "test:browser": "node tests/browser.cjs"
+    "test:browser": "node tests/browser.cjs",
+    "test:operations": "node tests/operations-browser.cjs"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.29.1",

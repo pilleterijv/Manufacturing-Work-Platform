@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import { db } from "@/lib/db";
 import { requireUser, grants, failure } from "@/lib/security";
 import { stats } from "@/lib/rules";
+import { addOperationsSheets } from "@/lib/operations-export";
 export async function GET() {
   try {
     const u = await requireUser("export");
@@ -159,6 +160,7 @@ export async function GET() {
         }
       }
     }
+    await addOperationsSheets(book, g);
     for (const sheet of book.worksheets) {
       sheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
       sheet.getRow(1).fill = {
