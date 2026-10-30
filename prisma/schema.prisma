@@ -18,6 +18,14 @@ model User {
  sessions Session[]
  records Record[]
  photos Photo[]
+ downtimeStarted Downtime[] @relation("DowntimeStarter")
+ downtimeStopped Downtime[] @relation("DowntimeStopper")
+ ideasCreated Idea[] @relation("IdeaCreator")
+ ideasSubmitted Idea[] @relation("IdeaSubmitter")
+ ideasPiloted Idea[] @relation("IdeaPilot")
+ ideasValidated Idea[] @relation("IdeaValidator")
+ ideaParticipations IdeaParticipant[]
+ notifications Notification[]
 }
 model Session {
  token String @id
@@ -34,6 +42,8 @@ model Equipment {
  area String
  line String
  standards Standard[]
+ downtime Downtime[]
+ ideas Idea[]
 }
 model Standard {
  id String @id @default(uuid())
@@ -81,4 +91,74 @@ model Rate {
  key String @id
  count Int
  expires DateTime
+}
+model DowntimeReason {
+ id String @id @default(uuid())
+ name String @unique
+ active Boolean @default(true)
+ events Downtime[]
+}
+model Downtime {
+ id String @id @default(uuid())
+ equipmentId String
+ reasonId String
+ reasonName String
+ equipmentSnapshot Json
+ shiftConfig Json
+ startedAt DateTime @default(now())
+ endedAt DateTime?
+ startedBy String
+ stoppedBy String?
+ equipment Equipment @relation(fields:[equipmentId],references:[id])
+ reason DowntimeReason @relation(fields:[reasonId],references:[id])
+ starter User @relation("DowntimeStarter",fields:[startedBy],references:[id])
+ stopper User? @relation("DowntimeStopper",fields:[stoppedBy],references:[id])
+ @@index([startedAt])
+}
+model Setting {
+ key String @id
+ value Json
+}
+model Idea {
+ id String @id @default(uuid())
+ title String
+ equipmentId String
+ equipmentSnapshot Json
+ currentState String
+ proposal String
+ dueDate String
+ status String @default("Open")
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ createdBy String
+ submitterId String
+ pilotId String
+ validatorId String
+ version Int @default(1)
+ equipment Equipment @relation(fields:[equipmentId],references:[id])
+ creator User @relation("IdeaCreator",fields:[createdBy],references:[id])
+ submitter User @relation("IdeaSubmitter",fields:[submitterId],references:[id])
+ pilot User @relation("IdeaPilot",fields:[pilotId],references:[id])
+ validator User @relation("IdeaValidator",fields:[validatorId],references:[id])
+ participants IdeaParticipant[]
+ notifications Notification[]
+ @@index([createdAt])
+}
+model IdeaParticipant {
+ ideaId String
+ userId String
+ idea Idea @relation(fields:[ideaId],references:[id])
+ user User @relation(fields:[userId],references:[id])
+ @@id([ideaId,userId])
+}
+model Notification {
+ id String @id @default(uuid())
+ userId String
+ ideaId String
+ message String
+ createdAt DateTime @default(now())
+ readAt DateTime?
+ user User @relation(fields:[userId],references:[id])
+ idea Idea @relation(fields:[ideaId],references:[id])
+ @@index([userId,createdAt])
 }

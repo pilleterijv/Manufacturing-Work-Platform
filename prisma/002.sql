@@ -1,0 +1,15 @@
+CREATE TABLE "DowntimeReason" (id TEXT PRIMARY KEY,name TEXT NOT NULL UNIQUE,active BOOLEAN NOT NULL DEFAULT true);
+CREATE TABLE "Setting" (key TEXT PRIMARY KEY,value JSONB NOT NULL);
+CREATE TABLE "Downtime" (id TEXT PRIMARY KEY,"equipmentId" TEXT NOT NULL REFERENCES "Equipment"(id),"reasonId" TEXT NOT NULL REFERENCES "DowntimeReason"(id),"reasonName" TEXT NOT NULL,"equipmentSnapshot" JSONB NOT NULL,"shiftConfig" JSONB NOT NULL,"startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"endedAt" TIMESTAMP(3),"startedBy" TEXT NOT NULL REFERENCES "User"(id),"stoppedBy" TEXT REFERENCES "User"(id),CHECK("endedAt" IS NULL OR "endedAt">="startedAt"));
+CREATE UNIQUE INDEX "Downtime_one_active_per_equipment" ON "Downtime"("equipmentId") WHERE "endedAt" IS NULL;
+CREATE INDEX "Downtime_startedAt" ON "Downtime"("startedAt");
+CREATE TABLE "Idea" (id TEXT PRIMARY KEY,title TEXT NOT NULL,"equipmentId" TEXT NOT NULL REFERENCES "Equipment"(id),"equipmentSnapshot" JSONB NOT NULL,"currentState" TEXT NOT NULL,proposal TEXT NOT NULL,"dueDate" TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'Open',"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"createdBy" TEXT NOT NULL REFERENCES "User"(id),"submitterId" TEXT NOT NULL REFERENCES "User"(id),"pilotId" TEXT NOT NULL REFERENCES "User"(id),"validatorId" TEXT NOT NULL REFERENCES "User"(id),version INTEGER NOT NULL DEFAULT 1);
+CREATE INDEX "Idea_createdAt" ON "Idea"("createdAt");
+CREATE TABLE "IdeaParticipant" ("ideaId" TEXT NOT NULL REFERENCES "Idea"(id),"userId" TEXT NOT NULL REFERENCES "User"(id),PRIMARY KEY("ideaId","userId"));
+CREATE TABLE "Notification" (id TEXT PRIMARY KEY,"userId" TEXT NOT NULL REFERENCES "User"(id),"ideaId" TEXT NOT NULL REFERENCES "Idea"(id),message TEXT NOT NULL,"createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,"readAt" TIMESTAMP(3));
+CREATE INDEX "Notification_user_created" ON "Notification"("userId","createdAt");
+INSERT INTO "Setting" (key,value) VALUES ('shifts','{"timezone":"America/Chicago","shifts":[{"name":"Shift 1","startMinute":360},{"name":"Shift 2","startMinute":840},{"name":"Shift 3","startMinute":1320}]}');
+INSERT INTO "DowntimeReason" (id,name) VALUES ('default-equipment','Equipment fault'),('default-material','Material shortage'),('default-changeover','Changeover'),('default-quality','Quality hold');
+UPDATE "Policy" SET grants=grants||'"downtime"'::jsonb WHERE jsonb_typeof(grants)='array' AND NOT grants ? 'downtime';
+UPDATE "Policy" SET grants=grants||'"ideas"'::jsonb WHERE jsonb_typeof(grants)='array' AND NOT grants ? 'ideas';
+UPDATE "Policy" SET grants=grants||'"leadership"'::jsonb WHERE role='Manager' AND jsonb_typeof(grants)='array' AND NOT grants ? 'leadership';

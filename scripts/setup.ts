@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { Pool } from "pg";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { db } from "../lib/db";
 import { defaults } from "../lib/rules";
@@ -13,21 +13,27 @@ async function main() {
     await client.query(
       'CREATE TABLE IF NOT EXISTS "Migration" (name TEXT PRIMARY KEY, hash TEXT NOT NULL)',
     );
-    const sql = await readFile("prisma/001.sql", "utf8");
-    const hash = createHash("sha256").update(sql).digest("hex");
-    const prior = await client.query(
-      'SELECT hash FROM "Migration" WHERE name=$1',
-      ["001"],
-    );
-    if (prior.rowCount) {
-      if (prior.rows[0].hash !== hash)
-        throw Error("Applied migration checksum changed");
-    } else {
-      await client.query(sql);
-      await client.query('INSERT INTO "Migration" VALUES ($1,$2)', [
-        "001",
-        hash,
-      ]);
+    const migrations = (await readdir("prisma"))
+      .filter((name) => /^\d{3}\.sql$/.test(name))
+      .sort();
+    for (const file of migrations) {
+      const name = file.slice(0, -4),
+        sql = await readFile(`prisma/${file}`, "utf8");
+      const hash = createHash("sha256").update(sql).digest("hex");
+      const prior = await client.query(
+        'SELECT hash FROM "Migration" WHERE name=$1',
+        [name],
+      );
+      if (prior.rowCount) {
+        if (prior.rows[0].hash !== hash)
+          throw Error("Applied migration checksum changed");
+      } else {
+        await client.query(sql);
+        await client.query('INSERT INTO "Migration" VALUES ($1,$2)', [
+          name,
+          hash,
+        ]);
+      }
     }
     await client.query("COMMIT");
   } catch (e) {

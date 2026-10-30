@@ -213,7 +213,12 @@ export async function POST(req: Request) {
           ...r,
           at: r.at ?? new Date().toISOString(),
         })),
-        snapshot: standard,
+        snapshot: {
+          ...standard,
+          equipment: await db.equipment.findUniqueOrThrow({
+            where: { id: standard.equipmentId },
+          }),
+        },
         completed: new Date().toISOString(),
         durationSeconds: (Date.now() - +new Date(v.started)) / 1000,
         followUp:
