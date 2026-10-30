@@ -86,6 +86,7 @@ async function main() {
       cookie.sameSite === "Strict" &&
       cookie.expires > Date.now() / 1000,
   );
+  await page.getByRole("button", { name: /Start standard work/ }).waitFor();
   await page.screenshot({
     path: "docs/screenshots/overview.png",
     fullPage: true,
@@ -227,6 +228,12 @@ async function main() {
   await page.getByRole("button", { name: "▷ Training", exact: true }).click();
   await page.reload();
   await page.getByRole("button", { name: "▷ Training", exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: "Play Machine setup walkthrough",
+      exact: true,
+    })
+    .waitFor();
   await page.screenshot({
     path: "docs/screenshots/training.png",
     fullPage: true,
@@ -536,6 +543,9 @@ async function main() {
   });
   const mobilePage = await mobile.newPage();
   await mobilePage.goto(origin);
+  await mobilePage
+    .getByRole("heading", { name: "Welcome back", exact: true })
+    .waitFor();
   await mobilePage.screenshot({
     path: "docs/screenshots/mobile-login.png",
     fullPage: true,
@@ -548,6 +558,9 @@ async function main() {
   await login(mobile, users[0].username);
   await mobilePage.reload();
   await mobilePage.getByRole("heading", { name: "Welcome, Jordan." }).waitFor();
+  await mobilePage
+    .getByRole("button", { name: /Start standard work/ })
+    .waitFor();
   await mobilePage.screenshot({
     path: "docs/screenshots/mobile-overview.png",
     fullPage: true,
