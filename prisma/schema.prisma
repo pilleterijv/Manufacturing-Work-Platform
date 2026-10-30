@@ -1,0 +1,84 @@
+generator client {
+ provider = "prisma-client-js"
+ engineType = "client"
+}
+datasource db {
+ provider = "postgresql"
+ url = env("DATABASE_URL")
+}
+model User {
+ id String @id @default(uuid())
+ username String @unique
+ name String
+ password String
+ role String
+ active Boolean @default(true)
+ mustChange Boolean @default(true)
+ version Int @default(1)
+ sessions Session[]
+ records Record[]
+ photos Photo[]
+}
+model Session {
+ token String @id
+ userId String
+ version Int
+ expires DateTime
+ user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+}
+model Equipment {
+ id String @id @default(uuid())
+ name String
+ plant String
+ department String
+ area String
+ line String
+ standards Standard[]
+}
+model Standard {
+ id String @id @default(uuid())
+ family String
+ revision Int
+ title String
+ equipmentId String
+ target Float
+ tolerance Float
+ steps Json
+ created DateTime @default(now())
+ equipment Equipment @relation(fields:[equipmentId],references:[id])
+ records Record[]
+ @@unique([family,revision])
+}
+model Record {
+ id String @id @default(uuid())
+ kind String
+ userId String
+ standardId String?
+ data Json
+ created DateTime @default(now())
+ user User @relation(fields:[userId],references:[id])
+ standard Standard? @relation(fields:[standardId],references:[id])
+}
+model Content {
+ id String @id @default(uuid())
+ kind String
+ title String
+ equipmentId String?
+ body String
+ active Boolean @default(true)
+}
+model Policy {
+ role String @id
+ grants Json
+}
+model Photo {
+ id String @id @default(uuid())
+ userId String
+ created DateTime @default(now())
+ user User @relation(fields:[userId],references:[id])
+}
+model Rate {
+ key String @id
+ count Int
+ expires DateTime
+}

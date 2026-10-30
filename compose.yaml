@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: work
+      POSTGRES_USER: work
+      POSTGRES_PASSWORD: work
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - work_data:/var/lib/postgresql/data
+volumes:
+  work_data:
