@@ -501,12 +501,41 @@ async function main() {
     });
     contentIds.push(c.id);
   }
+  await db.downtime.create({
+    data: {
+      equipmentId: equipment[2].id,
+      reasonId: reason.id,
+      reasonName: reason.name,
+      equipmentSnapshot: equipment[2],
+      shiftConfig: originalConfig,
+      startedBy: users[0].id,
+      stoppedBy: users[0].id,
+      startedAt: new Date("2026-10-31T04:50:00Z"),
+      endedAt: new Date("2026-10-31T05:10:00Z"),
+    },
+  });
+  const clipped = (
+    await get(
+      manager,
+      "/api/leadership?" +
+        new URLSearchParams({
+          department: equipment[2].department,
+          from: "2026-10-31",
+          to: "2026-10-31",
+        }),
+    )
+  ).body;
+  assert.equal(clipped.summary.downtimeSeconds, 600);
+  assert.equal(clipped.shifts[0].shiftDate, "2026-10-30");
   const query = (department) =>
     "/api/leadership?" +
     new URLSearchParams({ department, from: "2026-10-30", to: "2026-10-30" });
   const boundary = (await get(manager, query(equipment[2].department))).body;
-  assert.equal(boundary.summary.downtimeSeconds, 1200);
-  assert.deepEqual(boundary.shifts.map((s) => s.seconds).sort(), [600, 600]);
+  assert.equal(boundary.summary.downtimeSeconds, 1800);
+  assert.deepEqual(
+    boundary.shifts.map((s) => s.seconds).sort(),
+    [600, 600, 600],
+  );
   const scoped = (await get(manager, query(equipment[1].department))).body;
   assert.equal(scoped.summary.downtimeSeconds, 1800);
   assert.equal(scoped.summary.runs, 1);

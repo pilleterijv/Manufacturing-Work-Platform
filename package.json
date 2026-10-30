@@ -12,7 +12,8 @@
     "db:setup": "tsx scripts/setup.ts",
     "user:create": "tsx scripts/create-admin.ts",
     "test:browser": "node tests/browser.cjs",
-    "test:operations": "node tests/operations-browser.cjs"
+    "test:operations": "node tests/operations-browser.cjs",
+    "test:migrations": "node tests/migrations.cjs"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.29.1",

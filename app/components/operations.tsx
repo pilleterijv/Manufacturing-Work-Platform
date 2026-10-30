@@ -223,8 +223,8 @@ export function Downtime({
           </button>
         </div>
         <p className="small muted">
-          Shift reporting uses {data.config.timezone}. Admins can change the
-          shift schedule below; existing events retain their original schedule.
+          Shift reporting uses {data.config.timezone}. Admins can configure the
+          shift schedule; existing events retain their original schedule.
         </p>
       </section>
       {active.length > 0 && (
@@ -1107,8 +1107,8 @@ export function Leadership({
           <p className="small muted">
             Downtime totals sum machine time; simultaneous stoppages on
             different machines both count. Records crossing the selected dates
-            are clipped to that period. Browser and admin permissions do not
-            enforce plant-level data isolation.
+            are clipped to that period. Department filters organize reporting;
+            workspace roles control access.
           </p>
         </>
       )}

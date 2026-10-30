@@ -66,6 +66,8 @@ npm audit
 # Start the production build in a separate terminal, then:
 npm run test:browser
 npm run test:operations
+# Optional local PostgreSQL verification (requires CREATE DATABASE permission):
+npm run test:migrations
 ```
 
 Browser tests require Chromium (CHROMIUM_PATH defaults to /usr/bin/chromium), a local database, and a running production app at APP_URL (default http://localhost:3000). Tests create random temporary accounts, exercise real cookies and permissions, and remove their database fixtures. Passwords are not printed. Provider playback is stubbed; this does not verify live YouTube access. Screenshots are in docs/screenshots.
