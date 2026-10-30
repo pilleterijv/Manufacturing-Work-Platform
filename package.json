@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev --webpack --hostname 127.0.0.1",
     "build": "next build --webpack",
-    "start": "next start --hostname 127.0.0.1",
+    "start": "node scripts/start-runtime.cjs",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "db:generate": "prisma generate",
@@ -13,7 +13,12 @@
     "user:create": "tsx scripts/create-admin.ts",
     "test:browser": "node tests/browser.cjs",
     "test:operations": "node tests/operations-browser.cjs",
-    "test:migrations": "node tests/migrations.cjs"
+    "test:migrations": "node tests/migrations.cjs",
+    "runtime:prepare": "node scripts/prepare-runtime.cjs",
+    "package:source": "node scripts/package-source.cjs",
+    "postbuild": "node scripts/prepare-runtime.cjs",
+    "test:performance": "node tests/performance.cjs",
+    "test:runtime": "node tests/runtime.cjs"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.29.1",

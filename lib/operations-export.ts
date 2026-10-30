@@ -1,4 +1,4 @@
-import type ExcelJS from "exceljs";
+import { paged, type ExportBook } from "./excel-stream";
 import { db } from "./db";
 import { Capability } from "./rules";
 import {
@@ -7,7 +7,7 @@ import {
   EquipmentSnapshot,
 } from "./operations-rules";
 export async function addOperationsSheets(
-  book: ExcelJS.Workbook,
+  book: ExportBook,
   grants: Capability[],
 ) {
   if (grants.includes("downtime")) {
@@ -39,15 +39,22 @@ export async function addOperationsSheets(
       "End UTC",
       "Seconds",
     ]);
-    const downtime = await db.downtime.findMany({
-      orderBy: { startedAt: "asc" },
-      include: {
-        starter: { select: { name: true } },
-        stopper: { select: { name: true } },
-      },
-    });
-    const now = new Date();
-    for (const d of downtime) {
+    const asOf = new Date();
+    const downtime = paged((cursor) =>
+      db.downtime.findMany({
+        where: { startedAt: { lte: asOf } },
+        take: 100,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        orderBy: { id: "asc" },
+        include: {
+          starter: { select: { name: true } },
+          stopper: { select: { name: true } },
+        },
+      }),
+    );
+    const now = asOf;
+    for await (const d of downtime) {
+      book.check();
       const e = d.equipmentSnapshot as EquipmentSnapshot,
         c = d.shiftConfig as ShiftConfig;
       events.addRow([
@@ -97,17 +104,24 @@ export async function addOperationsSheets(
       "Created by",
       "Created UTC",
     ]);
-    const ideas = await db.idea.findMany({
-      orderBy: { createdAt: "asc" },
-      include: {
-        submitter: { select: { name: true } },
-        pilot: { select: { name: true } },
-        validator: { select: { name: true } },
-        creator: { select: { name: true } },
-        participants: { include: { user: { select: { name: true } } } },
-      },
-    });
-    for (const i of ideas) {
+    const asOf = new Date();
+    const ideas = paged((cursor) =>
+      db.idea.findMany({
+        where: { createdAt: { lte: asOf } },
+        take: 100,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        orderBy: { id: "asc" },
+        include: {
+          submitter: { select: { name: true } },
+          pilot: { select: { name: true } },
+          validator: { select: { name: true } },
+          creator: { select: { name: true } },
+          participants: { include: { user: { select: { name: true } } } },
+        },
+      }),
+    );
+    for await (const i of ideas) {
+      book.check();
       const e = i.equipmentSnapshot as EquipmentSnapshot;
       sheet.addRow([
         i.id,

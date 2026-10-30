@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import type { User, Data } from "@/lib/workspace-types";
 import type { Capability } from "@/lib/rules";
 import { api } from "@/lib/client-api";
-import { Field, Submit } from "./components/shared";
+import { Field, Submit, HistoryPagingContext } from "./components/shared";
 import { emptyOperations, type OperationsData } from "@/lib/operations-types";
 const Overview = dynamic(() => import("./components/sections/overview"), {
   loading: () => <p className="muted">Loading section…</p>,
@@ -65,7 +65,8 @@ export default function Home() {
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
     [operationsReady, setOperationsReady] = useState(false),
-    [platformReady, setPlatformReady] = useState(false);
+    [platformReady, setPlatformReady] = useState(false),
+    [loadingMore, setLoadingMore] = useState(false);
   async function refresh() {
     const account = await api("/api/account");
     setUser(account.user);
@@ -111,6 +112,29 @@ export default function Home() {
       return false;
     } finally {
       setBusy(false);
+    }
+  }
+  async function loadMore() {
+    if (!data.page?.hasMore || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const next = await api(
+        "/api/platform?view=records&cursor=" +
+          encodeURIComponent(data.page.cursor ?? ""),
+      );
+      setData((prev) => ({
+        ...prev,
+        records: [
+          ...new Map(
+            [...prev.records, ...next.records].map((r) => [r.id, r]),
+          ).values(),
+        ],
+        page: next.page,
+      }));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoadingMore(false);
     }
   }
   async function account(body: unknown) {
@@ -188,20 +212,32 @@ export default function Home() {
           if (!controller.signal.aborted) setError(e.message);
         });
     }
+    return () => controller.abort();
+  }, [tab, user?.id, user?.mustChange]);
+  useEffect(() => {
     if (
-      !platformReady &&
-      !["Overview", "Notifications", "Leadership dashboard"].includes(tab)
+      !user ||
+      user.mustChange ||
+      platformReady ||
+      [
+        "Overview",
+        "Notifications",
+        "Leadership dashboard",
+        "My account",
+      ].includes(tab)
     )
-      api("/api/platform", undefined, controller.signal)
-        .then((next) => {
-          if (!controller.signal.aborted) {
-            setData(next);
-            setPlatformReady(true);
-          }
-        })
-        .catch((e) => {
-          if (!controller.signal.aborted) setError(e.message);
-        });
+      return;
+    const controller = new AbortController();
+    api("/api/platform", undefined, controller.signal)
+      .then((next) => {
+        if (!controller.signal.aborted) {
+          setData(next);
+          setPlatformReady(true);
+        }
+      })
+      .catch((e) => {
+        if (!controller.signal.aborted) setError(e.message);
+      });
     return () => controller.abort();
   }, [tab, user?.id, user?.mustChange, platformReady]);
   if (!loaded) return <main className="loading">Opening Floorwork…</main>;
@@ -348,233 +384,244 @@ export default function Home() {
     "My account": "Manage your password and your signed-in devices.",
   };
   return (
-    <div className="shell">
-      <aside className="sidebar">
-        <div className="brand">
-          ▦{" "}
-          <span>
-            floorwork<span className="brand-dot">.</span>
-          </span>
-        </div>
-        <div className="workspace">
-          <i /> Manufacturing workspace<span>OPERATIONS PLATFORM</span>
-        </div>
-        <span className="nav-label">WORKSPACE</span>
-        <nav>
-          {nav
-            .filter(([, c]) => !c || g.includes(c))
-            .map(([name, , icon]) => (
-              <button
-                key={name}
-                className={tab === name ? "nav-item active" : "nav-item"}
-                onClick={() => {
-                  setTab(name);
-                  setError("");
-                  setNotice("");
-                }}
-              >
-                <span>{icon}</span>
-                {name}
-                {name === "Notifications" &&
-                  operations.notifications.some((n) => !n.readAt) && (
-                    <span className="notification-count">
-                      {operations.notifications.filter((n) => !n.readAt).length}
-                    </span>
-                  )}
-                {tab === name && <b>•</b>}
-              </button>
-            ))}
-        </nav>
-        <div className="sidebar-bottom">
-          <div className="avatar">{user.name.slice(0, 2).toUpperCase()}</div>
-          <div>
-            <strong>{user.name}</strong>
-            <small>{user.role}</small>
+    <HistoryPagingContext.Provider
+      value={{
+        loadMore,
+        loading: loadingMore,
+        hasMore: data.page?.hasMore ?? false,
+      }}
+    >
+      <div className="shell">
+        <aside className="sidebar">
+          <div className="brand">
+            ▦{" "}
+            <span>
+              floorwork<span className="brand-dot">.</span>
+            </span>
           </div>
-          <button
-            aria-label="Sign out"
-            onClick={() => void account({ action: "logout" })}
-          >
-            →
-          </button>
-        </div>
-      </aside>
-      <main className="main">
-        <header className="topbar">
-          <span>
-            Workspace <span className="muted"> / {tab}</span>
-          </span>
-          <span className="status">
-            <i /> Database connected{" "}
-            <span className="role-tag">{user.role}</span>
-          </span>
-        </header>
-        <div className="page">
-          <div className="page-heading">
+          <div className="workspace">
+            <i /> Manufacturing workspace<span>OPERATIONS PLATFORM</span>
+          </div>
+          <span className="nav-label">WORKSPACE</span>
+          <nav>
+            {nav
+              .filter(([, c]) => !c || g.includes(c))
+              .map(([name, , icon]) => (
+                <button
+                  key={name}
+                  className={tab === name ? "nav-item active" : "nav-item"}
+                  onClick={() => {
+                    setTab(name);
+                    setError("");
+                    setNotice("");
+                  }}
+                >
+                  <span>{icon}</span>
+                  {name}
+                  {name === "Notifications" &&
+                    operations.notifications.some((n) => !n.readAt) && (
+                      <span className="notification-count">
+                        {
+                          operations.notifications.filter((n) => !n.readAt)
+                            .length
+                        }
+                      </span>
+                    )}
+                  {tab === name && <b>•</b>}
+                </button>
+              ))}
+          </nav>
+          <div className="sidebar-bottom">
+            <div className="avatar">{user.name.slice(0, 2).toUpperCase()}</div>
             <div>
-              <span className="eyebrow">FLOORWORK / OPERATIONS</span>
-              <h1>
-                {tab === "Overview"
-                  ? `Welcome, ${user.name.split(" ")[0]}.`
-                  : tab}
-              </h1>
-              <p className="muted">{descriptions[tab]}</p>
+              <strong>{user.name}</strong>
+              <small>{user.role}</small>
             </div>
-            {g.includes("export") && (
-              <a className="outline" href="/api/export">
-                ↓ Export Excel
-              </a>
-            )}
+            <button
+              aria-label="Sign out"
+              onClick={() => void account({ action: "logout" })}
+            >
+              →
+            </button>
           </div>
-          {error && (
-            <div className="error" role="alert">
-              {error}
+        </aside>
+        <main className="main">
+          <header className="topbar">
+            <span>
+              Workspace <span className="muted"> / {tab}</span>
+            </span>
+            <span className="status">
+              <i /> Database connected{" "}
+              <span className="role-tag">{user.role}</span>
+            </span>
+          </header>
+          <div className="page">
+            <div className="page-heading">
+              <div>
+                <span className="eyebrow">FLOORWORK / OPERATIONS</span>
+                <h1>
+                  {tab === "Overview"
+                    ? `Welcome, ${user.name.split(" ")[0]}.`
+                    : tab}
+                </h1>
+                <p className="muted">{descriptions[tab]}</p>
+              </div>
+              {g.includes("export") && (
+                <a className="outline" href="/api/export">
+                  ↓ Export Excel
+                </a>
+              )}
             </div>
-          )}
-          {notice && (
-            <div className="notice" role="status">
-              ✓ {notice}
-            </div>
-          )}
-          {((["Downtime", "Improvement ideas"].includes(tab) &&
-            !operationsReady) ||
-            (![
-              "Overview",
-              "Notifications",
-              "Leadership dashboard",
-              "My account",
-              "Downtime",
-              "Improvement ideas",
-            ].includes(tab) &&
-              !platformReady)) && (
-            <p className="muted" role="status">
-              Loading section data…
-            </p>
-          )}
-          {tab === "Overview" && (
-            <Overview data={data} go={setTab} grants={g} />
-          )}
-          {tab === "Standard work" && platformReady && (
-            <Work data={data} save={save} busy={busy} audit={false} />
-          )}
-          {tab === "Supervisor audits" && platformReady && (
-            <Work data={data} save={save} busy={busy} audit />
-          )}
-          {tab === "Time studies" && platformReady && (
-            <Studies data={data} save={save} busy={busy} />
-          )}
-          {tab === "Training" && platformReady && (
-            <Content
-              data={data}
-              kind="video"
-              manage={g.includes("training")}
-              save={save}
-              busy={busy}
-            />
-          )}
-          {tab === "Troubleshooting" && platformReady && (
-            <Content
-              data={data}
-              kind="guide"
-              manage={g.includes("manage")}
-              save={save}
-              busy={busy}
-            />
-          )}
-          {tab === "Downtime" && operationsReady && (
-            <Downtime
-              data={operations}
-              equipment={data.equipment}
-              admin={user.role === "Admin"}
-              save={(b) => save(b, "/api/operations")}
-              busy={busy}
-            />
-          )}
-          {tab === "Improvement ideas" && operationsReady && (
-            <ImprovementIdeas
-              data={operations}
-              equipment={data.equipment}
-              userId={user.id}
-              admin={user.role === "Admin"}
-              save={(b) => save(b, "/api/operations")}
-              busy={busy}
-            />
-          )}
-          {tab === "Notifications" && (
-            <Notifications
-              data={operations}
-              save={(b) => save(b, "/api/operations")}
-              busy={busy}
-              openIdea={() => setTab("Improvement ideas")}
-            />
-          )}
-          {tab === "Leadership dashboard" && (
-            <Leadership
-              timezone={operations.config.timezone}
-              canExport={g.includes("export")}
-            />
-          )}
-          {tab === "Manage" && platformReady && (
-            <Manage data={data} save={save} busy={busy} />
-          )}
-          {tab === "Analytics" && platformReady && <Analytics data={data} />}
-          {tab === "Permissions" && platformReady && (
-            <Permissions data={data} save={save} busy={busy} />
-          )}
-          {tab === "Accounts" && platformReady && (
-            <Accounts data={data} save={save} busy={busy} />
-          )}
-          {tab === "My account" && (
-            <section className="panel narrow">
-              <h2>Change password</h2>
-              <p className="muted">
-                Changing your password signs out every device.
+            {error && (
+              <div className="error" role="alert">
+                {error}
+              </div>
+            )}
+            {notice && (
+              <div className="notice" role="status">
+                ✓ {notice}
+              </div>
+            )}
+            {((["Downtime", "Improvement ideas"].includes(tab) &&
+              !operationsReady) ||
+              (![
+                "Overview",
+                "Notifications",
+                "Leadership dashboard",
+                "My account",
+                "Downtime",
+                "Improvement ideas",
+              ].includes(tab) &&
+                !platformReady)) && (
+              <p className="muted" role="status">
+                Loading section data…
               </p>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const f = new FormData(e.currentTarget);
-                  void account({
-                    action: "password",
-                    current: f.get("current"),
-                    password: f.get("password"),
-                  });
-                }}
-              >
-                <Field label="Current password">
-                  <input
-                    name="current"
-                    type="password"
-                    autoComplete="current-password"
-                    required
-                  />
-                </Field>
-                <Field label="New password">
-                  <input
-                    name="password"
-                    type="password"
-                    minLength={12}
-                    maxLength={128}
-                    autoComplete="new-password"
-                    required
-                  />
-                </Field>
-                <Submit busy={busy}>Change password</Submit>
-              </form>
-              <hr />
-              <button
-                className="outline"
-                onClick={() => void account({ action: "logoutAll" })}
-              >
-                Sign out all devices
-              </button>
-            </section>
-          )}
-          <footer>
-            FLOORWORK <span>Built for the people behind the process.</span>
-          </footer>
-        </div>
-      </main>
-    </div>
+            )}
+            {tab === "Overview" && (
+              <Overview data={data} go={setTab} grants={g} />
+            )}
+            {tab === "Standard work" && platformReady && (
+              <Work data={data} save={save} busy={busy} audit={false} />
+            )}
+            {tab === "Supervisor audits" && platformReady && (
+              <Work data={data} save={save} busy={busy} audit />
+            )}
+            {tab === "Time studies" && platformReady && (
+              <Studies data={data} save={save} busy={busy} />
+            )}
+            {tab === "Training" && platformReady && (
+              <Content
+                data={data}
+                kind="video"
+                manage={g.includes("training")}
+                save={save}
+                busy={busy}
+              />
+            )}
+            {tab === "Troubleshooting" && platformReady && (
+              <Content
+                data={data}
+                kind="guide"
+                manage={g.includes("manage")}
+                save={save}
+                busy={busy}
+              />
+            )}
+            {tab === "Downtime" && operationsReady && (
+              <Downtime
+                data={operations}
+                equipment={data.equipment}
+                admin={user.role === "Admin"}
+                save={(b) => save(b, "/api/operations")}
+                busy={busy}
+              />
+            )}
+            {tab === "Improvement ideas" && operationsReady && (
+              <ImprovementIdeas
+                data={operations}
+                equipment={data.equipment}
+                userId={user.id}
+                admin={user.role === "Admin"}
+                save={(b) => save(b, "/api/operations")}
+                busy={busy}
+              />
+            )}
+            {tab === "Notifications" && (
+              <Notifications
+                data={operations}
+                save={(b) => save(b, "/api/operations")}
+                busy={busy}
+                openIdea={() => setTab("Improvement ideas")}
+              />
+            )}
+            {tab === "Leadership dashboard" && (
+              <Leadership
+                timezone={operations.config.timezone}
+                canExport={g.includes("export")}
+              />
+            )}
+            {tab === "Manage" && platformReady && (
+              <Manage data={data} save={save} busy={busy} />
+            )}
+            {tab === "Analytics" && platformReady && <Analytics data={data} />}
+            {tab === "Permissions" && platformReady && (
+              <Permissions data={data} save={save} busy={busy} />
+            )}
+            {tab === "Accounts" && platformReady && (
+              <Accounts data={data} save={save} busy={busy} />
+            )}
+            {tab === "My account" && (
+              <section className="panel narrow">
+                <h2>Change password</h2>
+                <p className="muted">
+                  Changing your password signs out every device.
+                </p>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const f = new FormData(e.currentTarget);
+                    void account({
+                      action: "password",
+                      current: f.get("current"),
+                      password: f.get("password"),
+                    });
+                  }}
+                >
+                  <Field label="Current password">
+                    <input
+                      name="current"
+                      type="password"
+                      autoComplete="current-password"
+                      required
+                    />
+                  </Field>
+                  <Field label="New password">
+                    <input
+                      name="password"
+                      type="password"
+                      minLength={12}
+                      maxLength={128}
+                      autoComplete="new-password"
+                      required
+                    />
+                  </Field>
+                  <Submit busy={busy}>Change password</Submit>
+                </form>
+                <hr />
+                <button
+                  className="outline"
+                  onClick={() => void account({ action: "logoutAll" })}
+                >
+                  Sign out all devices
+                </button>
+              </section>
+            )}
+            <footer>
+              FLOORWORK <span>Built for the people behind the process.</span>
+            </footer>
+          </div>
+        </main>
+      </div>
+    </HistoryPagingContext.Provider>
   );
 }

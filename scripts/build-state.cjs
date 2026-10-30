@@ -1,7 +1,7 @@
 const fs = require("node:fs"),
   path = require("node:path"),
   crypto = require("node:crypto");
-const roots = ["app", "lib", "prisma", "scripts"];
+const roots = ["app", "lib", "prisma", "scripts", "public"];
 const files = [
   "package.json",
   "package-lock.json",
@@ -47,6 +47,7 @@ function cachedBuild(root, fingerprint) {
         ".next/BUILD_ID",
         "tools/setup.cjs",
         "tools/create-admin.cjs",
+        "node_modules/.prisma/client/query_compiler_bg.wasm",
       ].every((file) =>
         fs.existsSync(path.join(root, ".floorwork", "runtime", file)),
       )

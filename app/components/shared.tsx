@@ -1,4 +1,10 @@
 "use client";
+import { createContext, useContext } from "react";
+export const HistoryPagingContext = createContext({
+  loadMore: async () => {},
+  loading: false,
+  hasMore: false,
+});
 import type { Data, Entry, Step, Cycle } from "@/lib/workspace-types";
 export function Field({
   label,
@@ -49,6 +55,7 @@ export function Metric({
   );
 }
 export function History({ data, records }: { data: Data; records: Entry[] }) {
+  const paging = useContext(HistoryPagingContext);
   return (
     <section className="panel history">
       {!records.length ? (
@@ -135,6 +142,18 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+      {paging.hasMore && (
+        <div className="button-row">
+          <button
+            type="button"
+            className="outline"
+            disabled={paging.loading}
+            onClick={() => void paging.loadMore()}
+          >
+            {paging.loading ? "Loading…" : "Load more history"}
+          </button>
         </div>
       )}
     </section>

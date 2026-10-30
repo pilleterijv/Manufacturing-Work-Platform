@@ -156,9 +156,10 @@ export default function Analytics({ data }: { data: Data }) {
         </div>
       </section>
       <p className="small muted">
-        Dashboard history is limited to the latest 2,000 accessible records.
-        Excel exports include all accessible records. A scheduled completion
-        percentage needs a future scheduling module.
+        Statistics reflect the history currently loaded. Use Load more history
+        in a work history section to include older records. Excel exports
+        include all accessible records. A scheduled completion percentage needs
+        a future scheduling module.
       </p>
     </>
   );

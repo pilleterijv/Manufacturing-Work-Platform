@@ -2,7 +2,7 @@ import "dotenv/config";
 import { createInterface } from "node:readline/promises";
 import { Writable } from "node:stream";
 import { db } from "../lib/db";
-import { hashPassword } from "../lib/security";
+import { hashPassword } from "../lib/passwords";
 let hidden = false;
 const output = new Writable({
   write(chunk, _encoding, done) {

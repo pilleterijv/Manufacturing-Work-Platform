@@ -70,10 +70,10 @@ function useServerClock(serverNow: string) {
     setNow(time);
   }, [serverNow]);
   useEffect(() => {
-    const id = setInterval(
-      () => setNow(anchor.time + Date.now() - anchor.local),
-      500,
-    );
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible")
+        setNow(anchor.time + Date.now() - anchor.local);
+    }, 1000);
     return () => clearInterval(id);
   }, [anchor]);
   return now;

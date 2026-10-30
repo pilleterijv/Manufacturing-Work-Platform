@@ -35,6 +35,7 @@ export type Entry = {
   data: any;
 };
 export type Data = {
+  page?: { hasMore: boolean; cursor: string | null };
   overview?: {
     runs: number;
     studies: number;

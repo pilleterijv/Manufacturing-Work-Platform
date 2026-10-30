@@ -85,7 +85,7 @@ async function main() {
   }
   const fingerprint = sourceFingerprint(root),
     runtime = path.join(root, ".floorwork", "runtime");
-  if (!cachedBuild(root, fingerprint)) {
+  if (process.argv.includes("--rebuild") || !cachedBuild(root, fingerprint)) {
     if (!fs.existsSync(npmCli))
       throw Error("Install the official Node.js Windows package including npm");
     console.log(
@@ -100,8 +100,10 @@ async function main() {
     ]);
     npm(["run", "db:generate"]);
     npm(["run", "build"]);
-    run(process.execPath, ["scripts/prepare-runtime.cjs"]);
-    fs.writeFileSync(".floorwork/build.json", JSON.stringify({ fingerprint }));
+    fs.writeFileSync(
+      ".floorwork/build.json",
+      JSON.stringify({ fingerprint: sourceFingerprint(root) }),
+    );
     if (!process.argv.includes("--keep-build-tools")) {
       fs.rmSync("node_modules", {
         recursive: true,

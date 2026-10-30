@@ -20,6 +20,12 @@ export async function GET(req: Request) {
   try {
     const u = await requireUser();
     const g = await grants(u);
+    const params = new URL(req.url).searchParams;
+    const cursor = z
+      .string()
+      .uuid()
+      .optional()
+      .parse(params.get("cursor") ?? undefined);
     const overview = new URL(req.url).searchParams.get("view") === "overview";
     const kinds = [
       ...(g.includes("work") || g.includes("analytics") ? ["run"] : []),
@@ -30,6 +36,23 @@ export async function GET(req: Request) {
       ...(g.includes("analytics") ? {} : { userId: u.id }),
       kind: { in: kinds },
     };
+    if (params.get("view") === "records") {
+      const rows = await db.record.findMany({
+        where: scope,
+        orderBy: [{ created: "desc" }, { id: "desc" }],
+        take: 101,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        include: { user: { select: { name: true } } },
+      });
+      const records = rows.slice(0, 100);
+      return Response.json({
+        records,
+        page: {
+          hasMore: rows.length > 100,
+          cursor: records.at(-1)?.id ?? null,
+        },
+      });
+    }
     const [counts, followUps] = await Promise.all([
       db.record.groupBy({ by: ["kind"], where: scope, _count: { _all: true } }),
       db.record.count({
@@ -47,8 +70,8 @@ export async function GET(req: Request) {
             }),
         db.record.findMany({
           where: scope,
-          orderBy: { created: "desc" },
-          take: overview ? 8 : 2000,
+          orderBy: [{ created: "desc" }, { id: "desc" }],
+          take: overview ? 8 : 101,
           include: { user: { select: { name: true } } },
         }),
         overview ? [] : db.content.findMany({ where: { active: true } }),
@@ -75,13 +98,19 @@ export async function GET(req: Request) {
       },
       equipment,
       standards,
-      records: records.filter((r) =>
-        r.kind === "run"
-          ? g.includes("work") || g.includes("analytics")
-          : r.kind === "audit"
-            ? g.includes("audits")
-            : g.includes("studies") || g.includes("analytics"),
-      ),
+      page: {
+        hasMore: !overview && records.length > 100,
+        cursor: records.slice(0, overview ? 8 : 100).at(-1)?.id ?? null,
+      },
+      records: records
+        .slice(0, overview ? 8 : 100)
+        .filter((r) =>
+          r.kind === "run"
+            ? g.includes("work") || g.includes("analytics")
+            : r.kind === "audit"
+              ? g.includes("audits")
+              : g.includes("studies") || g.includes("analytics"),
+        ),
       content,
       users,
       policies,

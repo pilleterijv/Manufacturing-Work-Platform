@@ -12,6 +12,18 @@ async function main() {
   );
   if (fs.existsSync("public"))
     fs.cpSync("public", path.join(standalone, "public"), { recursive: true });
+  for (const name of fs.readdirSync(
+    path.join(root, "node_modules/.prisma/client"),
+  ))
+    if (name.endsWith(".wasm"))
+      fs.copyFileSync(
+        path.join(root, "node_modules/.prisma/client", name),
+        path.join(standalone, "node_modules/.prisma/client", name),
+      );
+  for (const name of fs.readdirSync(standalone))
+    if (name === ".env" || name.startsWith(".env."))
+      fs.rmSync(path.join(standalone, name), { force: true });
+  fs.rmSync(path.join(standalone, "uploads"), { recursive: true, force: true });
   fs.mkdirSync(path.join(standalone, "tools"), { recursive: true });
   for (const name of ["setup", "create-admin"])
     await require("esbuild").build({
