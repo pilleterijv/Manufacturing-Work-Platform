@@ -1,8 +1,136 @@
-import {randomBytes} from 'node:crypto';
-import {cookies} from 'next/headers';
-import {z} from 'zod';
-import {db} from '@/lib/db';
-import {currentUser,grants,jsonBody,limit,verifyPassword,hashPassword,cookieName,secure,digest,requireUser,HttpError,failure} from '@/lib/security';
-export async function GET(){try{const u=await currentUser();return Response.json({user:u?{id:u.id,name:u.name,username:u.username,role:u.role,mustChange:u.mustChange,grants:await grants(u)}:null});}catch(e){return failure(e);}}
-export async function POST(req:Request){try{const b=await jsonBody(req);if(b.action==='login'){const input=z.object({username:z.string().min(1).max(80),password:z.string().max(128),remember:z.boolean()}).parse(b);const username=input.username.trim().toLowerCase();await limit('login:global',200,300);await limit(`login:${digest(username)}`,5,900);const u=await db.user.findUnique({where:{username}});const fake='0123456789abcdef0123456789abcdef:'+ '0'.repeat(128);const valid=await verifyPassword(input.password,u?.password??fake);if(!u||!u.active||!valid)throw new HttpError(401,'Invalid username or password');const token=randomBytes(32).toString('hex');await db.$transaction(async tx=>{const fresh=await tx.user.findUnique({where:{id:u.id}});if(!fresh?.active||fresh.version!==u.version||fresh.password!==u.password)throw new HttpError(401,'Please sign in again');await tx.session.create({data:{token:digest(token),userId:u.id,version:u.version,expires:new Date(Date.now()+(input.remember?30*86400:8*3600)*1000)}});},{isolationLevel:'Serializable'});(await cookies()).set(cookieName(),token,{httpOnly:true,secure:secure(),sameSite:'strict',path:'/',...(input.remember?{maxAge:30*86400}:{})});return Response.json({ok:true});}
-const u=await requireUser(undefined,true);const jar=await cookies();if(b.action==='logout'||b.action==='logoutAll'){if(b.action==='logoutAll')await db.session.deleteMany({where:{userId:u.id}});else await db.session.deleteMany({where:{token:digest(jar.get(cookieName())?.value??'')}});jar.delete(cookieName());return Response.json({ok:true});}if(b.action==='password'){const input=z.object({current:z.string().max(128),password:z.string().max(128)}).parse(b);if(!await verifyPassword(input.current,u.password))throw new HttpError(400,'Current password is incorrect');const password=await hashPassword(input.password);await db.$transaction(async tx=>{const changed=await tx.user.updateMany({where:{id:u.id,password:u.password,version:u.version},data:{password,mustChange:false,version:{increment:1}}});if(!changed.count)throw new HttpError(409,'Account changed. Sign in again');await tx.session.deleteMany({where:{userId:u.id}});});jar.delete(cookieName());return Response.json({ok:true});}throw new HttpError(400,'Unknown action');}catch(e){return failure(e);}}
+import { randomBytes } from "node:crypto";
+import { cookies } from "next/headers";
+import { z } from "zod";
+import { db } from "@/lib/db";
+import {
+  currentUser,
+  grants,
+  jsonBody,
+  limit,
+  verifyPassword,
+  hashPassword,
+  cookieName,
+  secure,
+  digest,
+  requireUser,
+  HttpError,
+  failure,
+} from "@/lib/security";
+export async function GET() {
+  try {
+    const u = await currentUser();
+    return Response.json({
+      user: u
+        ? {
+            id: u.id,
+            name: u.name,
+            username: u.username,
+            role: u.role,
+            mustChange: u.mustChange,
+            grants: await grants(u),
+          }
+        : null,
+    });
+  } catch (e) {
+    return failure(e);
+  }
+}
+export async function POST(req: Request) {
+  try {
+    const b = await jsonBody(req);
+    if (b.action === "login") {
+      const input = z
+        .object({
+          username: z.string().min(1).max(80),
+          password: z.string().max(128),
+          remember: z.boolean(),
+        })
+        .parse(b);
+      const username = input.username.trim().toLowerCase();
+      await limit("login:global", 200, 300);
+      await limit(`login:${digest(username)}`, 5, 900);
+      const u = await db.user.findUnique({ where: { username } });
+      const fake = "0123456789abcdef0123456789abcdef:" + "0".repeat(128);
+      const valid = await verifyPassword(input.password, u?.password ?? fake);
+      if (!u || !u.active || !valid)
+        throw new HttpError(401, "Invalid username or password");
+      const token = randomBytes(32).toString("hex");
+      await db.$transaction(
+        async (tx) => {
+          const fresh = await tx.user.findUnique({ where: { id: u.id } });
+          if (
+            !fresh?.active ||
+            fresh.version !== u.version ||
+            fresh.password !== u.password
+          )
+            throw new HttpError(401, "Please sign in again");
+          await tx.session.create({
+            data: {
+              token: digest(token),
+              userId: u.id,
+              version: u.version,
+              expires: new Date(
+                Date.now() + (input.remember ? 30 * 86400 : 8 * 3600) * 1000,
+              ),
+            },
+          });
+        },
+        { isolationLevel: "Serializable" },
+      );
+      (await cookies()).set(cookieName(), token, {
+        httpOnly: true,
+        secure: secure(),
+        sameSite: "strict",
+        path: "/",
+        ...(input.remember ? { maxAge: 30 * 86400 } : {}),
+      });
+      return Response.json({ ok: true });
+    }
+    const u = await requireUser(undefined, true);
+    const jar = await cookies();
+    if (b.action === "logout" || b.action === "logoutAll") {
+      if (b.action === "logoutAll")
+        await db.session.deleteMany({ where: { userId: u.id } });
+      else
+        await db.session.deleteMany({
+          where: { token: digest(jar.get(cookieName())?.value ?? "") },
+        });
+      jar.set(cookieName(), "", {
+        httpOnly: true,
+        secure: secure(),
+        sameSite: "strict",
+        path: "/",
+        maxAge: 0,
+      });
+      return Response.json({ ok: true });
+    }
+    if (b.action === "password") {
+      const input = z
+        .object({ current: z.string().max(128), password: z.string().max(128) })
+        .parse(b);
+      if (!(await verifyPassword(input.current, u.password)))
+        throw new HttpError(400, "Current password is incorrect");
+      const password = await hashPassword(input.password);
+      await db.$transaction(async (tx) => {
+        const changed = await tx.user.updateMany({
+          where: { id: u.id, password: u.password, version: u.version },
+          data: { password, mustChange: false, version: { increment: 1 } },
+        });
+        if (!changed.count)
+          throw new HttpError(409, "Account changed. Sign in again");
+        await tx.session.deleteMany({ where: { userId: u.id } });
+      });
+      jar.set(cookieName(), "", {
+        httpOnly: true,
+        secure: secure(),
+        sameSite: "strict",
+        path: "/",
+        maxAge: 0,
+      });
+      return Response.json({ ok: true });
+    }
+    throw new HttpError(400, "Unknown action");
+  } catch (e) {
+    return failure(e);
+  }
+}

@@ -1,0 +1,15 @@
+# Managed cloud startup
+
+Use the existing /workspace/Manufacturing-Work-Platform checkout. Read AGENTS.md, README.md, and docs/security.md. Source is backed up on GitHub branch codex/rebuild-floorwork. Commit and push checkpoints; do not depend on ephemeral workspace links or snapshots for code delivery.
+
+Run bash .codex/setup.sh to install locked dependencies, generate Prisma's JS client, start the loopback PostgreSQL Docker service, wait for readiness, and apply/seed the checksummed schema. Preserve existing .env files. This rebuild uses work_rebuild, not the legacy work database; do not reset/drop/migrate the legacy volume. Do not bypass TLS or Prisma checksum checks. prisma.config.ts selects the JS adapter to avoid native query engine downloads.
+
+No default account or preview bypass exists. The first permanent administrator is created through npm run user:create with private interactive password prompts. Never request a password in chat or create permanent demo credentials. Admins manage accounts and role policies in the app. Password reset/deactivation/role changes revoke sessions.
+
+Stop only owned application processes before rebuilding. Run npm test, npm run typecheck, npm run build, then npm start on port 3000. Run npm run test:browser against the production app with CHROMIUM_PATH=/usr/bin/chromium. It creates random temporary accounts, exercises authenticated workflows, restores policy fixtures, removes its records, and captures screenshots in docs/screenshots. Inspect screenshots after UI changes. Run npm audit and investigate advisories; zero reported advisories does not guarantee security.
+
+APP_ORIGIN must match the browser origin exactly. Loopback in this cloud machine is not the user's Windows computer. Do not give cloud localhost links as usable user previews. The verified delivery path is the pushed GitHub branch: download its ZIP, extract on Windows, install Node 24 LTS and Docker Desktop, start Docker Desktop, run START-FLOORWORK.cmd, create an individual Admin, then browse localhost on that Windows machine. Native Windows execution remains unverified until tested on Windows.
+
+Application controls include per-request DB permissions, hashed passwords/tokens, remembered/revocable sessions, exact-origin writes, bounded/deadlined bodies, image decoding/reencoding/pixel limits, photo ownership checks, login/upload budgets, nonce CSP, and private exports. Do not remove controls to pass tests. Infrastructure firewall/WAF/HTTPS/backups/quotas/monitoring remain deployment responsibilities. There is no unhackable guarantee.
+
+Training supports approved YouTube/Vimeo links, not raw MP4 uploads. Provider playback in tests is stubbed, not live validation. Optional private Azure Blob storage is implemented but not live verified. Entra SSO, MFA, detailed security audit logs, and plant/line authorization scopes are not implemented. Preserve historical standard revisions, run/audit snapshots, raw cycle observations, PostgreSQL, and photo storage. Do not edit an applied migration.

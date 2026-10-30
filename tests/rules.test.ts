@@ -1,8 +1,83 @@
-import {test} from 'node:test';
-import assert from 'node:assert/strict';
-import {stats,videoUrl,standardSchema} from '../lib/rules';
-import {hashPassword,verifyPassword,passwordValid} from '../lib/security';
-test('statistics retain variation, odd and even medians, and population deviation',()=>{assert.equal(stats([]),null);const s=stats([2,4,4,4,5,5,7,9])!;assert.equal(s.average,5);assert.equal(s.median,4.5);assert.equal(s.standardDeviation,2);assert.equal(s.range,7);assert.equal(stats([9,1,3])!.median,3);});
-test('only supported HTTPS video URLs can produce embeds',()=>{assert.equal(videoUrl('https://youtu.be/dQw4w9WgXcQ'),'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ');assert.equal(videoUrl('https://vimeo.com/1234'),'https://player.vimeo.com/video/1234');for(const url of ['javascript:alert(1)','http://youtube.com/watch?v=dQw4w9WgXcQ','https://youtube.com.evil.test/watch?v=dQw4w9WgXcQ','https://user@vimeo.com/123','https://vimeo.com:444/123'])assert.throws(()=>videoUrl(url));});
-test('standards reject duplicate step identities and invalid audit targets',()=>{const s={title:'Check',equipmentId:'one',target:45,tolerance:10,steps:[{id:'a',text:'Verify',photo:false}]};assert(standardSchema.safeParse(s).success);assert(!standardSchema.safeParse({...s,target:0}).success);assert(!standardSchema.safeParse({...s,steps:[...s.steps,...s.steps]}).success);});
-test('password hashes are salted and wrong passwords fail',async()=>{const p='A private example 382!';const a=await hashPassword(p),b=await hashPassword(p);assert.notEqual(a,b);assert(await verifyPassword(p,a));assert(!await verifyPassword('incorrect password',a));assert(!passwordValid('password1234'));assert(!passwordValid(' '.repeat(12)));});
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { stats, videoUrl, standardSchema } from "../lib/rules";
+import { hashPassword, verifyPassword, passwordValid } from "../lib/security";
+test("statistics retain variation, odd and even medians, and population deviation", () => {
+  assert.equal(stats([]), null);
+  const s = stats([2, 4, 4, 4, 5, 5, 7, 9])!;
+  assert.equal(s.average, 5);
+  assert.equal(s.median, 4.5);
+  assert.equal(s.standardDeviation, 2);
+  assert.equal(s.range, 7);
+  assert.equal(stats([9, 1, 3])!.median, 3);
+});
+test("only supported HTTPS video URLs can produce embeds", () => {
+  assert.equal(
+    videoUrl("https://youtu.be/dQw4w9WgXcQ"),
+    "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+  );
+  assert.equal(
+    videoUrl("https://vimeo.com/1234"),
+    "https://player.vimeo.com/video/1234",
+  );
+  for (const url of [
+    "javascript:alert(1)",
+    "http://youtube.com/watch?v=dQw4w9WgXcQ",
+    "https://youtube.com.evil.test/watch?v=dQw4w9WgXcQ",
+    "https://user@vimeo.com/123",
+    "https://vimeo.com:444/123",
+  ])
+    assert.throws(() => videoUrl(url));
+});
+test("standards reject duplicate step identities and invalid audit targets", () => {
+  const s = {
+    title: "Check",
+    equipmentId: "one",
+    target: 45,
+    tolerance: 10,
+    steps: [{ id: "a", text: "Verify", photo: false }],
+  };
+  assert(standardSchema.safeParse(s).success);
+  assert(!standardSchema.safeParse({ ...s, target: 0 }).success);
+  assert(
+    !standardSchema.safeParse({ ...s, steps: [...s.steps, ...s.steps] })
+      .success,
+  );
+});
+test("password hashes are salted and wrong passwords fail", async () => {
+  const p = "A private example 382!";
+  const a = await hashPassword(p),
+    b = await hashPassword(p);
+  assert.notEqual(a, b);
+  assert(await verifyPassword(p, a));
+  assert(!(await verifyPassword("incorrect password", a)));
+  assert(!passwordValid("password1234"));
+  assert(!passwordValid(" ".repeat(12)));
+});
+
+test("streamed JSON limits ignore a falsely small Content-Length and reject missing origins", async () => {
+  const { jsonBody } = await import("../lib/security");
+  const prior = process.env.APP_ORIGIN;
+  process.env.APP_ORIGIN = "http://localhost:3000";
+  try {
+    const missing = new Request("http://localhost:3000/api/platform", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    await assert.rejects(() => jsonBody(missing), /origin/);
+    const large = new Request("http://localhost:3000/api/platform", {
+      method: "POST",
+      headers: {
+        Origin: "http://localhost:3000",
+        "Content-Type": "application/json",
+        "Content-Length": "1",
+      },
+      body: JSON.stringify({ padding: "x".repeat(100) }),
+    });
+    await assert.rejects(() => jsonBody(large, 32), /too large/);
+  } finally {
+    if (prior === undefined) delete process.env.APP_ORIGIN;
+    else process.env.APP_ORIGIN = prior;
+  }
+});

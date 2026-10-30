@@ -1,52 +1,1891 @@
-'use client';
-import {useEffect,useState,useRef,FormEvent} from 'react';
-import {stats,capabilities,roles,Capability} from '@/lib/rules';
-type User={id:string;name:string;username:string;role:string;mustChange:boolean;grants:Capability[]};
-type Step={id:string;text:string;photo:boolean};
-type Standard={id:string;family:string;revision:number;title:string;equipmentId:string;target:number;tolerance:number;steps:Step[]};
-type Cycle={element:string;seconds:number;at:string};
-type Equipment={id:string;name:string;plant:string;department:string;area:string;line:string};
-type Entry={id:string;kind:string;created:string;user:{name:string};data:any};
-type Data={equipment:Equipment[];standards:Standard[];records:Entry[];content:{id:string;kind:string;title:string;equipmentId:string;body:string}[];users:any[];policies:{role:string;grants:Capability[]}[]};
-const empty:Data={equipment:[],standards:[],records:[],content:[],users:[],policies:[]};
-async function api(path:string,body?:unknown){const r=await fetch(path,{...(body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});const data=await r.json();if(!r.ok)throw Error(data.error??'Request failed');return data;}
-function Field({label,children}:{label:string;children:React.ReactNode}){return <label className="field"><span>{label}</span>{children}</label>;}
-function Submit({children,busy=false}:{children:React.ReactNode;busy?:boolean}){return <button className="primary" disabled={busy} type="submit">{busy?'Saving…':children}</button>;}
-const fmt=(n:number|undefined)=>n===undefined?'—':n.toFixed(2);
-export default function Home(){const [user,setUser]=useState<User|null>(null),[loaded,setLoaded]=useState(false),[data,setData]=useState<Data>(empty),[tab,setTab]=useState('Overview'),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false);
-async function refresh(){const account=await api('/api/account');setUser(account.user);if(account.user&&!account.user.mustChange)setData(await api('/api/platform'));else setData(empty);setLoaded(true);}
-useEffect(()=>{refresh().catch(e=>{setError(e.message);setLoaded(true);});},[]);
-async function save(body:unknown){setBusy(true);setError('');setNotice('');try{await api('/api/platform',body);await refresh();setNotice('Saved to the database.');return true;}catch(e){setError((e as Error).message);return false;}finally{setBusy(false);}}
-async function account(body:unknown){setBusy(true);setError('');try{await api('/api/account',body);await refresh();setNotice('');}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
-if(!loaded)return <main className="loading">Opening Floorwork…</main>;
-if(!user||user.mustChange)return <main className="auth"><section className="auth-story"><div className="brand">▦ <span>floorwork<span className="brand-dot">.</span></span></div><span className="eyebrow">A BETTER DAY ON THE FLOOR</span><h1>Good work.<br/>Made repeatable.</h1><p>Clear standards. Confident teams.<br/>Every improvement starts with one observation.</p><div className="auth-lines"><span>01 &nbsp; Follow the standard</span><span>02 &nbsp; Capture the evidence</span><span>03 &nbsp; Improve the process</span></div></section><section className="auth-form"><span className="eyebrow">YOUR MANUFACTURING WORKSPACE</span><h2>{user?'Set your own password':'Welcome back'}</h2><p className="muted">{user?'Replace your temporary password. You will then sign in again.':'Sign in with your individual account.'}</p>{error&&<div role="alert" className="error">{error}</div>}<form onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);void account(user?{action:'password',current:f.get('current'),password:f.get('password')}:{action:'login',username:f.get('username'),password:f.get('password'),remember:f.get('remember')==='on'});}}>{!user?<Field label="Username"><input name="username" autoComplete="username" required/></Field>:<Field label="Temporary password"><input name="current" type="password" autoComplete="current-password" required/></Field>}<Field label={user?'New password · 12–128 characters':'Password'}><input name="password" type="password" minLength={user?12:undefined} maxLength={128} autoComplete={user?'new-password':'current-password'} required/></Field>{!user&&<label className="check"><input type="checkbox" name="remember"/>Keep me signed in on this device for 30 days</label>}<Submit busy={busy}>{user?'Set password':'Sign in →'}</Submit></form><p className="small muted">{user?'All existing sessions will be signed out.':'Need access? Ask your administrator to create an account.'}</p></section></main>;
-const g=user.grants;const nav:[string,Capability|null,string][]=[['Overview',null,'◫'],['Standard work','work','☑'],['Time studies','studies','◷'],['Supervisor audits','audits','◎'],['Training',null,'▷'],['Troubleshooting',null,'◇'],['Analytics','analytics','▥'],['Manage','manage','⊞'],['Accounts','users','♙'],['Permissions','permissions','⚙'],['My account',null,'○']];
-const descriptions:Record<string,string>={'Overview':'A clear view of the work that moves your floor forward.','Standard work':'Follow each step. Verify the result. Capture the evidence.','Time studies':'Observe the process and turn raw timing into insight.','Supervisor audits':'Verify the standard and measure actual operator cycle times.','Training':'Practical know-how, ready when your team needs it.','Troubleshooting':'Find the guidance to get your process back on track.','Analytics':'Understand variation, spot failures, and track performance.','Manage':'Build equipment, standards, and guides for your team.','Accounts':'Individual access, with accountability built in.','Permissions':'Choose what each role can do across the platform.','My account':'Manage your password and your signed-in devices.'};
-return <div className="shell"><aside className="sidebar"><div className="brand">▦ <span>floorwork<span className="brand-dot">.</span></span></div><div className="workspace"><i/> Manufacturing workspace<span>OPERATIONS PLATFORM</span></div><span className="nav-label">WORKSPACE</span><nav>{nav.filter(([,c])=>!c||g.includes(c)).map(([name,,icon])=><button key={name} className={tab===name?'nav-item active':'nav-item'} onClick={()=>{setTab(name);setError('');setNotice('');}}><span>{icon}</span>{name}{tab===name&&<b>•</b>}</button>)}</nav><div className="sidebar-bottom"><div className="avatar">{user.name.slice(0,2).toUpperCase()}</div><div><strong>{user.name}</strong><small>{user.role}</small></div><button aria-label="Sign out" onClick={()=>void account({action:'logout'})}>↗</button></div></aside><main className="main"><header className="topbar"><span>Workspace <span className="muted"> / {tab}</span></span><span className="status"><i/> Database connected <span className="role-tag">{user.role}</span></span></header><div className="page"><div className="page-heading"><div><span className="eyebrow">FLOORWORK / OPERATIONS</span><h1>{tab==='Overview'?`Welcome, ${user.name.split(' ')[0]}.`:tab}</h1><p className="muted">{descriptions[tab]}</p></div>{g.includes('export')&&<a className="outline" href="/api/export">↓ Export Excel</a>}</div>{error&&<div className="error" role="alert">{error}</div>}{notice&&<div className="notice" role="status">✓ {notice}</div>}
-{tab==='Overview'&&<Overview data={data} go={setTab} grants={g}/>}
-{tab==='Standard work'&&<Work data={data} save={save} busy={busy} audit={false}/>}
-{tab==='Supervisor audits'&&<Work data={data} save={save} busy={busy} audit/>}
-{tab==='Time studies'&&<Studies data={data} save={save} busy={busy}/>}
-{tab==='Training'&&<Content data={data} kind="video" manage={g.includes('training')} save={save} busy={busy}/>}
-{tab==='Troubleshooting'&&<Content data={data} kind="guide" manage={g.includes('manage')} save={save} busy={busy}/>}
-{tab==='Manage'&&<Manage data={data} save={save} busy={busy}/>}
-{tab==='Analytics'&&<Analytics data={data}/>}
-{tab==='Permissions'&&<Permissions data={data} save={save} busy={busy}/>}
-{tab==='Accounts'&&<Accounts data={data} save={save} busy={busy}/>}
-{tab==='My account'&&<section className="panel narrow"><h2>Change password</h2><p className="muted">Changing your password signs out every device.</p><form onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);void account({action:'password',current:f.get('current'),password:f.get('password')});}}><Field label="Current password"><input name="current" type="password" autoComplete="current-password" required/></Field><Field label="New password"><input name="password" type="password" minLength={12} maxLength={128} autoComplete="new-password" required/></Field><Submit busy={busy}>Change password</Submit></form><hr/><button className="outline" onClick={()=>void account({action:'logoutAll'})}>Sign out all devices</button></section>}
-<footer>FLOORWORK <span>Built for the people behind the process.</span></footer></div></main></div>;
+"use client";
+import { useEffect, useState, useRef, FormEvent } from "react";
+import { stats, capabilities, roles, Capability } from "@/lib/rules";
+type User = {
+  id: string;
+  name: string;
+  username: string;
+  role: string;
+  mustChange: boolean;
+  grants: Capability[];
+};
+type Step = { id: string; text: string; photo: boolean };
+type Standard = {
+  id: string;
+  family: string;
+  revision: number;
+  title: string;
+  equipmentId: string;
+  target: number;
+  tolerance: number;
+  steps: Step[];
+};
+type Cycle = { element: string; seconds: number; at: string };
+type Equipment = {
+  id: string;
+  name: string;
+  plant: string;
+  department: string;
+  area: string;
+  line: string;
+};
+type Entry = {
+  id: string;
+  kind: string;
+  created: string;
+  user: { name: string };
+  data: any;
+};
+type Data = {
+  equipment: Equipment[];
+  standards: Standard[];
+  records: Entry[];
+  content: {
+    id: string;
+    kind: string;
+    title: string;
+    equipmentId: string;
+    body: string;
+  }[];
+  users: any[];
+  policies: { role: string; grants: Capability[] }[];
+};
+const empty: Data = {
+  equipment: [],
+  standards: [],
+  records: [],
+  content: [],
+  users: [],
+  policies: [],
+};
+async function api(path: string, body?: unknown) {
+  const r = await fetch(path, {
+    ...(body
+      ? {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      : {}),
+  });
+  const data = await r.json();
+  if (!r.ok) throw Error(data.error ?? "Request failed");
+  return data;
 }
-function Overview({data,go,grants}:{data:Data;go:(s:string)=>void;grants:Capability[]}){const runs=data.records.filter(r=>r.kind==='run'),audits=data.records.filter(r=>r.kind==='audit');return <><div className="hero"><div><span className="eyebrow">CONSISTENCY BUILDS CONFIDENCE</span><h2>Make every shift<br/>a step forward.</h2><p>Your standards, evidence, and process insights.<br/>One place to keep the floor moving.</p>{grants.includes('work')&&<button className="cream" onClick={()=>go('Standard work')}>Start standard work <span>↗</span></button>}</div><div className="hero-art" aria-hidden="true"><div className="orbit"/><div className="art-card"><span>PROCESS CHECK</span><b>✓</b><div>Ready for the next step</div><i/><i/><i/></div><div className="art-label">SMALL STEPS. BETTER SYSTEMS.</div></div></div><div className="metrics"><Metric label="Completed work" value={runs.length} detail="Stored verification records"/><Metric label="Time studies" value={data.records.filter(r=>r.kind==='study').length} detail="Raw observations preserved"/><Metric label="Supervisor audits" value={audits.length} detail="Timed process checks"/><Metric label="Follow-ups" value={data.records.filter(r=>r.data.followUp).length} detail="Failures or cycles over target" accent/></div><div className="section-title"><h2>Your floor, at a glance</h2><span className="muted">Latest activity</span></div><History data={data} records={data.records.slice(0,8)}/></>;}
-function Metric({label,value,detail,accent=false}:{label:string;value:number|string;detail:string;accent?:boolean}){return <section className={'metric '+(accent?'accent':'')}><span>{label}</span><strong>{value}</strong><small>{detail}</small></section>;}
-function History({data,records}:{data:Data;records:Entry[]}){return <section className="panel history">{!records.length?<div className="empty"><span>◇</span><h3>Your first observation starts here</h3><p>Completed work, time studies, and audits will appear here.</p></div>:<div className="table-wrap"><table><thead><tr><th>Process / study</th><th>Type</th><th>Recorded by</th><th>Date</th><th>Result</th><th>Details</th></tr></thead><tbody>{records.map(r=><tr key={r.id}><td><strong>{r.data.snapshot?.title??r.data.title}</strong><small>{r.data.snapshot?`Revision ${r.data.snapshot.revision}`:data.equipment.find(e=>e.id===r.data.equipmentId)?.name}</small></td><td>{r.kind}</td><td>{r.user.name}</td><td>{new Date(r.created).toLocaleString()}</td><td><span className={'badge '+(r.data.followUp?'warn':'')}>{r.data.followUp?'Follow up':'Recorded'}</span></td><td><details><summary>View record</summary>{r.data.operator&&<p>Operator: {r.data.operator}</p>}{r.data.snapshot&&<p>Target {r.data.snapshot.target}s · tolerance {r.data.snapshot.tolerance}%</p>}{r.data.responses?.map((a:any)=><div className="record-step" key={a.stepId}><strong>{a.answer?'✓ Yes':'✕ No'}</strong> {r.data.snapshot.steps.find((s:Step)=>s.id===a.stepId)?.text}<p>{a.comment}</p>{a.photo&&<a href={`/api/photos/${a.photo}`} target="_blank" rel="noreferrer">View evidence photo ↗</a>}</div>)}{r.data.cycles?.map((c:Cycle,i:number)=><p key={i}>{c.element}: {fmt(c.seconds)}s · {new Date(c.at).toLocaleString()}</p>)}</details></td></tr>)}</tbody></table></div>}</section>;}
-type Save=(b:unknown)=>Promise<boolean>;
-function EquipmentSelect({data,value,onChange}:{data:Data;value:string;onChange:(s:string)=>void}){return <select aria-label="Equipment" value={value} onChange={e=>onChange(e.target.value)} required><option value="">Select equipment</option>{data.equipment.map(e=><option key={e.id} value={e.id}>{e.name} · {e.line}</option>)}</select>;}
-function Timer({cycles,setCycles,audit=false,target=0,tolerance=0}:{cycles:Cycle[];setCycles:(v:Cycle[])=>void;audit?:boolean;target?:number;tolerance?:number}){const [running,setRunning]=useState(false),[elapsed,setElapsed]=useState(0),[element,setElement]=useState('Whole cycle');const start=useRef(0);useEffect(()=>{if(!running)return;const t=setInterval(()=>setElapsed((performance.now()-start.current)/1000),40);return ()=>clearInterval(t);},[running]);function record(){const seconds=(performance.now()-start.current)/1000;setCycles([...cycles,{element:element.trim()||'Whole cycle',seconds,at:new Date().toISOString()}]);setRunning(false);setElapsed(0);}const s=stats(cycles.map(c=>c.seconds));return <section className="timer-box"><div className="section-title"><h3>{audit?'Audit cycle timer':'Observation timer'}</h3><span className="badge">{cycles.length} observations</span></div>{!audit&&<Field label="Work element"><input value={element} onChange={e=>setElement(e.target.value)} disabled={running} maxLength={150}/></Field>}{audit&&<p className="muted">Target <strong>{target}s</strong> + {tolerance}% tolerance · limit {fmt(target*(1+tolerance/100))}s</p>}<div className={'clock '+(running?'running':'')}>{elapsed.toFixed(2)}<span>SECONDS</span></div><div className="button-row"><button type="button" className={running?'danger':'primary'} onClick={()=>{if(running)record();else{start.current=performance.now();setElapsed(0);setRunning(true);}}}>{running?'Stop & record cycle':'Start cycle'}</button>{running&&<button type="button" className="outline" onClick={()=>{setRunning(false);setElapsed(0);}}>Cancel cycle</button>}</div>{s&&<div className="mini-stats"><span>Average <b>{fmt(s.average)}s</b></span><span>Range <b>{fmt(s.range)}s</b></span><span>Std. dev. <b>{fmt(s.standardDeviation)}s</b></span></div>}{cycles.length>0&&<ol className="cycles">{cycles.map((c,i)=><li key={i}><span>{i+1}. {c.element}</span><strong>{fmt(c.seconds)}s</strong>{audit&&<span className={'badge '+(c.seconds>target*(1+tolerance/100)?'warn':'')}>{c.seconds>target*(1+tolerance/100)?'Over target':'Within target'}</span>}<button type="button" className="text-button" aria-label={`Remove cycle ${i+1}`} disabled={running} onClick={()=>setCycles(cycles.filter((_,j)=>j!==i))}>×</button></li>)}</ol>}<input type="hidden" name="timerRunning" value={running?'yes':'no'}/></section>;}
-function Work({data,save,busy,audit}:{data:Data;save:Save;busy:boolean;audit:boolean}){const latest=data.standards.filter(s=>!data.standards.some(t=>t.family===s.family&&t.revision>s.revision));const [id,setId]=useState(''),[responses,setResponses]=useState<Record<string,{answer:boolean|null;photo:string|null;comment:string}>>({}),[cycles,setCycles]=useState<Cycle[]>([]),[started,setStarted]=useState(new Date().toISOString()),[operator,setOperator]=useState(''),[localError,setLocalError]=useState(''),[uploading,setUploading]=useState(false);const s=data.standards.find(s=>s.id===id);function select(id:string){setId(id);setResponses({});setCycles([]);setStarted(new Date().toISOString());setLocalError('');}function update(step:string,patch:object){setResponses(prev=>({...prev,[step]:{...(prev[step]??{answer:null,photo:null,comment:''}),...patch}}));}async function upload(step:string,file:File){setUploading(true);setLocalError('');try{if(file.size>8*1024*1024)throw Error('Photos must be under 8 MB');const image=await new Promise<string>((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result));r.onerror=rej;r.readAsDataURL(file);});const p=await api('/api/photos',{image});update(step,{photo:p.id});}catch(e){setLocalError((e as Error).message);}finally{setUploading(false);}}
-return <><section className="panel"><div className="section-title"><h2>{audit?'New standard work audit':'Start a verification'}</h2><span className="badge">{audit?'SUPERVISOR':'STANDARD WORK'}</span></div><Field label="Standard work"><select value={id} onChange={e=>select(e.target.value)}><option value="">Select a process</option>{latest.map(s=><option key={s.id} value={s.id}>{s.title} · revision {s.revision}</option>)}</select></Field>{s&&<form onSubmit={async e=>{e.preventDefault();setLocalError('');if((new FormData(e.currentTarget)).get('timerRunning')==='yes'){setLocalError('Stop the timer before saving');return;}if(s.steps.some(step=>responses[step.id]?.answer==null||step.photo&&!responses[step.id]?.photo)){setLocalError('Answer every step and attach each required photo');return;}if(audit&&!cycles.length){setLocalError('Record at least one audit cycle');return;}if(await save({action:audit?'audit':'run',standardId:id,started,operator,responses:s.steps.map(step=>({stepId:step.id,...responses[step.id]})),...(audit?{cycles}:{})})){select('');setOperator('');}}}><div className="process-meta"><span>▦ {data.equipment.find(e=>e.id===s.equipmentId)?.name}</span><span>Revision {s.revision}</span><span>Target {s.target}s</span></div><div className={audit?'audit-grid':''}><div>{audit&&<Field label="Operator being audited"><input value={operator} onChange={e=>setOperator(e.target.value)} maxLength={150} required placeholder="Operator name or employee ID"/></Field>}{s.steps.map((step,i)=><section className="step" key={step.id}><div className="step-heading"><span className="step-number">{String(i+1).padStart(2,'0')}</span><div><h3>{step.text}</h3><p className="small muted">{step.photo?'Photo evidence required':'Verify against the approved standard'}</p></div></div><div className="yes-no">{[true,false].map(answer=><button key={String(answer)} type="button" aria-pressed={responses[step.id]?.answer===answer} className={responses[step.id]?.answer===answer?(answer?'selected-yes':'selected-no'):''} onClick={()=>update(step.id,{answer})}>{answer?'✓ Yes':'✕ No'}</button>)}</div><Field label={step.photo?'Evidence photo · required':'Evidence photo · optional'}><input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" disabled={uploading} onChange={e=>{const f=e.target.files?.[0];if(f)void upload(step.id,f);}}/></Field>{responses[step.id]?.photo&&<img className="photo-preview" src={`/api/photos/${responses[step.id].photo}`} alt={`Evidence for step ${i+1}`}/>}<Field label="Comment"><textarea maxLength={1000} rows={2} value={responses[step.id]?.comment??''} onChange={e=>update(step.id,{comment:e.target.value})} placeholder="Add context or describe an issue"/></Field></section>)}</div>{audit&&<div><Timer cycles={cycles} setCycles={setCycles} audit target={s.target} tolerance={s.tolerance}/><p className="small muted">Cycle timestamps and the current standard criteria are preserved with this audit.</p></div>}</div>{localError&&<div className="error" role="alert">{localError}</div>}<Submit busy={busy||uploading}>{audit?'Save audit':'Complete standard work'}</Submit></form>}</section><div className="section-title"><h2>{audit?'Audit history':'Completed verifications'}</h2><span className="muted">Historical revisions preserved</span></div><History data={data} records={data.records.filter(r=>r.kind===(audit?'audit':'run'))}/></>;}
-function Studies({data,save,busy}:{data:Data;save:Save;busy:boolean}){const [cycles,setCycles]=useState<Cycle[]>([]),[equipment,setEquipment]=useState(''),[title,setTitle]=useState(''),[error,setError]=useState('');return <><section className="panel"><h2>New time study</h2><form onSubmit={async e=>{e.preventDefault();if(new FormData(e.currentTarget).get('timerRunning')==='yes'){setError('Stop the timer before saving');return;}if(!cycles.length){setError('Record at least one observation');return;}if(await save({action:'study',title,equipmentId:equipment,cycles})){setCycles([]);setTitle('');setError('');}}}><div className="form-grid"><Field label="Study name"><input value={title} onChange={e=>setTitle(e.target.value)} maxLength={150} required placeholder="e.g. Label application baseline"/></Field><Field label="Equipment"><EquipmentSelect data={data} value={equipment} onChange={setEquipment}/></Field></div><Timer cycles={cycles} setCycles={setCycles}/>{error&&<div className="error">{error}</div>}<Submit busy={busy}>Save time study</Submit></form></section><div className="section-title"><h2>Saved studies</h2></div><History data={data} records={data.records.filter(r=>r.kind==='study')}/></>;}
-function Content({data,kind,manage,save,busy}:{data:Data;kind:string;manage:boolean;save:Save;busy:boolean}){const [search,setSearch]=useState(''),[playing,setPlaying]=useState('');const items=data.content.filter(c=>c.kind===kind&&`${c.title} ${kind==='guide'?c.body:''} ${data.equipment.find(e=>e.id===c.equipmentId)?.name??''}`.toLowerCase().includes(search.toLowerCase()));return <><div className="search-row"><input aria-label="Search library" value={search} onChange={e=>setSearch(e.target.value)} placeholder={kind==='video'?'Search training videos or equipment…':'Search troubleshooting guides or equipment…'}/><span className="muted">{items.length} resources</span></div><div className="content-grid">{items.map(c=><article className="panel resource" key={c.id}>{kind==='video'&&(playing===c.id?<iframe title={c.title} src={c.body} allow="fullscreen; picture-in-picture" allowFullScreen referrerPolicy="no-referrer"/>:<button className="video-cover" onClick={()=>setPlaying(c.id)} aria-label={`Play ${c.title}`}><span>▷</span><small>PLAY TRAINING</small></button>)}<span className="eyebrow">{data.equipment.find(e=>e.id===c.equipmentId)?.name??'ALL EQUIPMENT'}</span><h2>{c.title}</h2>{kind==='guide'&&<p className="guide-body">{c.body}</p>}{manage&&<button className="text-button" onClick={()=>void save({action:'archive',id:c.id})}>Archive resource</button>}</article>)}</div>{!items.length&&<section className="panel empty"><h3>No resources found</h3><p>{manage?'Add a resource below to build your team’s library.':'Ask your manager to add a resource for this process.'}</p></section>}{manage&&<section className="panel narrow"><h2>Add {kind==='video'?'training video':'troubleshooting guide'}</h2><form onSubmit={async e=>{e.preventDefault();const form=e.currentTarget,f=new FormData(form);if(await save({action:kind,title:f.get('title'),equipmentId:f.get('equipmentId'),body:f.get('body')}))form.reset();}}><Field label="Title"><input name="title" maxLength={150} required/></Field><Field label="Equipment"><select name="equipmentId"><option value="">All equipment</option>{data.equipment.map(e=><option key={e.id} value={e.id}>{e.name}</option>)}</select></Field><Field label={kind==='video'?'HTTPS YouTube or Vimeo video URL':'Troubleshooting instructions'}>{kind==='video'?<input name="body" type="url" required placeholder="https://www.youtube.com/watch?v=…"/>:<textarea name="body" rows={6} maxLength={10000} required/>}</Field><p className="small muted">{kind==='video'?'Videos play from the original provider. Use content your organization is permitted to share.':'Use approved site procedures and include escalation guidance.'}</p><Submit busy={busy}>Add resource</Submit></form></section>}</>;}
-function Manage({data,save,busy}:{data:Data;save:Save;busy:boolean}){const [editing,setEditing]=useState(''),[title,setTitle]=useState(''),[equipment,setEquipment]=useState(''),[target,setTarget]=useState(45),[tolerance,setTolerance]=useState(10),[steps,setSteps]=useState<Step[]>([{id:crypto.randomUUID(),text:'',photo:false}]);function load(id:string){setEditing(id);const s=data.standards.find(x=>x.id===id);setTitle(s?.title??'');setEquipment(s?.equipmentId??'');setTarget(s?.target??45);setTolerance(s?.tolerance??10);setSteps(s?.steps??[{id:crypto.randomUUID(),text:'',photo:false}]);}return <><section className="panel"><h2>Standard work editor</h2><p className="muted">Publishing a change creates a new revision. Existing results retain their original steps and timing criteria.</p><Field label="Create or revise"><select value={editing} onChange={e=>load(e.target.value)}><option value="">New standard</option>{data.standards.filter(s=>!data.standards.some(x=>x.family===s.family&&x.revision>s.revision)).map(s=><option key={s.id} value={s.id}>{s.title} · revision {s.revision}</option>)}</select></Field><form onSubmit={async e=>{e.preventDefault();if(await save({action:'standard',title,equipmentId:equipment,target,tolerance,steps,...(editing?{family:data.standards.find(s=>s.id===editing)?.family}:{})}))load('');}}><div className="form-grid"><Field label="Standard title"><input required maxLength={150} value={title} onChange={e=>setTitle(e.target.value)}/></Field><Field label="Equipment"><EquipmentSelect data={data} value={equipment} onChange={setEquipment}/></Field><Field label="Target cycle time (seconds)"><input type="number" min="0.01" max="86400" step="0.01" value={target} onChange={e=>setTarget(Number(e.target.value))} required/></Field><Field label="Allowed tolerance (%)"><input type="number" min="0" max="100" value={tolerance} onChange={e=>setTolerance(Number(e.target.value))} required/></Field></div>{steps.map((step,i)=><div className="editor-step" key={step.id}><Field label={`Step ${i+1}`}><input required maxLength={500} value={step.text} onChange={e=>setSteps(steps.map((s,j)=>j===i?{...s,text:e.target.value}:s))}/></Field><label className="check"><input type="checkbox" checked={step.photo} onChange={e=>setSteps(steps.map((s,j)=>j===i?{...s,photo:e.target.checked}:s))}/>Photo required</label><button className="text-button" type="button" disabled={steps.length===1} onClick={()=>setSteps(steps.filter((_,j)=>i!==j))}>Remove</button></div>)}<div className="button-row"><button type="button" className="outline" disabled={steps.length>=100} onClick={()=>setSteps([...steps,{id:crypto.randomUUID(),text:'',photo:false}])}>+ Add step</button><Submit busy={busy}>{editing?'Publish new revision':'Publish standard'}</Submit></div></form></section><section className="panel"><h2>Add equipment</h2><form onSubmit={async e=>{e.preventDefault();const form=e.currentTarget;const f=new FormData(form);if(await save({action:'equipment',...Object.fromEntries(f)}))form.reset();}}><div className="form-grid">{['name','plant','department','area','line'].map(name=><Field label={name[0].toUpperCase()+name.slice(1)} key={name}><input name={name} required maxLength={name==='name'?150:100}/></Field>)}</div><Submit busy={busy}>Add equipment</Submit></form><div className="equipment-list">{data.equipment.map(e=><p key={e.id}><strong>{e.name}</strong><span>{[e.plant,e.department,e.area,e.line].join(' / ')}</span></p>)}</div></section></>;}
-function Analytics({data}:{data:Data}){const runs=data.records.filter(r=>r.kind==='run'),responses=runs.flatMap(r=>r.data.responses??[]),no=responses.filter(a=>!a.answer).length,studies=data.records.filter(r=>r.kind==='study');return <><div className="metrics"><Metric label="Completed verifications" value={runs.length} detail="Completed records, not scheduled tasks"/><Metric label="No response rate" value={responses.length?`${fmt(no/responses.length*100)}%`:'—'} detail={`${no} No answers / ${responses.length} responses`}/><Metric label="Average completion" value={runs.length?`${fmt(runs.reduce((s,r)=>s+r.data.durationSeconds,0)/runs.length)}s`:'—'} detail="Elapsed verification time"/><Metric label="Audit follow-ups" value={data.records.filter(r=>r.kind==='audit'&&r.data.followUp).length} detail="Failed checks or cycles over target" accent/></div><section className="panel"><h2>Time study statistics</h2><p className="muted">Calculated from raw observations by work element. Standard deviation uses the population formula.</p><div className="table-wrap"><table><thead><tr>{['Study / element','N','Average','Median','Min','Max','Range','Std. dev.'].map(t=><th key={t}>{t}</th>)}</tr></thead><tbody>{studies.flatMap(r=>[...new Set<string>(r.data.cycles.map((c:Cycle)=>c.element))].map(element=>{const s=stats(r.data.cycles.filter((c:Cycle)=>c.element===element).map((c:Cycle)=>c.seconds))!;return <tr key={r.id+element}><td><strong>{r.data.title}</strong><small>{element}</small></td><td>{s.count}</td>{[s.average,s.median,s.min,s.max,s.range,s.standardDeviation].map((n,i)=><td key={i}>{fmt(n)}s</td>)}</tr>;}))}</tbody></table>{!studies.length&&<p className="empty">Save a time study to see its statistics.</p>}</div></section><section className="panel"><h2>Failures by equipment and step</h2><div className="table-wrap"><table><thead><tr><th>Equipment</th><th>Standard / revision</th><th>Step</th><th>No responses</th></tr></thead><tbody>{data.standards.flatMap(s=>s.steps.map(step=>{const count=runs.filter(r=>r.data.snapshot.id===s.id).flatMap(r=>r.data.responses).filter(a=>a.stepId===step.id&&!a.answer).length;return count?<tr key={s.id+step.id}><td>{data.equipment.find(e=>e.id===s.equipmentId)?.name}</td><td>{s.title} · r{s.revision}</td><td>{step.text}</td><td>{count}</td></tr>:null;}))}</tbody></table></div></section><p className="small muted">Dashboard history is limited to the latest 2,000 accessible records. Excel exports include all accessible records. A scheduled completion percentage needs a future scheduling module.</p></>;}
-function Permissions({data,save,busy}:{data:Data;save:Save;busy:boolean}){const [role,setRole]=useState('Manager'),[checked,setChecked]=useState<Capability[]>(data.policies.find(p=>p.role==='Manager')?.grants??[]);return <section className="panel"><h2>Role permissions</h2><p className="muted">Changes apply to the next server request. Admin retains all permissions to prevent accidental lockout.</p><Field label="Role"><select value={role} onChange={e=>{setRole(e.target.value);setChecked(data.policies.find(p=>p.role===e.target.value)?.grants??[]);}}>{roles.filter(r=>r!=='Admin').map(r=><option key={r}>{r}</option>)}</select></Field><form onSubmit={e=>{e.preventDefault();void save({action:'policy',role,grants:checked});}}><div className="permission-grid">{capabilities.map(cap=><label className="permission" key={cap}><input type="checkbox" checked={checked.includes(cap)} onChange={e=>setChecked(e.target.checked?[...checked,cap]:checked.filter(c=>c!==cap))}/><span><strong>{cap}</strong><small>Allow {cap} actions</small></span></label>)}</div><Submit busy={busy}>Save role permissions</Submit></form><p className="small muted">Roles currently apply across the workspace. Plant and line restrictions are not implemented.</p></section>;}
-function Accounts({data,save,busy}:{data:Data;save:Save;busy:boolean}){const [id,setId]=useState(''),[username,setUsername]=useState(''),[name,setName]=useState(''),[role,setRole]=useState('Operator'),[active,setActive]=useState(true),[password,setPassword]=useState('');function select(id:string){setId(id);const u=data.users.find(u=>u.id===id);setUsername(u?.username??'');setName(u?.name??'');setRole(u?.role??'Operator');setActive(u?.active??true);setPassword('');}return <><section className="panel"><h2>{id?'Update account':'Create individual account'}</h2><Field label="Account"><select value={id} onChange={e=>select(e.target.value)}><option value="">New account</option>{data.users.map(u=><option key={u.id} value={u.id}>{u.name} ({u.username})</option>)}</select></Field><form onSubmit={async e=>{e.preventDefault();if(await save({action:'user',...(id?{id}:{}),username,name,role,active,...(password?{password}:{})}))select('');}}><div className="form-grid"><Field label="Username"><input value={username} onChange={e=>setUsername(e.target.value)} pattern="[a-z0-9._\-]{3,80}" required autoComplete="off"/></Field><Field label="Display name"><input value={name} onChange={e=>setName(e.target.value)} required maxLength={150}/></Field><Field label="Role"><select value={role} onChange={e=>setRole(e.target.value)}>{roles.map(r=><option key={r}>{r}</option>)}</select></Field><Field label={id?'Reset password (leave empty to keep)':'Temporary password'}><input type="password" value={password} onChange={e=>setPassword(e.target.value)} required={!id} minLength={12} maxLength={128} autoComplete="new-password"/></Field></div><label className="check"><input type="checkbox" checked={active} onChange={e=>setActive(e.target.checked)}/>Account active</label><p className="small muted">Temporary passwords must be changed at first sign-in. Updating an account revokes its existing sessions.</p><Submit busy={busy}>{id?'Update account':'Create account'}</Submit></form></section><section className="panel table-wrap"><table><thead><tr><th>Person</th><th>Username</th><th>Role</th><th>Access</th></tr></thead><tbody>{data.users.map(u=><tr key={u.id}><td>{u.name}</td><td>{u.username}</td><td>{u.role}</td><td><span className={'badge '+(!u.active?'warn':'')}>{u.active?'Active':'Disabled'}</span>{u.mustChange&&<small>Password change required</small>}</td></tr>)}</tbody></table></section></>;}
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      {children}
+    </label>
+  );
+}
+function Submit({
+  children,
+  busy = false,
+}: {
+  children: React.ReactNode;
+  busy?: boolean;
+}) {
+  return (
+    <button className="primary" disabled={busy} type="submit">
+      {busy ? "Saving…" : children}
+    </button>
+  );
+}
+const fmt = (n: number | undefined) => (n === undefined ? "—" : n.toFixed(2));
+export default function Home() {
+  const [user, setUser] = useState<User | null>(null),
+    [loaded, setLoaded] = useState(false),
+    [data, setData] = useState<Data>(empty),
+    [tab, setTab] = useState("Overview"),
+    [error, setError] = useState(""),
+    [notice, setNotice] = useState(""),
+    [busy, setBusy] = useState(false);
+  async function refresh() {
+    const account = await api("/api/account");
+    setUser(account.user);
+    if (account.user && !account.user.mustChange)
+      setData(await api("/api/platform"));
+    else setData(empty);
+    setLoaded(true);
+  }
+  useEffect(() => {
+    refresh().catch((e) => {
+      setError(e.message);
+      setLoaded(true);
+    });
+  }, []);
+  async function save(body: unknown) {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await api("/api/platform", body);
+      await refresh();
+      setNotice("Saved to the database.");
+      return true;
+    } catch (e) {
+      setError((e as Error).message);
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function account(body: unknown) {
+    setBusy(true);
+    setError("");
+    try {
+      await api("/api/account", body);
+      await refresh();
+      setNotice("");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (!loaded) return <main className="loading">Opening Floorwork…</main>;
+  if (!user || user.mustChange)
+    return (
+      <main className="auth">
+        <section className="auth-story">
+          <div className="brand">
+            ▦{" "}
+            <span>
+              floorwork<span className="brand-dot">.</span>
+            </span>
+          </div>
+          <span className="eyebrow">A BETTER DAY ON THE FLOOR</span>
+          <h1>
+            Good work.
+            <br />
+            Made repeatable.
+          </h1>
+          <p>
+            Clear standards. Confident teams.
+            <br />
+            Every improvement starts with one observation.
+          </p>
+          <div className="auth-lines">
+            <span>01 &nbsp; Follow the standard</span>
+            <span>02 &nbsp; Capture the evidence</span>
+            <span>03 &nbsp; Improve the process</span>
+          </div>
+        </section>
+        <section className="auth-form">
+          <span className="eyebrow">YOUR MANUFACTURING WORKSPACE</span>
+          <h2>{user ? "Set your own password" : "Welcome back"}</h2>
+          <p className="muted">
+            {user
+              ? "Replace your temporary password. You will then sign in again."
+              : "Sign in with your individual account."}
+          </p>
+          {error && (
+            <div role="alert" className="error">
+              {error}
+            </div>
+          )}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const f = new FormData(e.currentTarget);
+              void account(
+                user
+                  ? {
+                      action: "password",
+                      current: f.get("current"),
+                      password: f.get("password"),
+                    }
+                  : {
+                      action: "login",
+                      username: f.get("username"),
+                      password: f.get("password"),
+                      remember: f.get("remember") === "on",
+                    },
+              );
+            }}
+          >
+            {!user ? (
+              <Field label="Username">
+                <input name="username" autoComplete="username" required />
+              </Field>
+            ) : (
+              <Field label="Temporary password">
+                <input
+                  name="current"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                />
+              </Field>
+            )}
+            <Field
+              label={user ? "New password · 12–128 characters" : "Password"}
+            >
+              <input
+                name="password"
+                type="password"
+                minLength={user ? 12 : undefined}
+                maxLength={128}
+                autoComplete={user ? "new-password" : "current-password"}
+                required
+              />
+            </Field>
+            {!user && (
+              <label className="check">
+                <input type="checkbox" name="remember" />
+                Keep me signed in on this device for 30 days
+              </label>
+            )}
+            <Submit busy={busy}>{user ? "Set password" : "Sign in →"}</Submit>
+          </form>
+          <p className="small muted">
+            {user
+              ? "All existing sessions will be signed out."
+              : "Need access? Ask your administrator to create an account."}
+          </p>
+        </section>
+      </main>
+    );
+  const g = user.grants;
+  const nav: [string, Capability | null, string][] = [
+    ["Overview", null, "◫"],
+    ["Standard work", "work", "☑"],
+    ["Time studies", "studies", "◷"],
+    ["Supervisor audits", "audits", "◎"],
+    ["Training", null, "▷"],
+    ["Troubleshooting", null, "◇"],
+    ["Analytics", "analytics", "▥"],
+    ["Manage", "manage", "⊞"],
+    ["Accounts", "users", "♙"],
+    ["Permissions", "permissions", "⚙"],
+    ["My account", null, "○"],
+  ];
+  const descriptions: Record<string, string> = {
+    Overview: "A clear view of the work that moves your floor forward.",
+    "Standard work":
+      "Follow each step. Verify the result. Capture the evidence.",
+    "Time studies": "Observe the process and turn raw timing into insight.",
+    "Supervisor audits":
+      "Verify the standard and measure actual operator cycle times.",
+    Training: "Practical know-how, ready when your team needs it.",
+    Troubleshooting: "Find the guidance to get your process back on track.",
+    Analytics: "Understand variation, spot failures, and track performance.",
+    Manage: "Build equipment, standards, and guides for your team.",
+    Accounts: "Individual access, with accountability built in.",
+    Permissions: "Choose what each role can do across the platform.",
+    "My account": "Manage your password and your signed-in devices.",
+  };
+  return (
+    <div className="shell">
+      <aside className="sidebar">
+        <div className="brand">
+          ▦{" "}
+          <span>
+            floorwork<span className="brand-dot">.</span>
+          </span>
+        </div>
+        <div className="workspace">
+          <i /> Manufacturing workspace<span>OPERATIONS PLATFORM</span>
+        </div>
+        <span className="nav-label">WORKSPACE</span>
+        <nav>
+          {nav
+            .filter(([, c]) => !c || g.includes(c))
+            .map(([name, , icon]) => (
+              <button
+                key={name}
+                className={tab === name ? "nav-item active" : "nav-item"}
+                onClick={() => {
+                  setTab(name);
+                  setError("");
+                  setNotice("");
+                }}
+              >
+                <span>{icon}</span>
+                {name}
+                {tab === name && <b>•</b>}
+              </button>
+            ))}
+        </nav>
+        <div className="sidebar-bottom">
+          <div className="avatar">{user.name.slice(0, 2).toUpperCase()}</div>
+          <div>
+            <strong>{user.name}</strong>
+            <small>{user.role}</small>
+          </div>
+          <button
+            aria-label="Sign out"
+            onClick={() => void account({ action: "logout" })}
+          >
+            →
+          </button>
+        </div>
+      </aside>
+      <main className="main">
+        <header className="topbar">
+          <span>
+            Workspace <span className="muted"> / {tab}</span>
+          </span>
+          <span className="status">
+            <i /> Database connected{" "}
+            <span className="role-tag">{user.role}</span>
+          </span>
+        </header>
+        <div className="page">
+          <div className="page-heading">
+            <div>
+              <span className="eyebrow">FLOORWORK / OPERATIONS</span>
+              <h1>
+                {tab === "Overview"
+                  ? `Welcome, ${user.name.split(" ")[0]}.`
+                  : tab}
+              </h1>
+              <p className="muted">{descriptions[tab]}</p>
+            </div>
+            {g.includes("export") && (
+              <a className="outline" href="/api/export">
+                ↓ Export Excel
+              </a>
+            )}
+          </div>
+          {error && (
+            <div className="error" role="alert">
+              {error}
+            </div>
+          )}
+          {notice && (
+            <div className="notice" role="status">
+              ✓ {notice}
+            </div>
+          )}
+          {tab === "Overview" && (
+            <Overview data={data} go={setTab} grants={g} />
+          )}
+          {tab === "Standard work" && (
+            <Work data={data} save={save} busy={busy} audit={false} />
+          )}
+          {tab === "Supervisor audits" && (
+            <Work data={data} save={save} busy={busy} audit />
+          )}
+          {tab === "Time studies" && (
+            <Studies data={data} save={save} busy={busy} />
+          )}
+          {tab === "Training" && (
+            <Content
+              data={data}
+              kind="video"
+              manage={g.includes("training")}
+              save={save}
+              busy={busy}
+            />
+          )}
+          {tab === "Troubleshooting" && (
+            <Content
+              data={data}
+              kind="guide"
+              manage={g.includes("manage")}
+              save={save}
+              busy={busy}
+            />
+          )}
+          {tab === "Manage" && <Manage data={data} save={save} busy={busy} />}
+          {tab === "Analytics" && <Analytics data={data} />}
+          {tab === "Permissions" && (
+            <Permissions data={data} save={save} busy={busy} />
+          )}
+          {tab === "Accounts" && (
+            <Accounts data={data} save={save} busy={busy} />
+          )}
+          {tab === "My account" && (
+            <section className="panel narrow">
+              <h2>Change password</h2>
+              <p className="muted">
+                Changing your password signs out every device.
+              </p>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const f = new FormData(e.currentTarget);
+                  void account({
+                    action: "password",
+                    current: f.get("current"),
+                    password: f.get("password"),
+                  });
+                }}
+              >
+                <Field label="Current password">
+                  <input
+                    name="current"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                  />
+                </Field>
+                <Field label="New password">
+                  <input
+                    name="password"
+                    type="password"
+                    minLength={12}
+                    maxLength={128}
+                    autoComplete="new-password"
+                    required
+                  />
+                </Field>
+                <Submit busy={busy}>Change password</Submit>
+              </form>
+              <hr />
+              <button
+                className="outline"
+                onClick={() => void account({ action: "logoutAll" })}
+              >
+                Sign out all devices
+              </button>
+            </section>
+          )}
+          <footer>
+            FLOORWORK <span>Built for the people behind the process.</span>
+          </footer>
+        </div>
+      </main>
+    </div>
+  );
+}
+function Overview({
+  data,
+  go,
+  grants,
+}: {
+  data: Data;
+  go: (s: string) => void;
+  grants: Capability[];
+}) {
+  const runs = data.records.filter((r) => r.kind === "run"),
+    audits = data.records.filter((r) => r.kind === "audit");
+  return (
+    <>
+      <div className="hero">
+        <div>
+          <span className="eyebrow">CONSISTENCY BUILDS CONFIDENCE</span>
+          <h2>
+            Make every shift
+            <br />a step forward.
+          </h2>
+          <p>
+            Your standards, evidence, and process insights.
+            <br />
+            One place to keep the floor moving.
+          </p>
+          {grants.includes("work") && (
+            <button className="cream" onClick={() => go("Standard work")}>
+              Start standard work <span>→</span>
+            </button>
+          )}
+        </div>
+        <div className="hero-art" aria-hidden="true">
+          <div className="orbit" />
+          <div className="art-card">
+            <span>PROCESS CHECK</span>
+            <b>✓</b>
+            <div>Ready for the next step</div>
+            <i />
+            <i />
+            <i />
+          </div>
+          <div className="art-label">SMALL STEPS. BETTER SYSTEMS.</div>
+        </div>
+      </div>
+      <div className="metrics">
+        <Metric
+          label="Completed work"
+          value={runs.length}
+          detail="Stored verification records"
+        />
+        <Metric
+          label="Time studies"
+          value={data.records.filter((r) => r.kind === "study").length}
+          detail="Raw observations preserved"
+        />
+        <Metric
+          label="Supervisor audits"
+          value={audits.length}
+          detail="Timed process checks"
+        />
+        <Metric
+          label="Follow-ups"
+          value={data.records.filter((r) => r.data.followUp).length}
+          detail="Failures or cycles over target"
+          accent
+        />
+      </div>
+      <div className="section-title">
+        <h2>Your floor, at a glance</h2>
+        <span className="muted">Latest activity</span>
+      </div>
+      <History data={data} records={data.records.slice(0, 8)} />
+    </>
+  );
+}
+function Metric({
+  label,
+  value,
+  detail,
+  accent = false,
+}: {
+  label: string;
+  value: number | string;
+  detail: string;
+  accent?: boolean;
+}) {
+  return (
+    <section className={"metric " + (accent ? "accent" : "")}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{detail}</small>
+    </section>
+  );
+}
+function History({ data, records }: { data: Data; records: Entry[] }) {
+  return (
+    <section className="panel history">
+      {!records.length ? (
+        <div className="empty">
+          <span>◇</span>
+          <h3>Your first observation starts here</h3>
+          <p>Completed work, time studies, and audits will appear here.</p>
+        </div>
+      ) : (
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Process / study</th>
+                <th>Type</th>
+                <th>Recorded by</th>
+                <th>Date</th>
+                <th>Result</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.map((r) => (
+                <tr key={r.id}>
+                  <td>
+                    <strong>{r.data.snapshot?.title ?? r.data.title}</strong>
+                    <small>
+                      {r.data.snapshot
+                        ? `Revision ${r.data.snapshot.revision}`
+                        : data.equipment.find(
+                            (e) => e.id === r.data.equipmentId,
+                          )?.name}
+                    </small>
+                  </td>
+                  <td>{r.kind}</td>
+                  <td>{r.user.name}</td>
+                  <td>{new Date(r.created).toLocaleString()}</td>
+                  <td>
+                    <span
+                      className={"badge " + (r.data.followUp ? "warn" : "")}
+                    >
+                      {r.data.followUp ? "Follow up" : "Recorded"}
+                    </span>
+                  </td>
+                  <td>
+                    <details>
+                      <summary>View record</summary>
+                      {r.data.operator && <p>Operator: {r.data.operator}</p>}
+                      {r.data.snapshot && (
+                        <p>
+                          Target {r.data.snapshot.target}s · tolerance{" "}
+                          {r.data.snapshot.tolerance}%
+                        </p>
+                      )}
+                      {r.data.responses?.map((a: any) => (
+                        <div className="record-step" key={a.stepId}>
+                          <strong>{a.answer ? "✓ Yes" : "✕ No"}</strong>{" "}
+                          {
+                            r.data.snapshot.steps.find(
+                              (s: Step) => s.id === a.stepId,
+                            )?.text
+                          }
+                          <p>{a.comment}</p>
+                          {a.photo && (
+                            <a
+                              href={`/api/photos/${a.photo}`}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              View evidence photo →
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                      {r.data.cycles?.map((c: Cycle, i: number) => (
+                        <p key={i}>
+                          {c.element}: {fmt(c.seconds)}s ·{" "}
+                          {new Date(c.at).toLocaleString()}
+                        </p>
+                      ))}
+                    </details>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+type Save = (b: unknown) => Promise<boolean>;
+function EquipmentSelect({
+  data,
+  value,
+  onChange,
+}: {
+  data: Data;
+  value: string;
+  onChange: (s: string) => void;
+}) {
+  return (
+    <select
+      aria-label="Equipment"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      required
+    >
+      <option value="">Select equipment</option>
+      {data.equipment.map((e) => (
+        <option key={e.id} value={e.id}>
+          {e.name} · {e.line}
+        </option>
+      ))}
+    </select>
+  );
+}
+function Timer({
+  cycles,
+  setCycles,
+  audit = false,
+  target = 0,
+  tolerance = 0,
+}: {
+  cycles: Cycle[];
+  setCycles: (v: Cycle[]) => void;
+  audit?: boolean;
+  target?: number;
+  tolerance?: number;
+}) {
+  const [running, setRunning] = useState(false),
+    [elapsed, setElapsed] = useState(0),
+    [element, setElement] = useState("Whole cycle");
+  const start = useRef(0);
+  useEffect(() => {
+    if (!running) return;
+    const t = setInterval(
+      () => setElapsed((performance.now() - start.current) / 1000),
+      40,
+    );
+    return () => clearInterval(t);
+  }, [running]);
+  function record() {
+    const seconds = (performance.now() - start.current) / 1000;
+    setCycles([
+      ...cycles,
+      {
+        element: element.trim() || "Whole cycle",
+        seconds,
+        at: new Date().toISOString(),
+      },
+    ]);
+    setRunning(false);
+    setElapsed(0);
+  }
+  const s = stats(cycles.map((c) => c.seconds));
+  return (
+    <section className="timer-box">
+      <div className="section-title">
+        <h3>{audit ? "Audit cycle timer" : "Observation timer"}</h3>
+        <span className="badge">{cycles.length} observations</span>
+      </div>
+      {!audit && (
+        <Field label="Work element">
+          <input
+            value={element}
+            onChange={(e) => setElement(e.target.value)}
+            disabled={running}
+            maxLength={150}
+          />
+        </Field>
+      )}
+      {audit && (
+        <p className="muted">
+          Target <strong>{target}s</strong> + {tolerance}% tolerance · limit{" "}
+          {fmt(target * (1 + tolerance / 100))}s
+        </p>
+      )}
+      <div className={"clock " + (running ? "running" : "")}>
+        {elapsed.toFixed(2)}
+        <span>SECONDS</span>
+      </div>
+      <div className="button-row">
+        <button
+          type="button"
+          className={running ? "danger" : "primary"}
+          onClick={() => {
+            if (running) record();
+            else {
+              start.current = performance.now();
+              setElapsed(0);
+              setRunning(true);
+            }
+          }}
+        >
+          {running ? "Stop & record cycle" : "Start cycle"}
+        </button>
+        {running && (
+          <button
+            type="button"
+            className="outline"
+            onClick={() => {
+              setRunning(false);
+              setElapsed(0);
+            }}
+          >
+            Cancel cycle
+          </button>
+        )}
+      </div>
+      {s && (
+        <div className="mini-stats">
+          <span>
+            Average <b>{fmt(s.average)}s</b>
+          </span>
+          <span>
+            Range <b>{fmt(s.range)}s</b>
+          </span>
+          <span>
+            Std. dev. <b>{fmt(s.standardDeviation)}s</b>
+          </span>
+        </div>
+      )}
+      {cycles.length > 0 && (
+        <ol className="cycles">
+          {cycles.map((c, i) => (
+            <li key={i}>
+              <span>
+                {i + 1}. {c.element}
+              </span>
+              <strong>{fmt(c.seconds)}s</strong>
+              {audit && (
+                <span
+                  className={
+                    "badge " +
+                    (c.seconds > target * (1 + tolerance / 100) ? "warn" : "")
+                  }
+                >
+                  {c.seconds > target * (1 + tolerance / 100)
+                    ? "Over target"
+                    : "Within target"}
+                </span>
+              )}
+              <button
+                type="button"
+                className="text-button"
+                aria-label={`Remove cycle ${i + 1}`}
+                disabled={running}
+                onClick={() => setCycles(cycles.filter((_, j) => j !== i))}
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
+      <input type="hidden" name="timerRunning" value={running ? "yes" : "no"} />
+    </section>
+  );
+}
+function Work({
+  data,
+  save,
+  busy,
+  audit,
+}: {
+  data: Data;
+  save: Save;
+  busy: boolean;
+  audit: boolean;
+}) {
+  const latest = data.standards.filter(
+    (s) =>
+      !data.standards.some(
+        (t) => t.family === s.family && t.revision > s.revision,
+      ),
+  );
+  const [id, setId] = useState(""),
+    [responses, setResponses] = useState<
+      Record<
+        string,
+        {
+          answer: boolean | null;
+          photo: string | null;
+          comment: string;
+          at?: string;
+        }
+      >
+    >({}),
+    [cycles, setCycles] = useState<Cycle[]>([]),
+    [started, setStarted] = useState(new Date().toISOString()),
+    [operator, setOperator] = useState(""),
+    [localError, setLocalError] = useState(""),
+    [uploading, setUploading] = useState(false);
+  const s = data.standards.find((s) => s.id === id);
+  function select(id: string) {
+    setId(id);
+    setResponses({});
+    setCycles([]);
+    setStarted(new Date().toISOString());
+    setLocalError("");
+  }
+  function update(step: string, patch: object) {
+    setResponses((prev) => ({
+      ...prev,
+      [step]: {
+        ...(prev[step] ?? { answer: null, photo: null, comment: "" }),
+        ...patch,
+        at: new Date().toISOString(),
+      },
+    }));
+  }
+  async function upload(step: string, file: File) {
+    setUploading(true);
+    setLocalError("");
+    try {
+      if (file.size > 8 * 1024 * 1024) throw Error("Photos must be under 8 MB");
+      const image = await new Promise<string>((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(String(r.result));
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+      const p = await api("/api/photos", { image });
+      update(step, { photo: p.id });
+    } catch (e) {
+      setLocalError((e as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  }
+  return (
+    <>
+      <section className="panel">
+        <div className="section-title">
+          <h2>{audit ? "New standard work audit" : "Start a verification"}</h2>
+          <span className="badge">
+            {audit ? "SUPERVISOR" : "STANDARD WORK"}
+          </span>
+        </div>
+        <Field label="Standard work">
+          <select
+            aria-label="Standard work"
+            value={id}
+            onChange={(e) => select(e.target.value)}
+          >
+            <option value="">Select a process</option>
+            {latest.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.title} · revision {s.revision}
+              </option>
+            ))}
+          </select>
+        </Field>
+        {s && (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setLocalError("");
+              if (new FormData(e.currentTarget).get("timerRunning") === "yes") {
+                setLocalError("Stop the timer before saving");
+                return;
+              }
+              if (
+                s.steps.some(
+                  (step) =>
+                    responses[step.id]?.answer == null ||
+                    (step.photo && !responses[step.id]?.photo),
+                )
+              ) {
+                setLocalError(
+                  "Answer every step and attach each required photo",
+                );
+                return;
+              }
+              if (audit && !cycles.length) {
+                setLocalError("Record at least one audit cycle");
+                return;
+              }
+              if (
+                await save({
+                  action: audit ? "audit" : "run",
+                  standardId: id,
+                  started,
+                  operator,
+                  responses: s.steps.map((step) => ({
+                    stepId: step.id,
+                    ...responses[step.id],
+                  })),
+                  ...(audit ? { cycles } : {}),
+                })
+              ) {
+                select("");
+                setOperator("");
+              }
+            }}
+          >
+            <div className="process-meta">
+              <span>
+                ▦ {data.equipment.find((e) => e.id === s.equipmentId)?.name}
+              </span>
+              <span>Revision {s.revision}</span>
+              <span>Target {s.target}s</span>
+            </div>
+            <div className={audit ? "audit-grid" : ""}>
+              <div>
+                {audit && (
+                  <Field label="Operator being audited">
+                    <input
+                      value={operator}
+                      onChange={(e) => setOperator(e.target.value)}
+                      maxLength={150}
+                      required
+                      placeholder="Operator name or employee ID"
+                    />
+                  </Field>
+                )}
+                {s.steps.map((step, i) => (
+                  <section className="step" key={step.id}>
+                    <div className="step-heading">
+                      <span className="step-number">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <div>
+                        <h3>{step.text}</h3>
+                        <p className="small muted">
+                          {step.photo
+                            ? "Photo evidence required"
+                            : "Verify against the approved standard"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="yes-no">
+                      {[true, false].map((answer) => (
+                        <button
+                          key={String(answer)}
+                          type="button"
+                          aria-pressed={responses[step.id]?.answer === answer}
+                          className={
+                            responses[step.id]?.answer === answer
+                              ? answer
+                                ? "selected-yes"
+                                : "selected-no"
+                              : ""
+                          }
+                          onClick={() => update(step.id, { answer })}
+                        >
+                          {answer ? "✓ Yes" : "✕ No"}
+                        </button>
+                      ))}
+                    </div>
+                    <Field
+                      label={
+                        step.photo
+                          ? "Evidence photo · required"
+                          : "Evidence photo · optional"
+                      }
+                    >
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        capture="environment"
+                        disabled={uploading}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) void upload(step.id, f);
+                        }}
+                      />
+                    </Field>
+                    {responses[step.id]?.photo && (
+                      <img
+                        className="photo-preview"
+                        src={`/api/photos/${responses[step.id].photo}`}
+                        alt={`Evidence for step ${i + 1}`}
+                      />
+                    )}
+                    <Field label="Comment">
+                      <textarea
+                        maxLength={1000}
+                        rows={2}
+                        value={responses[step.id]?.comment ?? ""}
+                        onChange={(e) =>
+                          update(step.id, { comment: e.target.value })
+                        }
+                        placeholder="Add context or describe an issue"
+                      />
+                    </Field>
+                  </section>
+                ))}
+              </div>
+              {audit && (
+                <div>
+                  <Timer
+                    cycles={cycles}
+                    setCycles={setCycles}
+                    audit
+                    target={s.target}
+                    tolerance={s.tolerance}
+                  />
+                  <p className="small muted">
+                    Cycle timestamps and the current standard criteria are
+                    preserved with this audit.
+                  </p>
+                </div>
+              )}
+            </div>
+            {localError && (
+              <div className="error" role="alert">
+                {localError}
+              </div>
+            )}
+            <Submit busy={busy || uploading}>
+              {audit ? "Save audit" : "Complete standard work"}
+            </Submit>
+          </form>
+        )}
+      </section>
+      <div className="section-title">
+        <h2>{audit ? "Audit history" : "Completed verifications"}</h2>
+        <span className="muted">Historical revisions preserved</span>
+      </div>
+      <History
+        data={data}
+        records={data.records.filter(
+          (r) => r.kind === (audit ? "audit" : "run"),
+        )}
+      />
+    </>
+  );
+}
+function Studies({
+  data,
+  save,
+  busy,
+}: {
+  data: Data;
+  save: Save;
+  busy: boolean;
+}) {
+  const [cycles, setCycles] = useState<Cycle[]>([]),
+    [equipment, setEquipment] = useState(""),
+    [title, setTitle] = useState(""),
+    [error, setError] = useState("");
+  return (
+    <>
+      <section className="panel">
+        <h2>New time study</h2>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (new FormData(e.currentTarget).get("timerRunning") === "yes") {
+              setError("Stop the timer before saving");
+              return;
+            }
+            if (!cycles.length) {
+              setError("Record at least one observation");
+              return;
+            }
+            if (
+              await save({
+                action: "study",
+                title,
+                equipmentId: equipment,
+                cycles,
+              })
+            ) {
+              setCycles([]);
+              setTitle("");
+              setError("");
+            }
+          }}
+        >
+          <div className="form-grid">
+            <Field label="Study name">
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                maxLength={150}
+                required
+                placeholder="e.g. Label application baseline"
+              />
+            </Field>
+            <Field label="Equipment">
+              <EquipmentSelect
+                data={data}
+                value={equipment}
+                onChange={setEquipment}
+              />
+            </Field>
+          </div>
+          <Timer cycles={cycles} setCycles={setCycles} />
+          {error && <div className="error">{error}</div>}
+          <Submit busy={busy}>Save time study</Submit>
+        </form>
+      </section>
+      <div className="section-title">
+        <h2>Saved studies</h2>
+      </div>
+      <History
+        data={data}
+        records={data.records.filter((r) => r.kind === "study")}
+      />
+    </>
+  );
+}
+function Content({
+  data,
+  kind,
+  manage,
+  save,
+  busy,
+}: {
+  data: Data;
+  kind: string;
+  manage: boolean;
+  save: Save;
+  busy: boolean;
+}) {
+  const [search, setSearch] = useState(""),
+    [playing, setPlaying] = useState("");
+  const items = data.content.filter(
+    (c) =>
+      c.kind === kind &&
+      `${c.title} ${kind === "guide" ? c.body : ""} ${data.equipment.find((e) => e.id === c.equipmentId)?.name ?? ""}`
+        .toLowerCase()
+        .includes(search.toLowerCase()),
+  );
+  return (
+    <>
+      <div className="search-row">
+        <input
+          aria-label="Search library"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={
+            kind === "video"
+              ? "Search training videos or equipment…"
+              : "Search troubleshooting guides or equipment…"
+          }
+        />
+        <span className="muted">{items.length} resources</span>
+      </div>
+      <div className="content-grid">
+        {items.map((c) => (
+          <article className="panel resource" key={c.id}>
+            {kind === "video" &&
+              (playing === c.id ? (
+                <iframe
+                  title={c.title}
+                  src={c.body}
+                  allow="fullscreen; picture-in-picture"
+                  allowFullScreen
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <button
+                  className="video-cover"
+                  onClick={() => setPlaying(c.id)}
+                  aria-label={`Play ${c.title}`}
+                >
+                  <span>▷</span>
+                  <small>PLAY TRAINING</small>
+                </button>
+              ))}
+            <span className="eyebrow">
+              {data.equipment.find((e) => e.id === c.equipmentId)?.name ??
+                "ALL EQUIPMENT"}
+            </span>
+            <h2>{c.title}</h2>
+            {kind === "guide" && <p className="guide-body">{c.body}</p>}
+            {manage && (
+              <button
+                className="text-button"
+                onClick={() => void save({ action: "archive", id: c.id })}
+              >
+                Archive resource
+              </button>
+            )}
+          </article>
+        ))}
+      </div>
+      {!items.length && (
+        <section className="panel empty">
+          <h3>No resources found</h3>
+          <p>
+            {manage
+              ? "Add a resource below to build your team’s library."
+              : "Ask your manager to add a resource for this process."}
+          </p>
+        </section>
+      )}
+      {manage && (
+        <section className="panel narrow">
+          <h2>
+            Add {kind === "video" ? "training video" : "troubleshooting guide"}
+          </h2>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const form = e.currentTarget,
+                f = new FormData(form);
+              if (
+                await save({
+                  action: kind,
+                  title: f.get("title"),
+                  equipmentId: f.get("equipmentId"),
+                  body: f.get("body"),
+                })
+              )
+                form.reset();
+            }}
+          >
+            <Field label="Title">
+              <input name="title" maxLength={150} required />
+            </Field>
+            <Field label="Equipment">
+              <select name="equipmentId">
+                <option value="">All equipment</option>
+                {data.equipment.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field
+              label={
+                kind === "video"
+                  ? "HTTPS YouTube or Vimeo video URL"
+                  : "Troubleshooting instructions"
+              }
+            >
+              {kind === "video" ? (
+                <input
+                  name="body"
+                  type="url"
+                  required
+                  placeholder="https://www.youtube.com/watch?v=…"
+                />
+              ) : (
+                <textarea name="body" rows={6} maxLength={10000} required />
+              )}
+            </Field>
+            <p className="small muted">
+              {kind === "video"
+                ? "Videos play from the original provider. Use content your organization is permitted to share."
+                : "Use approved site procedures and include escalation guidance."}
+            </p>
+            <Submit busy={busy}>Add resource</Submit>
+          </form>
+        </section>
+      )}
+    </>
+  );
+}
+function Manage({
+  data,
+  save,
+  busy,
+}: {
+  data: Data;
+  save: Save;
+  busy: boolean;
+}) {
+  const [editing, setEditing] = useState(""),
+    [title, setTitle] = useState(""),
+    [equipment, setEquipment] = useState(""),
+    [target, setTarget] = useState(45),
+    [tolerance, setTolerance] = useState(10),
+    [steps, setSteps] = useState<Step[]>([
+      { id: crypto.randomUUID(), text: "", photo: false },
+    ]);
+  function load(id: string) {
+    setEditing(id);
+    const s = data.standards.find((x) => x.id === id);
+    setTitle(s?.title ?? "");
+    setEquipment(s?.equipmentId ?? "");
+    setTarget(s?.target ?? 45);
+    setTolerance(s?.tolerance ?? 10);
+    setSteps(s?.steps ?? [{ id: crypto.randomUUID(), text: "", photo: false }]);
+  }
+  return (
+    <>
+      <section className="panel">
+        <h2>Standard work editor</h2>
+        <p className="muted">
+          Publishing a change creates a new revision. Existing results retain
+          their original steps and timing criteria.
+        </p>
+        <Field label="Create or revise">
+          <select value={editing} onChange={(e) => load(e.target.value)}>
+            <option value="">New standard</option>
+            {data.standards
+              .filter(
+                (s) =>
+                  !data.standards.some(
+                    (x) => x.family === s.family && x.revision > s.revision,
+                  ),
+              )
+              .map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.title} · revision {s.revision}
+                </option>
+              ))}
+          </select>
+        </Field>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (
+              await save({
+                action: "standard",
+                title,
+                equipmentId: equipment,
+                target,
+                tolerance,
+                steps,
+                ...(editing
+                  ? {
+                      family: data.standards.find((s) => s.id === editing)
+                        ?.family,
+                    }
+                  : {}),
+              })
+            )
+              load("");
+          }}
+        >
+          <div className="form-grid">
+            <Field label="Standard title">
+              <input
+                required
+                maxLength={150}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </Field>
+            <Field label="Equipment">
+              <EquipmentSelect
+                data={data}
+                value={equipment}
+                onChange={setEquipment}
+              />
+            </Field>
+            <Field label="Target cycle time (seconds)">
+              <input
+                type="number"
+                min="0.01"
+                max="86400"
+                step="0.01"
+                value={target}
+                onChange={(e) => setTarget(Number(e.target.value))}
+                required
+              />
+            </Field>
+            <Field label="Allowed tolerance (%)">
+              <input
+                type="number"
+                min="0"
+                max="100"
+                value={tolerance}
+                onChange={(e) => setTolerance(Number(e.target.value))}
+                required
+              />
+            </Field>
+          </div>
+          {steps.map((step, i) => (
+            <div className="editor-step" key={step.id}>
+              <Field label={`Step ${i + 1}`}>
+                <input
+                  required
+                  maxLength={500}
+                  value={step.text}
+                  onChange={(e) =>
+                    setSteps(
+                      steps.map((s, j) =>
+                        j === i ? { ...s, text: e.target.value } : s,
+                      ),
+                    )
+                  }
+                />
+              </Field>
+              <label className="check">
+                <input
+                  type="checkbox"
+                  checked={step.photo}
+                  onChange={(e) =>
+                    setSteps(
+                      steps.map((s, j) =>
+                        j === i ? { ...s, photo: e.target.checked } : s,
+                      ),
+                    )
+                  }
+                />
+                Photo required
+              </label>
+              <button
+                className="text-button"
+                type="button"
+                disabled={steps.length === 1}
+                onClick={() => setSteps(steps.filter((_, j) => i !== j))}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+          <div className="button-row">
+            <button
+              type="button"
+              className="outline"
+              disabled={steps.length >= 100}
+              onClick={() =>
+                setSteps([
+                  ...steps,
+                  { id: crypto.randomUUID(), text: "", photo: false },
+                ])
+              }
+            >
+              + Add step
+            </button>
+            <Submit busy={busy}>
+              {editing ? "Publish new revision" : "Publish standard"}
+            </Submit>
+          </div>
+        </form>
+      </section>
+      <section className="panel">
+        <h2>Add equipment</h2>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const f = new FormData(form);
+            if (await save({ action: "equipment", ...Object.fromEntries(f) }))
+              form.reset();
+          }}
+        >
+          <div className="form-grid">
+            {["name", "plant", "department", "area", "line"].map((name) => (
+              <Field label={name[0].toUpperCase() + name.slice(1)} key={name}>
+                <input
+                  name={name}
+                  required
+                  maxLength={name === "name" ? 150 : 100}
+                />
+              </Field>
+            ))}
+          </div>
+          <Submit busy={busy}>Add equipment</Submit>
+        </form>
+        <div className="equipment-list">
+          {data.equipment.map((e) => (
+            <p key={e.id}>
+              <strong>{e.name}</strong>
+              <span>{[e.plant, e.department, e.area, e.line].join(" / ")}</span>
+            </p>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}
+function Analytics({ data }: { data: Data }) {
+  const runs = data.records.filter((r) => r.kind === "run"),
+    responses = runs.flatMap((r) => r.data.responses ?? []),
+    no = responses.filter((a) => !a.answer).length,
+    studies = data.records.filter((r) => r.kind === "study");
+  return (
+    <>
+      <div className="metrics">
+        <Metric
+          label="Completed verifications"
+          value={runs.length}
+          detail="Completed records, not scheduled tasks"
+        />
+        <Metric
+          label="No response rate"
+          value={
+            responses.length ? `${fmt((no / responses.length) * 100)}%` : "—"
+          }
+          detail={`${no} No answers / ${responses.length} responses`}
+        />
+        <Metric
+          label="Average completion"
+          value={
+            runs.length
+              ? `${fmt(runs.reduce((s, r) => s + r.data.durationSeconds, 0) / runs.length)}s`
+              : "—"
+          }
+          detail="Elapsed verification time"
+        />
+        <Metric
+          label="Audit follow-ups"
+          value={
+            data.records.filter((r) => r.kind === "audit" && r.data.followUp)
+              .length
+          }
+          detail="Failed checks or cycles over target"
+          accent
+        />
+      </div>
+      <section className="panel">
+        <h2>Time study statistics</h2>
+        <p className="muted">
+          Calculated from raw observations by work element. Standard deviation
+          uses the population formula.
+        </p>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                {[
+                  "Study / element",
+                  "N",
+                  "Average",
+                  "Median",
+                  "Min",
+                  "Max",
+                  "Range",
+                  "Std. dev.",
+                ].map((t) => (
+                  <th key={t}>{t}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {studies.flatMap((r) =>
+                [
+                  ...new Set<string>(
+                    r.data.cycles.map((c: Cycle) => c.element),
+                  ),
+                ].map((element) => {
+                  const s = stats(
+                    r.data.cycles
+                      .filter((c: Cycle) => c.element === element)
+                      .map((c: Cycle) => c.seconds),
+                  )!;
+                  return (
+                    <tr key={r.id + element}>
+                      <td>
+                        <strong>{r.data.title}</strong>
+                        <small>{element}</small>
+                      </td>
+                      <td>{s.count}</td>
+                      {[
+                        s.average,
+                        s.median,
+                        s.min,
+                        s.max,
+                        s.range,
+                        s.standardDeviation,
+                      ].map((n, i) => (
+                        <td key={i}>{fmt(n)}s</td>
+                      ))}
+                    </tr>
+                  );
+                }),
+              )}
+            </tbody>
+          </table>
+          {!studies.length && (
+            <p className="empty">Save a time study to see its statistics.</p>
+          )}
+        </div>
+      </section>
+      <section className="panel">
+        <h2>Failures by equipment and step</h2>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Equipment</th>
+                <th>Standard / revision</th>
+                <th>Step</th>
+                <th>No responses</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.standards.flatMap((s) =>
+                s.steps.map((step) => {
+                  const count = runs
+                    .filter((r) => r.data.snapshot.id === s.id)
+                    .flatMap((r) => r.data.responses)
+                    .filter((a) => a.stepId === step.id && !a.answer).length;
+                  return count ? (
+                    <tr key={s.id + step.id}>
+                      <td>
+                        {
+                          data.equipment.find((e) => e.id === s.equipmentId)
+                            ?.name
+                        }
+                      </td>
+                      <td>
+                        {s.title} · r{s.revision}
+                      </td>
+                      <td>{step.text}</td>
+                      <td>{count}</td>
+                    </tr>
+                  ) : null;
+                }),
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <p className="small muted">
+        Dashboard history is limited to the latest 2,000 accessible records.
+        Excel exports include all accessible records. A scheduled completion
+        percentage needs a future scheduling module.
+      </p>
+    </>
+  );
+}
+function Permissions({
+  data,
+  save,
+  busy,
+}: {
+  data: Data;
+  save: Save;
+  busy: boolean;
+}) {
+  const [role, setRole] = useState("Manager"),
+    [checked, setChecked] = useState<Capability[]>(
+      data.policies.find((p) => p.role === "Manager")?.grants ?? [],
+    );
+  return (
+    <section className="panel">
+      <h2>Role permissions</h2>
+      <p className="muted">
+        Changes apply to the next server request. Admin retains all permissions
+        to prevent accidental lockout.
+      </p>
+      <Field label="Role">
+        <select
+          value={role}
+          onChange={(e) => {
+            setRole(e.target.value);
+            setChecked(
+              data.policies.find((p) => p.role === e.target.value)?.grants ??
+                [],
+            );
+          }}
+        >
+          {roles
+            .filter((r) => r !== "Admin")
+            .map((r) => (
+              <option key={r}>{r}</option>
+            ))}
+        </select>
+      </Field>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save({ action: "policy", role, grants: checked });
+        }}
+      >
+        <div className="permission-grid">
+          {capabilities.map((cap) => (
+            <label className="permission" key={cap}>
+              <input
+                type="checkbox"
+                checked={checked.includes(cap)}
+                onChange={(e) =>
+                  setChecked(
+                    e.target.checked
+                      ? [...checked, cap]
+                      : checked.filter((c) => c !== cap),
+                  )
+                }
+              />
+              <span>
+                <strong>{cap}</strong>
+                <small>Allow {cap} actions</small>
+              </span>
+            </label>
+          ))}
+        </div>
+        <Submit busy={busy}>Save role permissions</Submit>
+      </form>
+      <p className="small muted">
+        Roles currently apply across the workspace. Plant and line restrictions
+        are not implemented.
+      </p>
+    </section>
+  );
+}
+function Accounts({
+  data,
+  save,
+  busy,
+}: {
+  data: Data;
+  save: Save;
+  busy: boolean;
+}) {
+  const [id, setId] = useState(""),
+    [username, setUsername] = useState(""),
+    [name, setName] = useState(""),
+    [role, setRole] = useState("Operator"),
+    [active, setActive] = useState(true),
+    [password, setPassword] = useState("");
+  function select(id: string) {
+    setId(id);
+    const u = data.users.find((u) => u.id === id);
+    setUsername(u?.username ?? "");
+    setName(u?.name ?? "");
+    setRole(u?.role ?? "Operator");
+    setActive(u?.active ?? true);
+    setPassword("");
+  }
+  return (
+    <>
+      <section className="panel">
+        <h2>{id ? "Update account" : "Create individual account"}</h2>
+        <Field label="Account">
+          <select
+            aria-label="Standard work"
+            value={id}
+            onChange={(e) => select(e.target.value)}
+          >
+            <option value="">New account</option>
+            {data.users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name} ({u.username})
+              </option>
+            ))}
+          </select>
+        </Field>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (
+              await save({
+                action: "user",
+                ...(id ? { id } : {}),
+                username,
+                name,
+                role,
+                active,
+                ...(password ? { password } : {}),
+              })
+            )
+              select("");
+          }}
+        >
+          <div className="form-grid">
+            <Field label="Username">
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                pattern="[a-z0-9._\-]{3,80}"
+                required
+                autoComplete="off"
+              />
+            </Field>
+            <Field label="Display name">
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                maxLength={150}
+              />
+            </Field>
+            <Field label="Role">
+              <select value={role} onChange={(e) => setRole(e.target.value)}>
+                {roles.map((r) => (
+                  <option key={r}>{r}</option>
+                ))}
+              </select>
+            </Field>
+            <Field
+              label={
+                id
+                  ? "Reset password (leave empty to keep)"
+                  : "Temporary password"
+              }
+            >
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required={!id}
+                minLength={12}
+                maxLength={128}
+                autoComplete="new-password"
+              />
+            </Field>
+          </div>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={active}
+              onChange={(e) => setActive(e.target.checked)}
+            />
+            Account active
+          </label>
+          <p className="small muted">
+            Temporary passwords must be changed at first sign-in. Updating an
+            account revokes its existing sessions.
+          </p>
+          <Submit busy={busy}>
+            {id ? "Update account" : "Create account"}
+          </Submit>
+        </form>
+      </section>
+      <section className="panel table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Person</th>
+              <th>Username</th>
+              <th>Role</th>
+              <th>Access</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.users.map((u) => (
+              <tr key={u.id}>
+                <td>{u.name}</td>
+                <td>{u.username}</td>
+                <td>{u.role}</td>
+                <td>
+                  <span className={"badge " + (!u.active ? "warn" : "")}>
+                    {u.active ? "Active" : "Disabled"}
+                  </span>
+                  {u.mustChange && <small>Password change required</small>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    </>
+  );
+}
