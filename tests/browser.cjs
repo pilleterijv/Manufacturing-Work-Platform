@@ -357,6 +357,52 @@ async function main() {
     ).status,
     403,
   );
+  const managerPolicy = (
+    await db.policy.findUnique({ where: { role: "Manager" } })
+  ).grants;
+  try {
+    await db.policy.update({
+      where: { role: "Manager" },
+      data: { grants: managerPolicy.filter((c) => c !== "training") },
+    });
+    assert.equal(
+      (
+        await request(manager, "/api/platform", {
+          action: "guide",
+          title: "Archive regression " + suffix,
+          body: "Approved guidance.",
+        })
+      ).status,
+      200,
+    );
+    const guide = await db.content.findFirst({
+      where: { title: "Archive regression " + suffix },
+    });
+    contentIds.push(guide.id);
+    assert.equal(
+      (
+        await request(manager, "/api/platform", {
+          action: "archive",
+          id: guide.id,
+        })
+      ).status,
+      200,
+    );
+    assert.equal(
+      (
+        await request(manager, "/api/platform", {
+          action: "archive",
+          id: contentIds[0],
+        })
+      ).status,
+      403,
+    );
+  } finally {
+    await db.policy.update({
+      where: { role: "Manager" },
+      data: { grants: managerPolicy },
+    });
+  }
   const original = (await db.policy.findUnique({ where: { role: "Operator" } }))
     .grants;
   try {
@@ -406,6 +452,16 @@ async function main() {
   await login(fresh, created.username);
   assert.equal((await request(fresh, "/api/platform")).status, 403);
   const newPassword = `Changed ${randomUUID()}!`;
+  assert.equal(
+    (
+      await request(fresh, "/api/account", {
+        action: "password",
+        current: password,
+        password,
+      })
+    ).status,
+    400,
+  );
   assert.equal(
     (
       await request(fresh, "/api/account", {

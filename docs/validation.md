@@ -9,3 +9,5 @@ Validated on October 30, 2026 in the managed Linux environment using Node 24.19.
 - Screenshots were captured from actual rendered UI, including a Manager entering a supervisor audit. Sample accounts and observations used for screenshots/tests are removed after verification.
 
 Not verified on native Windows, against live Entra/Azure services, or against real external video playback. Entra sign-in is not implemented in this rebuild. The Windows launcher is syntax checked. Source application tests run on Linux. Review docs/security.md before deployment.
+
+A fresh clone of the pushed branch independently passed npm ci, client generation, repeatable database setup, production build, type checking, and all five unit tests. The final browser run also covers guide archiving with training permission removed, denial of video archiving under that policy, and rejection of an unchanged temporary password.

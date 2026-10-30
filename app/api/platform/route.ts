@@ -84,7 +84,7 @@ export async function POST(req: Request) {
       } as const
     )[action as "standard"];
     if (!cap) throw new HttpError(400, "Unknown action");
-    const u = await requireUser(cap);
+    const u = await requireUser(action === "archive" ? undefined : cap);
     if (action === "equipment") {
       const v = z
         .object({
@@ -148,7 +148,7 @@ export async function POST(req: Request) {
       const id = z.string().parse(b.id);
       const item = await db.content.findUnique({ where: { id } });
       if (!item) throw new HttpError(404, "Not found");
-      if (item.kind === "guide") await requireUser("manage");
+      await requireUser(item.kind === "guide" ? "manage" : "training");
       await db.content.update({ where: { id }, data: { active: false } });
     }
     if (action === "run" || action === "audit") {
@@ -269,10 +269,10 @@ export async function POST(req: Request) {
         })
         .parse(b);
       const { id, password, ...fields } = v;
-      if (id === u.id && (!v.active || v.role !== "Admin"))
+      if (id === u.id && (!v.active || v.role !== u.role))
         throw new HttpError(
           400,
-          "You cannot remove your own administrative access",
+          "You cannot change your own role or deactivate yourself",
         );
       const passwordHash = password ? await hashPassword(password) : undefined;
       if (!id && !passwordHash)

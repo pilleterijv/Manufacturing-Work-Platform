@@ -110,6 +110,8 @@ export async function POST(req: Request) {
         .parse(b);
       if (!(await verifyPassword(input.current, u.password)))
         throw new HttpError(400, "Current password is incorrect");
+      if (input.current === input.password)
+        throw new HttpError(400, "Choose a different new password");
       const password = await hashPassword(input.password);
       await db.$transaction(async (tx) => {
         const changed = await tx.user.updateMany({
