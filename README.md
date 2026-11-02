@@ -107,4 +107,4 @@ Raw Excel exports stage committed rows on private temporary disk and read record
 
 For a reproducible source archive from Git, run npm run package:source; it packages the committed HEAD into dist/Floorwork-source.zip and honors .gitattributes exclusions. Local uncommitted changes, dependencies, build output, private configuration, photos, and the screenshot gallery are not included.
 
-The tablet/security update adds migration 004; back up data before upgrading and review the new dashboard permission on custom role policies. Deployment templates are provided but have not changed your host firewall or published a live site.
+The tablet/security update adds migrations 004 and 005; back up data before upgrading and review the new dashboard permission on custom role policies. Deployment templates are provided but have not changed your host firewall or published a live site.

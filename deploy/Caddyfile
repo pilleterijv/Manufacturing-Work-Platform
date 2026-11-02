@@ -1,4 +1,5 @@
 {
+    auto_https disable_redirects
     servers {
         timeouts {
             read_header 10s
@@ -9,6 +10,9 @@
 }
 # FLOORWORK_HOST is the DNS name, without a scheme.
 {$FLOORWORK_HOST} {
+    # Private workplace/VPN deployment: distribute this CA trust through IT/MDM,
+    # or replace with your organization's trusted certificate/key paths.
+    tls internal
     encode zstd gzip
     request_body {
         max_size 12MB

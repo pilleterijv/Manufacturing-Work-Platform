@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { readPhoto } from "@/lib/storage";
 import { requireUser, grants, HttpError, failure } from "@/lib/security";
@@ -14,17 +15,19 @@ export async function GET(
     if (!photo) throw new HttpError(404, "Photo not found");
     if (photo.userId !== u.id) {
       const g = await grants(u);
-      const records = await db.record.findMany({
-        where: { kind: { in: ["run", "audit"] } },
-        select: { kind: true, data: true },
-      });
-      const linked = records.some(
-        (r) =>
-          (r.kind === "audit"
-            ? g.includes("audits")
-            : g.includes("analytics")) &&
-          JSON.stringify(r.data).includes(`"photo":"${id}"`),
-      );
+      const kinds = [
+        ...(g.includes("analytics") ? ["run"] : []),
+        ...(g.includes("audits") ? ["audit"] : []),
+      ];
+      if (!kinds.length) throw new HttpError(403, "Photo access denied");
+      const linked =
+        (
+          await db.$queryRaw<{ id: string }[]>(Prisma.sql`
+        SELECT id FROM "Record" WHERE kind IN ('run','audit')
+        AND kind IN (${Prisma.join(kinds)})
+        AND (data->'responses') @> ${JSON.stringify([{ photo: id }])}::jsonb LIMIT 1
+      `)
+        ).length > 0;
       if (!linked) throw new HttpError(403, "Photo access denied");
     }
     return new Response(new Uint8Array(await readPhoto(id)), {

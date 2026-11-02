@@ -79,3 +79,8 @@ the recipient's downloaded file is subject to their device controls.
 The ExcelJS subtree overrides minimatch with its patched 11.x release. Export
 content is generated from explicit rows, never user-controlled glob expressions;
 worksheet/data generation and complete multi-sheet downloads are regression-tested.
+
+Photo authorization now checks exact JSON response-photo links inside PostgreSQL
+using migration 005's partial GIN index, instead of downloading every historical
+run and audit. Ownership validation for an execution's uploaded photos is batched
+into one query; existing per-record permissions are retained.

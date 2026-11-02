@@ -56,6 +56,12 @@ export default function Overview({
           <div className="art-label">SMALL STEPS. BETTER SYSTEMS.</div>
         </div>
       </div>
+      <h2>Record overview</h2>
+      <p className="small muted">
+        These totals and recent activity cover records available to your
+        account. They do not use the department dashboard's date or department
+        filters.
+      </p>
       <div className="metrics">
         <Metric
           label="Completed work"

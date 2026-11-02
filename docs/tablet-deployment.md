@@ -48,8 +48,7 @@ The files in `deploy/` are templates, not an executed deployment or firewall cha
   owned by root and readable only by the service group (mode 0640).
 - `Caddyfile`: HTTPS reverse proxy with request-size and network-read limits.
   Set `FLOORWORK_HOST` in Caddy's own service environment to your DNS name.
-  Caddy's automatic public certificates require DNS and challenge reachability.
-  For private names use your organization's trusted certificate/key configuration;
+  The default uses Caddy's private CA with HTTP redirects disabled, so no public port 80 is needed. Distribute the CA trust through IT/MDM, or replace `tls internal` with your organization's certificate/key paths. For private names use your organization's trusted certificate/key configuration;
   do not disable TLS validation or teach users to ignore certificate warnings.
 
 Provision the `floorwork` service user, `/opt/floorwork` (application readable,
@@ -104,7 +103,7 @@ permissions for setup seeds/cleanup. Do not put the maintenance credential in
 Git or chat. For an existing database, preserve its volume/data when changing hosts.
 
 Back up **both PostgreSQL and uploads** (or private Blob objects) with encryption,
-retention and restore tests. Take a backup before migration 004. Do not delete
+retention and restore tests. Take a backup before migrations 004 and 005. Do not delete
 historical records to reduce memory usage. Reports and libraries respect retained
 snapshots, and applied migrations retain their checksums.
 

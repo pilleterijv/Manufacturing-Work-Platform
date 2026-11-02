@@ -604,14 +604,15 @@ export function ImprovementIdeas({
               />
             </Field>
           </div>
-          <Field label="Participants">
+          <fieldset className="field participant-fieldset">
+            <legend>Participants</legend>
             <span
               className="participant-picker"
               role="group"
               aria-label="Participants"
             >
               {data.people.map((p) => (
-                <span key={p.id} className="participant-option">
+                <label key={p.id} className="participant-option">
                   <input
                     type="checkbox"
                     aria-label={`Participant ${p.name}`}
@@ -625,10 +626,10 @@ export function ImprovementIdeas({
                     }
                   />
                   {p.name} ({p.username})
-                </span>
+                </label>
               ))}
             </span>
-          </Field>
+          </fieldset>
           <p className="small muted">
             Select any supporting participants. The assigned pilot receives a
             private in-app message immediately. Your account is recorded as the

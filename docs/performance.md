@@ -78,3 +78,9 @@ department aggregate statistics and request-header protections. `npm test` also
 checks slow multi-sheet consumption, export cancellation and private-file cleanup.
 These are functional/load fixtures, not a benchmark proving capacity for a
 particular number of production tablets.
+
+The November 2 follow-up runtime measured 77,076,369 bytes / 3,085 files in the
+Linux verification environment, about 217 KB more than the previous published
+runtime while adding tablet support and the follow-up controls. Summary polling
+remained 222 bytes in the same fixture. See docs/validation.md for the verified
+scope; there is no production concurrency or physical-tablet RAM benchmark.

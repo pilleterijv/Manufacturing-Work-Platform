@@ -1,10 +1,11 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 type InstallEvent = Event & {
   prompt(): Promise<void>;
   userChoice: Promise<{ outcome: string }>;
 };
 export default function InstallApp() {
+  const banner = useRef<HTMLElement | null>(null);
   const [prompt, setPrompt] = useState<InstallEvent | null>(null);
   const [show, setShow] = useState(false);
   const [ios, setIos] = useState(false);
@@ -37,9 +38,28 @@ export default function InstallApp() {
       window.removeEventListener("appinstalled", installed);
     };
   }, []);
+  useEffect(() => {
+    if (!show || !banner.current) return;
+    const update = () =>
+      document.documentElement.style.setProperty(
+        "--install-banner-height",
+        `${banner.current?.getBoundingClientRect().height ?? 0}px`,
+      );
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(banner.current);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.removeProperty("--install-banner-height");
+    };
+  }, [show]);
   if (!show) return null;
   return (
-    <aside className="install-banner" aria-label="Install Floorwork">
+    <aside
+      ref={banner}
+      className="install-banner"
+      aria-label="Install Floorwork"
+    >
       <span>
         {ios
           ? "Install on iPad or iPhone: open in Safari, tap Share, then Add to Home Screen."

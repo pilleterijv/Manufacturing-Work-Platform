@@ -327,12 +327,20 @@ export async function POST(req: Request) {
         )
       )
         throw new HttpError(400, "Complete every step and required photo");
-      for (const r of v.responses)
-        if (
-          r.photo &&
-          !(await db.photo.findFirst({ where: { id: r.photo, userId: u.id } }))
-        )
-          throw new HttpError(403, "Photo must belong to you");
+      const photoIds = [
+        ...new Set(
+          v.responses
+            .map((r) => r.photo)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      ];
+      if (
+        photoIds.length &&
+        (await db.photo.count({
+          where: { id: { in: photoIds }, userId: u.id },
+        })) !== photoIds.length
+      )
+        throw new HttpError(403, "Photo must belong to you");
       if (
         new Date(v.started) > new Date() ||
         Date.now() - +new Date(v.started) > 86400000

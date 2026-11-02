@@ -21,7 +21,7 @@ async function main() {
     users.push(
       await db.user.create({
         data: {
-          username: "tablet-" + role + "-" + suffix,
+          username: "tablet-" + role.toLowerCase() + "-" + suffix,
           name: "Tablet " + role,
           role,
           password: hash,
@@ -241,6 +241,19 @@ async function main() {
     .getByRole("heading", { name: "Whole-floor performance", exact: true })
     .waitFor();
   await page.evaluate(() => navigator.serviceWorker.ready);
+  assert(
+    await page.evaluate(() => {
+      const banner = document.querySelector(".install-banner"),
+        sidebar = document.querySelector(".sidebar");
+      if (!banner || !sidebar || getComputedStyle(sidebar).position !== "fixed")
+        return true;
+      return (
+        sidebar.getBoundingClientRect().top >=
+        banner.getBoundingClientRect().bottom - 1
+      );
+    }),
+    "Install instructions overlap tablet navigation",
+  );
   await page.reload();
   await page.waitForFunction(() => !!navigator.serviceWorker.controller);
   await page
