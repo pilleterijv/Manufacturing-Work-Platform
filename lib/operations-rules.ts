@@ -123,6 +123,7 @@ export const ideaSchema = z.object({
   equipmentId: z.string().min(1),
   currentState: z.string().trim().min(1).max(5000),
   proposal: z.string().trim().min(1).max(5000),
+  process: z.string().trim().max(200).default(""),
   dueDate: dateSchema,
   pilotId: z.string().min(1),
   validatorId: z.string().min(1),

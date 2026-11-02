@@ -24,12 +24,7 @@ export default function Work({
   busy: boolean;
   audit: boolean;
 }) {
-  const latest = data.standards.filter(
-    (s) =>
-      !data.standards.some(
-        (t) => t.family === s.family && t.revision > s.revision,
-      ),
-  );
+  const latest = data.standards;
   const [id, setId] = useState(""),
     [responses, setResponses] = useState<
       Record<

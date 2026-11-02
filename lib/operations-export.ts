@@ -13,7 +13,7 @@ export async function addOperationsSheets(
   if (grants.includes("downtime")) {
     const events = book.addWorksheet("Downtime events"),
       shifts = book.addWorksheet("Downtime shifts");
-    events.addRow([
+    await events.addRow([
       "ID",
       "Equipment",
       "Plant",
@@ -28,7 +28,7 @@ export async function addOperationsSheets(
       "Stopped by",
       "State",
     ]);
-    shifts.addRow([
+    await shifts.addRow([
       "Event ID",
       "Equipment",
       "Department",
@@ -57,7 +57,7 @@ export async function addOperationsSheets(
       book.check();
       const e = d.equipmentSnapshot as EquipmentSnapshot,
         c = d.shiftConfig as ShiftConfig;
-      events.addRow([
+      await events.addRow([
         d.id,
         e.name,
         e.plant,
@@ -73,7 +73,7 @@ export async function addOperationsSheets(
         d.endedAt ? "Stopped" : "In progress",
       ]);
       for (const s of splitDowntime(d.startedAt, d.endedAt ?? now, c))
-        shifts.addRow([
+        await shifts.addRow([
           d.id,
           e.name,
           e.department,
@@ -88,11 +88,15 @@ export async function addOperationsSheets(
   }
   if (grants.includes("ideas")) {
     const sheet = book.addWorksheet("Improvement ideas");
-    sheet.addRow([
+    await sheet.addRow([
       "ID",
       "Title",
       "Equipment",
       "Department",
+      "Plant",
+      "Area",
+      "Line",
+      "Process",
       "Current state",
       "Proposal",
       "Due date",
@@ -123,11 +127,15 @@ export async function addOperationsSheets(
     for await (const i of ideas) {
       book.check();
       const e = i.equipmentSnapshot as EquipmentSnapshot;
-      sheet.addRow([
+      await sheet.addRow([
         i.id,
         i.title,
         e.name,
         e.department,
+        e.plant,
+        e.area,
+        e.line,
+        i.process,
         i.currentState,
         i.proposal,
         i.dueDate,

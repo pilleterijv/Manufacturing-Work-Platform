@@ -9,6 +9,9 @@ export const db =
       max: 4,
       idleTimeoutMillis: 10000,
       connectionTimeoutMillis: 10000,
+      statement_timeout: 30000,
+      lock_timeout: 5000,
+      idle_in_transaction_session_timeout: 30000,
     }),
   });
 globalDb.db = db;

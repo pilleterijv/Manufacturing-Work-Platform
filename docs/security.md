@@ -44,3 +44,43 @@ The production runtime retains existing authentication/authorization, bounded up
 The cache stamp covers application/library/schema/scripts/config/lockfile content and Node/platform architecture. Missing critical runtime files invalidate the stamp. Documentation and screenshot changes do not rebuild the application. The Windows launcher deletes only generated build folders after packaging; database volumes, .env, and uploads are preserved. PostgreSQL remains the authoritative store. STOP-DATABASE.cmd stops only this Compose project's database service and does not delete its volume.
 
 Summary/live endpoints apply the same session and capability checks as full requests. Private notification queries remain scoped to the recipient. Paged history requests retain server-side identity/role filtering. Excel streaming retains export/module grants and stops when the download is cancelled. Streamed exports read in batches and therefore are not a fully transactional snapshot of concurrent edits; historical runs themselves remain immutable.
+
+## Tablet/shared-host additions
+
+See [tablet-deployment.md](tablet-deployment.md) for device installation, trusted
+HTTPS, firewall boundaries, private storage, permissions and migration deployment.
+The host templates do not apply system firewall rules themselves.
+
+Public HTTP origins, embedded credentials, path/query origins, alternate Host
+headers and cross-site API fetch metadata are rejected. Existing exact-Origin
+write checks and nonce-based CSP remain in place. App/API responses prohibit
+caching; the service worker caches only a public offline notice. Responses include
+same-origin opener/resource policies, nosniff and frame protection. HTTPS enables
+HSTS. No user data is placed in a PWA cache or localStorage.
+
+Expensive scrypt operations retain their cryptographic parameters and run at most
+two at once, with a maximum of eight waiting operations; overload returns 429.
+Image processing remains limited to two per process. Two reports may run at once,
+and one export is allowed per process through completion/cancellation of its
+HTTP download. PostgreSQL runtime statements time out after 30 seconds, lock
+waits after five seconds; its four-connection pool is reused. Limits apply to one
+app process; use matching ingress controls if deploying multiple replicas.
+
+Exports spool rows into mode-0600 temporary files inside a private temporary
+directory, then write sheets sequentially to a disk-backed ZIP. Slow downloads
+use filesystem stream backpressure. Up to 256 MiB of uncompressed staged JSON is
+allowed per export; limit failures return an error rather than partial success.
+Temporary files are removed after success, client cancellation or preparation
+failure. A process/host crash may leave files until OS private-temp cleanup;
+include that location in your host retention policy. Reserve temporary disk for
+both staged rows and the generated workbook. TLS protects exports in transit;
+the recipient's downloaded file is subject to their device controls.
+
+The ExcelJS subtree overrides minimatch with its patched 11.x release. Export
+content is generated from explicit rows, never user-controlled glob expressions;
+worksheet/data generation and complete multi-sheet downloads are regression-tested.
+
+Photo authorization now checks exact JSON response-photo links inside PostgreSQL
+using migration 005's partial GIN index, instead of downloading every historical
+run and audit. Ownership validation for an execution's uploaded photos is batched
+into one query; existing per-record permissions are retained.

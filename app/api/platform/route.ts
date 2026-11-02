@@ -26,15 +26,74 @@ export async function GET(req: Request) {
       .uuid()
       .optional()
       .parse(params.get("cursor") ?? undefined);
-    const overview = new URL(req.url).searchParams.get("view") === "overview";
+    const view = z
+      .enum([
+        "full",
+        "overview",
+        "records",
+        "work",
+        "audits",
+        "studies",
+        "manage",
+        "analytics",
+        "training",
+        "guides",
+        "users",
+        "policies",
+        "equipment",
+        "revisions",
+      ])
+      .parse(params.get("view") ?? "full");
+    if (view === "revisions") {
+      await requireUser("manage");
+      const family = z.string().uuid().parse(params.get("family"));
+      const before = z.coerce
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .parse(params.get("before") ?? undefined);
+      const revisions = await db.standard.findMany({
+        where: { family, ...(before ? { revision: { lt: before } } : {}) },
+        orderBy: { revision: "desc" },
+        take: 101,
+      });
+      return Response.json({
+        revisions: revisions.slice(0, 100),
+        hasMore: revisions.length > 100,
+      });
+    }
+    const overview = view === "overview" || view === "equipment";
+    const history = [
+      "full",
+      "overview",
+      "work",
+      "audits",
+      "studies",
+      "analytics",
+      "records",
+    ].includes(view);
+    const standardsNeeded = ["full", "work", "audits", "manage"].includes(view);
+    const contentNeeded = ["full", "training", "guides"].includes(view);
     const kinds = [
       ...(g.includes("work") || g.includes("analytics") ? ["run"] : []),
       ...(g.includes("studies") || g.includes("analytics") ? ["study"] : []),
       ...(g.includes("audits") ? ["audit"] : []),
     ];
+    const requestedKind = params.get("kind");
+    const historyKind = view === "records" ? requestedKind : view;
     const scope = {
       ...(g.includes("analytics") ? {} : { userId: u.id }),
-      kind: { in: kinds },
+      kind: {
+        in:
+          historyKind === "work"
+            ? kinds.filter((k) => k === "run")
+            : historyKind === "audits"
+              ? kinds.filter((k) => k === "audit")
+              : historyKind === "studies"
+                ? kinds.filter((k) => k === "study")
+                : kinds,
+      },
     };
     if (params.get("view") === "records") {
       const rows = await db.record.findMany({
@@ -53,29 +112,50 @@ export async function GET(req: Request) {
         },
       });
     }
-    const [counts, followUps] = await Promise.all([
-      db.record.groupBy({ by: ["kind"], where: scope, _count: { _all: true } }),
-      db.record.count({
-        where: { ...scope, data: { path: ["followUp"], equals: true } },
-      }),
-    ]);
+    const [counts, followUps] = history
+      ? await Promise.all([
+          db.record.groupBy({
+            by: ["kind"],
+            where: scope,
+            _count: { _all: true },
+          }),
+          db.record.count({
+            where: { ...scope, data: { path: ["followUp"], equals: true } },
+          }),
+        ])
+      : [[], 0];
 
     const [equipment, standards, records, content, users, policies] =
       await Promise.all([
         db.equipment.findMany({ orderBy: { name: "asc" } }),
-        overview
-          ? []
-          : db.standard.findMany({
-              orderBy: [{ title: "asc" }, { revision: "desc" }],
-            }),
-        db.record.findMany({
-          where: scope,
-          orderBy: [{ created: "desc" }, { id: "desc" }],
-          take: overview ? 8 : 101,
-          include: { user: { select: { name: true } } },
-        }),
-        overview ? [] : db.content.findMany({ where: { active: true } }),
-        !overview && g.includes("users")
+        standardsNeeded
+          ? db.$queryRaw<Prisma.StandardGetPayload<{}>[]>`
+          SELECT s.* FROM "Standard" s JOIN (
+            SELECT family, max(revision) AS revision FROM "Standard" GROUP BY family
+          ) latest ON s.family=latest.family AND s.revision=latest.revision ORDER BY s.title
+        `
+          : [],
+        history
+          ? db.record.findMany({
+              where: scope,
+              orderBy: [{ created: "desc" }, { id: "desc" }],
+              take: overview ? 8 : 101,
+              include: { user: { select: { name: true } } },
+            })
+          : [],
+        contentNeeded
+          ? db.content.findMany({
+              where: {
+                active: true,
+                ...(view === "training"
+                  ? { kind: "video" }
+                  : view === "guides"
+                    ? { kind: "guide" }
+                    : {}),
+              },
+            })
+          : [],
+        ["full", "users"].includes(view) && g.includes("users")
           ? db.user.findMany({
               select: {
                 id: true,
@@ -87,7 +167,9 @@ export async function GET(req: Request) {
               },
             })
           : [],
-        !overview && g.includes("permissions") ? db.policy.findMany() : [],
+        ["full", "policies"].includes(view) && g.includes("permissions")
+          ? db.policy.findMany()
+          : [],
       ]);
     return Response.json({
       overview: {
@@ -245,12 +327,20 @@ export async function POST(req: Request) {
         )
       )
         throw new HttpError(400, "Complete every step and required photo");
-      for (const r of v.responses)
-        if (
-          r.photo &&
-          !(await db.photo.findFirst({ where: { id: r.photo, userId: u.id } }))
-        )
-          throw new HttpError(403, "Photo must belong to you");
+      const photoIds = [
+        ...new Set(
+          v.responses
+            .map((r) => r.photo)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      ];
+      if (
+        photoIds.length &&
+        (await db.photo.count({
+          where: { id: { in: photoIds }, userId: u.id },
+        })) !== photoIds.length
+      )
+        throw new HttpError(403, "Photo must belong to you");
       if (
         new Date(v.started) > new Date() ||
         Date.now() - +new Date(v.started) > 86400000

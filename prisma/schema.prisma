@@ -126,6 +126,7 @@ model Idea {
  equipmentSnapshot Json
  currentState String
  proposal String
+ process String @default("")
  dueDate String
  status String @default("Open")
  createdAt DateTime @default(now())

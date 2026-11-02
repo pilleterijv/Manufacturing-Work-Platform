@@ -14,6 +14,7 @@ if (!fs.existsSync(serverPath)) {
     shell: false,
     env: {
       ...process.env,
+      NODE_ENV: "production",
       HOSTNAME: "127.0.0.1",
       PORT: process.env.PORT || "3000",
       UPLOADS_DIR: process.env.UPLOADS_DIR || path.join(root, "uploads"),

@@ -1376,3 +1376,81 @@ select[multiple] {
     width: 100%;
   }
 }
+
+.install-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  background: #e2efeb;
+  color: #153e41;
+  flex-wrap: wrap;
+}
+.install-banner span {
+  max-width: 65ch;
+}
+.participant-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  max-height: 260px;
+  overflow: auto;
+  gap: 0.5rem;
+}
+.participant-option {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 48px;
+  padding: 0.5rem;
+  border: 1px solid #dce4df;
+  border-radius: 8px;
+}
+.participant-option input {
+  width: 24px;
+  height: 24px;
+}
+.idea-id {
+  overflow-wrap: anywhere;
+  font-size: 0.85rem;
+  color: #516965;
+}
+button,
+select,
+input:not([type="checkbox"]) {
+  min-height: 44px;
+}
+@media (max-width: 900px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+.participant-fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.participant-fieldset legend {
+  margin-bottom: 0.5rem;
+}
+
+/* Keep install instructions clear of the fixed navigation on tablets. */
+.install-banner {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.sidebar {
+  top: var(--install-banner-height, 0px);
+}
+.shell {
+  min-height: calc(100dvh - var(--install-banner-height, 0px));
+}
+@media (max-width: 1100px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

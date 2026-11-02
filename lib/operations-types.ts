@@ -18,6 +18,7 @@ export type Idea = {
   equipmentSnapshot: EquipmentSnapshot;
   currentState: string;
   proposal: string;
+  process: string;
   dueDate: string;
   status: string;
   version: number;
@@ -30,6 +31,8 @@ export type Idea = {
   participants: { user: Person }[];
 };
 export type OperationsData = {
+  downtimePage?: { hasMore: boolean; cursor: string | null };
+  ideasPage?: { hasMore: boolean; cursor: string | null };
   reasons: { id: string; name: string; active: boolean }[];
   config: ShiftConfig;
   serverNow: string;

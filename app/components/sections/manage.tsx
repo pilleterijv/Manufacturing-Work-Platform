@@ -22,6 +22,10 @@ export default function Manage({
   busy: boolean;
 }) {
   const [editing, setEditing] = useState(""),
+    [revisions, setRevisions] = useState<Standard[]>([]),
+    [moreRevisions, setMoreRevisions] = useState(false),
+    [revisionError, setRevisionError] = useState(""),
+    [revisionLoading, setRevisionLoading] = useState(false),
     [title, setTitle] = useState(""),
     [equipment, setEquipment] = useState(""),
     [target, setTarget] = useState(45),
@@ -29,7 +33,34 @@ export default function Manage({
     [steps, setSteps] = useState<Step[]>([
       { id: crypto.randomUUID(), text: "", photo: false },
     ]);
+  async function history(more = false) {
+    const standard = data.standards.find((s) => s.id === editing);
+    if (!standard || revisionLoading) return;
+    setRevisionLoading(true);
+    setRevisionError("");
+    try {
+      const next = await api(
+        "/api/platform?" +
+          new URLSearchParams({
+            view: "revisions",
+            family: standard.family,
+            ...(more ? { before: String(revisions.at(-1)?.revision) } : {}),
+          }),
+      );
+      setRevisions((prev) =>
+        more ? [...prev, ...next.revisions] : next.revisions,
+      );
+      setMoreRevisions(next.hasMore);
+    } catch (error) {
+      setRevisionError((error as Error).message);
+    } finally {
+      setRevisionLoading(false);
+    }
+  }
   function load(id: string) {
+    setRevisions([]);
+    setMoreRevisions(false);
+    setRevisionError("");
     setEditing(id);
     const s = data.standards.find((x) => x.id === id);
     setTitle(s?.title ?? "");
@@ -49,20 +80,54 @@ export default function Manage({
         <Field label="Create or revise">
           <select value={editing} onChange={(e) => load(e.target.value)}>
             <option value="">New standard</option>
-            {data.standards
-              .filter(
-                (s) =>
-                  !data.standards.some(
-                    (x) => x.family === s.family && x.revision > s.revision,
-                  ),
-              )
-              .map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.title} · revision {s.revision}
-                </option>
-              ))}
+            {data.standards.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.title} · revision {s.revision}
+              </option>
+            ))}
           </select>
         </Field>
+        {editing && (
+          <div className="revision-history">
+            <button
+              className="outline"
+              type="button"
+              disabled={revisionLoading}
+              onClick={() => void history()}
+            >
+              View revision history
+            </button>
+            {revisionError && <p role="alert">{revisionError}</p>}
+            {revisions.map((revision) => (
+              <details key={revision.id}>
+                <summary>
+                  {revision.title} · revision {revision.revision}
+                </summary>
+                <p>
+                  Target {revision.target}s · tolerance {revision.tolerance}%
+                </p>
+                <ol>
+                  {revision.steps.map((step) => (
+                    <li key={step.id}>
+                      {step.text}
+                      {step.photo ? " (photo required)" : ""}
+                    </li>
+                  ))}
+                </ol>
+              </details>
+            ))}
+            {moreRevisions && (
+              <button
+                className="outline"
+                disabled={revisionLoading}
+                type="button"
+                onClick={() => void history(true)}
+              >
+                Load older revisions
+              </button>
+            )}
+          </div>
+        )}
         <form
           onSubmit={async (e) => {
             e.preventDefault();

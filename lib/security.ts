@@ -1,3 +1,6 @@
+import { HttpError } from "./http-error";
+export { HttpError } from "./http-error";
+import { configuredOrigin } from "./request-policy";
 import { createHash } from "node:crypto";
 import { cookies } from "next/headers";
 import { db } from "./db";
@@ -47,18 +50,11 @@ export async function requireUser(cap?: Capability, allowChange = false) {
     throw new HttpError(403, "You do not have permission for this action");
   return u;
 }
-export class HttpError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    super(message);
-  }
-}
 export async function jsonBody(req: Request, max = 256 * 1024) {
   const origin = process.env.APP_ORIGIN;
   if (!origin || req.headers.get("origin") !== new URL(origin).origin)
     throw new HttpError(403, "Request origin is not allowed");
+  configuredOrigin(origin);
   if (!(req.headers.get("content-type") ?? "").startsWith("application/json"))
     throw new HttpError(415, "Send JSON");
   const reader = req.body?.getReader();

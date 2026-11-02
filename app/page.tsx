@@ -47,6 +47,26 @@ const Leadership = dynamic(
   { loading: () => <p className="muted">Loading section…</p> },
 );
 
+const platformViews: Record<string, string> = {
+  Overview: "overview",
+  "Standard work": "work",
+  "Supervisor audits": "audits",
+  "Time studies": "studies",
+  Training: "training",
+  Troubleshooting: "guides",
+  Manage: "manage",
+  Accounts: "users",
+  Permissions: "policies",
+  Analytics: "analytics",
+};
+const platformUrl = (tab: string) =>
+  "/api/platform?view=" + (platformViews[tab] ?? "equipment");
+const operationsView = (tab: string) =>
+  tab === "Downtime"
+    ? "downtime"
+    : tab === "Improvement ideas"
+      ? "ideas"
+      : "summary";
 const empty: Data = {
   equipment: [],
   standards: [],
@@ -66,22 +86,27 @@ export default function Home() {
     [busy, setBusy] = useState(false),
     [operationsReady, setOperationsReady] = useState(false),
     [platformReady, setPlatformReady] = useState(false),
+    [platformTab, setPlatformTab] = useState(""),
+    [opsDepartment, setOpsDepartment] = useState(""),
+    [opsLoading, setOpsLoading] = useState(false),
     [loadingMore, setLoadingMore] = useState(false);
   async function refresh() {
     const account = await api("/api/account");
     setUser(account.user);
     if (account.user && !account.user.mustChange) {
       const [platform, ops] = await Promise.all([
-        api("/api/platform" + (tab === "Overview" ? "?view=overview" : "")),
+        api(platformUrl(tab)),
         api(
-          "/api/operations" +
-            (["Downtime", "Improvement ideas"].includes(tab)
-              ? ""
-              : "?view=summary"),
+          "/api/operations?" +
+            new URLSearchParams({
+              view: operationsView(tab),
+              department: opsDepartment,
+            }),
         ),
       ]);
       setData(platform);
-      setPlatformReady(tab !== "Overview");
+      setPlatformTab(tab);
+      setPlatformReady(true);
       setOperations({ ...emptyOperations, ...ops });
       setOperationsReady(["Downtime", "Improvement ideas"].includes(tab));
     } else {
@@ -114,12 +139,55 @@ export default function Home() {
       setBusy(false);
     }
   }
+  const opsGeneration = useRef(0);
+  useEffect(() => {
+    opsGeneration.current++;
+  }, [tab, opsDepartment]);
+  async function loadMoreOperations() {
+    const generation = opsGeneration.current;
+    const page =
+      tab === "Downtime" ? operations.downtimePage : operations.ideasPage;
+    if (!page?.hasMore || opsLoading) return;
+    setOpsLoading(true);
+    try {
+      const next = await api(
+        "/api/operations?" +
+          new URLSearchParams({
+            view: operationsView(tab),
+            department: opsDepartment,
+            cursor: page.cursor ?? "",
+          }),
+      );
+      if (generation !== opsGeneration.current) return;
+      setOperations((prev) => ({
+        ...prev,
+        downtime: [
+          ...new Map(
+            [...prev.downtime, ...next.downtime].map((d) => [d.id, d]),
+          ).values(),
+        ],
+        ideas: [
+          ...new Map(
+            [...prev.ideas, ...next.ideas].map((i) => [i.id, i]),
+          ).values(),
+        ],
+        downtimePage: next.downtimePage,
+        ideasPage: next.ideasPage,
+      }));
+    } catch (e) {
+      if (generation === opsGeneration.current) setError((e as Error).message);
+    } finally {
+      setOpsLoading(false);
+    }
+  }
   async function loadMore() {
     if (!data.page?.hasMore || loadingMore) return;
     setLoadingMore(true);
     try {
       const next = await api(
-        "/api/platform?view=records&cursor=" +
+        "/api/platform?view=records&kind=" +
+          encodeURIComponent(platformViews[tab] ?? "") +
+          "&cursor=" +
           encodeURIComponent(data.page.cursor ?? ""),
       );
       setData((prev) => ({
@@ -151,7 +219,7 @@ export default function Home() {
     }
   }
   useEffect(() => {
-    if (!user || user.mustChange) return;
+    if (!loaded || !user || user.mustChange) return;
     const controller = new AbortController();
     let pending = false;
     const poll = async () => {
@@ -160,7 +228,11 @@ export default function Home() {
       try {
         const live = tab === "Downtime",
           next = await api(
-            "/api/operations?view=" + (live ? "live" : "summary"),
+            "/api/operations?" +
+              new URLSearchParams({
+                view: live ? "live" : "summary",
+                department: opsDepartment,
+              }),
             undefined,
             controller.signal,
           );
@@ -195,16 +267,24 @@ export default function Home() {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", visible);
     };
-  }, [user?.id, user?.mustChange, tab]);
+  }, [loaded, user?.id, user?.mustChange, tab, opsDepartment]);
   useEffect(() => {
-    if (!user || user.mustChange) return;
+    if (!loaded || !user || user.mustChange) return;
     const controller = new AbortController();
     if (["Downtime", "Improvement ideas"].includes(tab)) {
       setOperationsReady(false);
-      api("/api/operations", undefined, controller.signal)
+      api(
+        "/api/operations?" +
+          new URLSearchParams({
+            view: operationsView(tab),
+            department: opsDepartment,
+          }),
+        undefined,
+        controller.signal,
+      )
         .then((next) => {
           if (!controller.signal.aborted) {
-            setOperations(next);
+            setOperations({ ...emptyOperations, ...next });
             setOperationsReady(true);
           }
         })
@@ -213,25 +293,23 @@ export default function Home() {
         });
     }
     return () => controller.abort();
-  }, [tab, user?.id, user?.mustChange]);
+  }, [loaded, tab, user?.id, user?.mustChange, opsDepartment]);
   useEffect(() => {
     if (
+      !loaded ||
       !user ||
       user.mustChange ||
-      platformReady ||
-      [
-        "Overview",
-        "Notifications",
-        "Leadership dashboard",
-        "My account",
-      ].includes(tab)
+      (platformReady && platformTab === tab) ||
+      ["Notifications", "Leadership dashboard", "My account"].includes(tab)
     )
       return;
     const controller = new AbortController();
-    api("/api/platform", undefined, controller.signal)
+    setPlatformReady(false);
+    api(platformUrl(tab), undefined, controller.signal)
       .then((next) => {
         if (!controller.signal.aborted) {
-          setData(next);
+          setData({ ...empty, ...next });
+          setPlatformTab(tab);
           setPlatformReady(true);
         }
       })
@@ -239,7 +317,8 @@ export default function Home() {
         if (!controller.signal.aborted) setError(e.message);
       });
     return () => controller.abort();
-  }, [tab, user?.id, user?.mustChange, platformReady]);
+  }, [loaded, tab, user?.id, user?.mustChange, platformReady, platformTab]);
+  const sectionReady = platformReady && platformTab === tab;
   if (!loaded) return <main className="loading">Opening Floorwork…</main>;
   if (!user || user.mustChange)
     return (
@@ -412,6 +491,7 @@ export default function Home() {
                   className={tab === name ? "nav-item active" : "nav-item"}
                   onClick={() => {
                     setTab(name);
+                    setOpsDepartment("");
                     setError("");
                     setNotice("");
                   }}
@@ -492,24 +572,34 @@ export default function Home() {
                 "Downtime",
                 "Improvement ideas",
               ].includes(tab) &&
-                !platformReady)) && (
+                !sectionReady)) && (
               <p className="muted" role="status">
                 Loading section data…
               </p>
             )}
             {tab === "Overview" && (
-              <Overview data={data} go={setTab} grants={g} />
+              <>
+                {(g.includes("dashboard") || g.includes("leadership")) && (
+                  <Leadership
+                    timezone={operations.config.timezone}
+                    canExport={g.includes("export")}
+                    endpoint="/api/dashboard"
+                    canOverall={g.includes("leadership")}
+                  />
+                )}
+                <Overview data={data} go={setTab} grants={g} />
+              </>
             )}
-            {tab === "Standard work" && platformReady && (
+            {tab === "Standard work" && sectionReady && (
               <Work data={data} save={save} busy={busy} audit={false} />
             )}
-            {tab === "Supervisor audits" && platformReady && (
+            {tab === "Supervisor audits" && sectionReady && (
               <Work data={data} save={save} busy={busy} audit />
             )}
-            {tab === "Time studies" && platformReady && (
+            {tab === "Time studies" && sectionReady && (
               <Studies data={data} save={save} busy={busy} />
             )}
-            {tab === "Training" && platformReady && (
+            {tab === "Training" && sectionReady && (
               <Content
                 data={data}
                 kind="video"
@@ -518,7 +608,7 @@ export default function Home() {
                 busy={busy}
               />
             )}
-            {tab === "Troubleshooting" && platformReady && (
+            {tab === "Troubleshooting" && sectionReady && (
               <Content
                 data={data}
                 kind="guide"
@@ -532,6 +622,10 @@ export default function Home() {
                 data={operations}
                 equipment={data.equipment}
                 admin={user.role === "Admin"}
+                department={opsDepartment}
+                onDepartment={setOpsDepartment}
+                loadMore={loadMoreOperations}
+                loadingMore={opsLoading}
                 save={(b) => save(b, "/api/operations")}
                 busy={busy}
               />
@@ -542,6 +636,10 @@ export default function Home() {
                 equipment={data.equipment}
                 userId={user.id}
                 admin={user.role === "Admin"}
+                department={opsDepartment}
+                onDepartment={setOpsDepartment}
+                loadMore={loadMoreOperations}
+                loadingMore={opsLoading}
                 save={(b) => save(b, "/api/operations")}
                 busy={busy}
               />
@@ -560,14 +658,14 @@ export default function Home() {
                 canExport={g.includes("export")}
               />
             )}
-            {tab === "Manage" && platformReady && (
+            {tab === "Manage" && sectionReady && (
               <Manage data={data} save={save} busy={busy} />
             )}
-            {tab === "Analytics" && platformReady && <Analytics data={data} />}
-            {tab === "Permissions" && platformReady && (
+            {tab === "Analytics" && sectionReady && <Analytics data={data} />}
+            {tab === "Permissions" && sectionReady && (
               <Permissions data={data} save={save} busy={busy} />
             )}
-            {tab === "Accounts" && platformReady && (
+            {tab === "Accounts" && sectionReady && (
               <Accounts data={data} save={save} busy={busy} />
             )}
             {tab === "My account" && (

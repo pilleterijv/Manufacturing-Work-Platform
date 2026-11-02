@@ -60,7 +60,9 @@ async function main() {
     headless: true,
     args: ["--no-sandbox"],
   });
+  // Network injection probes must bypass the worker; PWA behavior has its own suite.
   const context = await browser.newContext({
+    serviceWorkers: "block",
     viewport: { width: 1440, height: 1000 },
     timezoneId: "America/Chicago",
   });
