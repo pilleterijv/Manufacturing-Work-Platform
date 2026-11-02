@@ -2,9 +2,19 @@
 
 A browser application for standard work, photographic evidence, time studies, supervisor audits, troubleshooting, training, role permissions, downtime tracking, improvement ideas, leadership reporting, and Excel exports. PostgreSQL is the primary database; Excel is an export format.
 
+## Install on tablets / shared workplace use
+
+See [tablet installation and secure shared deployment](docs/tablet-deployment.md).
+Modern iPad, Android and Windows tablets can install Floorwork from a trusted
+HTTPS site; only the shared server needs Node and PostgreSQL. It requires a
+server connection to save work. Local desktop startup below is for one computer.
+The main Overview now includes department section statistics; users with
+leadership access can also see the overall workspace. Improvement cards display
+their unique UUID, full equipment location and an optional process description.
+
 ## Download and run on Windows
 
-**[Download the application source as one small ZIP](https://github.com/pilleterijv/Manufacturing-Work-Platform/archive/refs/heads/codex/rebuild-floorwork.zip)**. You do not need to open or download the files individually. Screenshots stay available in GitHub's docs/screenshots folder and are excluded from the ZIP.
+**[Download the application source as one small ZIP](https://github.com/pilleterijv/Manufacturing-Work-Platform/archive/refs/heads/codex/tablet-security-optimization.zip)**. You do not need to open or download the files individually. Screenshots stay available in GitHub's docs/screenshots folder and are excluded from the ZIP.
 
 1. Install **Node.js 24 LTS** from https://nodejs.org/ and start **Docker Desktop**. Docker **AMD64** is for Intel/AMD computers; ARM64 is for ARM computers. An existing native PostgreSQL installation can be used instead of Docker; see below.
 2. Right-click the ZIP → **Extract All**. Open the extracted folder and double-click **START-FLOORWORK.cmd**.
@@ -76,6 +86,7 @@ npm audit
 # Start the production build in a separate terminal, then:
 npm run test:browser
 npm run test:operations
+npm run test:tablet
 # Optional local PostgreSQL verification (requires CREATE DATABASE permission):
 npm run test:migrations
 ```
@@ -92,6 +103,8 @@ This rebuild uses local account authentication. Microsoft Entra SSO is not imple
 
 See [docs/performance.md](docs/performance.md) for measured before/after sizes and verification. Section bundles load on demand; startup requests fetch only overview data and private message summaries. Visible tabs poll small summaries or active timers, and hidden tabs stop polling. Closed downtime history rows are memoized rather than recalculated on each clock tick. PostgreSQL connections are reused with a four-connection pool, and local Docker PostgreSQL uses conservative memory settings. Migration 003 adds history/expiry indexes without rewriting work records. Only expired sessions and rate-limit entries are pruned during startup.
 
-Raw Excel exports stream committed rows and read records in batches of 100, preserving all authorized records across page boundaries. Leadership exports remain separate, reflecting the selected department/date report.
+Raw Excel exports stage committed rows on private temporary disk and read records in batches of 100, preserving all authorized records across page boundaries. Leadership exports remain separate, reflecting the selected department/date report.
 
 For a reproducible source archive from Git, run npm run package:source; it packages the committed HEAD into dist/Floorwork-source.zip and honors .gitattributes exclusions. Local uncommitted changes, dependencies, build output, private configuration, photos, and the screenshot gallery are not included.
+
+The tablet/security update adds migration 004; back up data before upgrading and review the new dashboard permission on custom role policies. Deployment templates are provided but have not changed your host firewall or published a live site.

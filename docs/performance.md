@@ -50,3 +50,31 @@ npm run package:source
 ```
 
 Set BASELINE_URL to a separately running local previous version to repeat response comparisons. The performance script saves non-secret measurements under ignored .measurements/. Screenshots are kept under docs/screenshots and remain available through GitHub.
+
+## Tablet/dashboard follow-up
+
+The department dashboard now aggregates record/response/cycle statistics in
+PostgreSQL, including exact median and population standard deviation. Downtime
+is processed in batches of 100 with only shift/reason aggregates retained. Latest
+standards are selected by family in SQL instead of downloading every revision;
+management can explicitly page through immutable revision history. Section
+requests no longer load unrelated histories, libraries, accounts and policies.
+Downtime and ideas have independent pages of 100 and server-side department
+filters; composite timestamp/ID cursors survive tied timestamps and deletion of
+the preceding page's last row. All historical records remain available.
+
+Exports now stage bounded batches on private temporary disk and ZIP worksheets
+sequentially. This avoids buffering later worksheets while ExcelJS is writing an
+earlier worksheet, and separates workbook generation from slow HTTP download
+backpressure. This reduces heap pressure at the cost of temporary disk I/O and a
+wait before the first download byte. One export per process and a 256 MiB staged
+JSON limit bound parallel work/storage. Raw exports beyond that limit need an
+administrative archive or a future date-filtered export workflow; department
+report exports already accept date ranges.
+
+Run `npm run test:tablet` against the local production app for tablet viewport,
+offline-cache privacy, latest-standard/revision paging, cursor deletion/ties,
+department aggregate statistics and request-header protections. `npm test` also
+checks slow multi-sheet consumption, export cancellation and private-file cleanup.
+These are functional/load fixtures, not a benchmark proving capacity for a
+particular number of production tablets.

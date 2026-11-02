@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useMemo, memo } from "react";
+import { useEffect, useState, useMemo, useRef, memo } from "react";
 import { Temporal } from "@js-temporal/polyfill";
 import {
   durationText,
@@ -84,7 +84,15 @@ export function Downtime({
   admin,
   save,
   busy,
+  department,
+  onDepartment,
+  loadMore,
+  loadingMore,
 }: {
+  department: string;
+  onDepartment: (value: string) => void;
+  loadMore: () => Promise<void>;
+  loadingMore: boolean;
   data: OperationsData;
   equipment: EquipmentSnapshot[];
   admin: boolean;
@@ -92,8 +100,7 @@ export function Downtime({
   busy: boolean;
 }) {
   const [equipmentId, setEquipment] = useState(""),
-    [reason, setReason] = useState(""),
-    [department, setDepartment] = useState("");
+    [reason, setReason] = useState("");
   const now = useServerClock(data.serverNow);
   const selected = data.downtime.find(
     (d) => d.equipmentId === equipmentId && !d.endedAt,
@@ -202,7 +209,7 @@ export function Downtime({
         <select
           aria-label="Downtime department"
           value={department}
-          onChange={(e) => setDepartment(e.target.value)}
+          onChange={(e) => onDepartment(e.target.value)}
         >
           <option value="">All departments</option>
           {[
@@ -248,9 +255,18 @@ export function Downtime({
         )}
       </section>
       <p className="small muted">
-        History shows the latest 1,000 events plus all active timers. Full
-        records are available in Excel.
+        History loads 100 events at a time, plus active timers in the selected
+        department. Full records are available in Excel.
       </p>
+      {data.downtimePage?.hasMore && (
+        <button
+          className="outline"
+          disabled={loadingMore}
+          onClick={() => void loadMore()}
+        >
+          {loadingMore ? "Loading…" : "Load more downtime"}
+        </button>
+      )}
       {admin && <DowntimeSettings data={data} save={save} busy={busy} />}
     </>
   );
@@ -446,7 +462,15 @@ export function ImprovementIdeas({
   admin,
   save,
   busy,
+  department,
+  onDepartment,
+  loadMore,
+  loadingMore,
 }: {
+  department: string;
+  onDepartment: (value: string) => void;
+  loadMore: () => Promise<void>;
+  loadingMore: boolean;
   data: OperationsData;
   equipment: EquipmentSnapshot[];
   userId: string;
@@ -455,8 +479,7 @@ export function ImprovementIdeas({
   busy: boolean;
 }) {
   const [equipmentId, setEquipment] = useState(""),
-    [participants, setParticipants] = useState<string[]>([]),
-    [department, setDepartment] = useState("");
+    [participants, setParticipants] = useState<string[]>([]);
   const today = localToday(data.config.timezone);
   function person(label: string, name: string, defaultValue = "") {
     return (
@@ -545,8 +568,32 @@ export function ImprovementIdeas({
                 placeholder="What would you change and test?"
               />
             </Field>
+            <Field label="Process / improvement location">
+              <input
+                name="process"
+                aria-label="Process / improvement location"
+                maxLength={200}
+                placeholder="e.g. Changeover, label inspection, packing"
+              />
+            </Field>
+            {equipmentId && (
+              <p className="small muted">
+                Location:{" "}
+                {equipment
+                  .filter((e) => e.id === equipmentId)
+                  .map((e) =>
+                    [e.plant, e.department, e.area, e.line, e.name]
+                      .filter(Boolean)
+                      .join(" / "),
+                  )}
+              </p>
+            )}
             {person("Submitted by", "submitterId", userId)}
             {person("Pilot", "pilotId")}
+            <p className="small muted">
+              Pilot = person leading the improvement. Submitted by = person the
+              idea came from.
+            </p>
             {person("Validator", "validatorId")}
             <Field label="Due date">
               <input
@@ -558,22 +605,29 @@ export function ImprovementIdeas({
             </Field>
           </div>
           <Field label="Participants">
-            <select
+            <span
+              className="participant-picker"
+              role="group"
               aria-label="Participants"
-              multiple
-              value={participants}
-              onChange={(e) =>
-                setParticipants(
-                  [...e.target.selectedOptions].map((o) => o.value),
-                )
-              }
             >
               {data.people.map((p) => (
-                <option key={p.id} value={p.id}>
+                <span key={p.id} className="participant-option">
+                  <input
+                    type="checkbox"
+                    aria-label={`Participant ${p.name}`}
+                    checked={participants.includes(p.id)}
+                    onChange={(e) =>
+                      setParticipants((prev) =>
+                        e.target.checked
+                          ? [...prev, p.id]
+                          : prev.filter((id) => id !== p.id),
+                      )
+                    }
+                  />
                   {p.name} ({p.username})
-                </option>
+                </span>
               ))}
-            </select>
+            </span>
           </Field>
           <p className="small muted">
             Select any supporting participants. The assigned pilot receives a
@@ -590,7 +644,7 @@ export function ImprovementIdeas({
         <select
           aria-label="Ideas department"
           value={department}
-          onChange={(e) => setDepartment(e.target.value)}
+          onChange={(e) => onDepartment(e.target.value)}
         >
           <option value="">All departments</option>
           {[
@@ -629,9 +683,20 @@ export function ImprovementIdeas({
                 <small>Due {idea.dueDate}</small>
               </div>
               <h2>{idea.title}</h2>
+              <p className="idea-id">
+                Improvement ID: <code>{idea.id}</code>
+              </p>
               <p className="small muted">
-                {idea.equipmentSnapshot.department} /{" "}
-                {idea.equipmentSnapshot.name}
+                {[
+                  idea.equipmentSnapshot.plant,
+                  idea.equipmentSnapshot.department,
+                  idea.equipmentSnapshot.area,
+                  idea.equipmentSnapshot.line,
+                  idea.equipmentSnapshot.name,
+                  idea.process,
+                ]
+                  .filter(Boolean)
+                  .join(" / ")}
               </p>
               <h3>Current state</h3>
               <p className="guide-body">{idea.currentState}</p>
@@ -686,13 +751,22 @@ export function ImprovementIdeas({
             </article>
           ))}
       </div>
+      {data.ideasPage?.hasMore && (
+        <button
+          className="outline"
+          disabled={loadingMore}
+          onClick={() => void loadMore()}
+        >
+          {loadingMore ? "Loading…" : "Load more ideas"}
+        </button>
+      )}
       {!data.ideas.length && (
         <section className="panel empty">
           Your first improvement idea starts here.
         </section>
       )}
       <p className="small muted">
-        Latest 1,000 ideas shown. Pilots and validators can update progress; the
+        Ideas load 100 at a time. Pilots and validators can update progress; the
         validator or Admin signs off completion.
       </p>
     </>
@@ -756,7 +830,11 @@ type Report = Awaited<ReturnType<typeof leadershipReport>>;
 export function Leadership({
   timezone,
   canExport,
+  endpoint = "/api/leadership",
+  canOverall = true,
 }: {
+  endpoint?: string;
+  canOverall?: boolean;
   timezone: string;
   canExport: boolean;
 }) {
@@ -769,24 +847,32 @@ export function Leadership({
     [report, setReport] = useState<Report | null>(null),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(false);
+  const request = useRef<AbortController | null>(null);
   async function load() {
+    request.current?.abort();
+    const controller = new AbortController();
+    request.current = controller;
     setLoading(true);
     setError("");
     try {
       const r = await fetch(
-        "/api/leadership?" + new URLSearchParams({ department, from, to }),
+        endpoint + "?" + new URLSearchParams({ department, from, to }),
+        { signal: controller.signal },
       );
       const body = await r.json();
       if (!r.ok) throw Error(body.error);
+      if (controller.signal.aborted) return;
       setReport(body);
+      if (!canOverall && !department) setDepartment(body.department);
     } catch (e) {
-      setError((e as Error).message);
+      if (!controller.signal.aborted) setError((e as Error).message);
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   }
   useEffect(() => {
     void load();
+    return () => request.current?.abort();
   }, []);
   const s = report?.summary;
   function metric(
@@ -819,7 +905,9 @@ export function Leadership({
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
             >
-              <option value="">All departments</option>
+              <option value="">
+                {canOverall ? "All departments" : "Choose a department"}
+              </option>
               {report?.departments.map((d) => (
                 <option key={d}>{d}</option>
               ))}
@@ -864,7 +952,11 @@ export function Leadership({
               <span className="eyebrow">
                 LEADERSHIP / {report.department || "ALL DEPARTMENTS"}
               </span>
-              <h2>{report.department || "Whole-floor performance"}</h2>
+              <h2>
+                {report.department
+                  ? `${report.department} — section dashboard`
+                  : "Whole-floor performance"}
+              </h2>
               <p className="small muted">
                 {report.from} through {report.to} · refreshed{" "}
                 {new Date(report.generatedAt).toLocaleTimeString()}
@@ -874,7 +966,8 @@ export function Leadership({
               <a
                 className="outline"
                 href={
-                  "/api/leadership?" +
+                  endpoint +
+                  "?" +
                   new URLSearchParams({
                     department: report.department,
                     from: report.from,
@@ -931,7 +1024,9 @@ export function Leadership({
                   ["Raw cycle observations", s.observations],
                   [
                     "Average observation duration",
-                    s.cycleStats ? `${s.cycleStats.average.toFixed(2)}s` : "—",
+                    s.cycleStats?.average != null
+                      ? `${s.cycleStats.average.toFixed(2)}s`
+                      : "—",
                   ],
                   ["Training videos", s.training],
                   ["Troubleshooting guides", s.guides],

@@ -287,9 +287,11 @@ async function main() {
     .fill("Pilot a labeled tool cart staged at the packing station.");
   await op.getByLabel("Pilot", { exact: true }).selectOption(users[1].id);
   await op.getByLabel("Validator", { exact: true }).selectOption(users[2].id);
+  await op.getByLabel(`Participant ${users[0].name}`, { exact: true }).check();
+  await op.getByLabel(`Participant ${users[3].name}`, { exact: true }).check();
   await op
-    .getByLabel("Participants", { exact: true })
-    .selectOption([users[0].id, users[3].id]);
+    .getByLabel("Process / improvement location", { exact: true })
+    .fill("Packing changeover");
   await op.getByLabel("Due date", { exact: true }).fill("2026-11-15");
   await op.screenshot({
     path: "docs/screenshots/improvement-idea-input.png",
@@ -301,6 +303,8 @@ async function main() {
   await op.getByRole("status").waitFor();
   const idea = await db.idea.findFirst({ where: { createdBy: users[3].id } });
   assert(idea);
+  assert.equal(idea.process, "Packing changeover");
+  await op.getByText(idea.id, { exact: true }).waitFor();
   assert.equal(idea.submitterId, users[3].id);
   assert.equal(
     await db.ideaParticipant.count({ where: { ideaId: idea.id } }),
@@ -572,7 +576,10 @@ async function main() {
     .selectOption(equipment[1].department);
   await mp.getByRole("button", { name: "Apply filters", exact: true }).click();
   await mp
-    .getByRole("heading", { name: equipment[1].department, exact: true })
+    .getByRole("heading", {
+      name: `${equipment[1].department} — section dashboard`,
+      exact: true,
+    })
     .waitFor();
   await mp.screenshot({
     path: "docs/screenshots/leadership-department.png",

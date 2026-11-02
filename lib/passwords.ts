@@ -1,5 +1,22 @@
 import { randomBytes, scrypt as rawScrypt, timingSafeEqual } from "node:crypto";
-const scrypt = (password: string, salt: string) =>
+import { HttpError } from "./http-error";
+let hashing = 0;
+const waiting: (() => void)[] = [];
+const scrypt = async (password: string, salt: string) => {
+  if (hashing >= 2) {
+    if (waiting.length >= 8)
+      throw new HttpError(429, "Sign-in is busy. Try again shortly.");
+    await new Promise<void>((resolve) => waiting.push(resolve));
+  } else hashing++;
+  try {
+    return await derive(password, salt);
+  } finally {
+    const next = waiting.shift();
+    if (next) next();
+    else hashing--;
+  }
+};
+const derive = (password: string, salt: string) =>
   new Promise<Buffer>((resolve, reject) =>
     rawScrypt(
       password,

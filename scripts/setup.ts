@@ -5,7 +5,10 @@ import { createHash } from "node:crypto";
 import { db } from "../lib/db";
 import { defaults } from "../lib/rules";
 async function main() {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const pool = new Pool({
+    connectionString:
+      process.env.DATABASE_SETUP_URL || process.env.DATABASE_URL,
+  });
   const client = await pool.connect();
   try {
     await client.query("BEGIN");

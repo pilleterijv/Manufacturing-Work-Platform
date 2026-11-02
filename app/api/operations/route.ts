@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { decodeCursor, pageInfo } from "@/lib/pagination";
 import { db } from "@/lib/db";
 import {
   requireUser,
@@ -20,9 +21,23 @@ export async function GET(req: Request) {
     const u = await requireUser();
     const g = await grants(u);
     const view = z
-      .enum(["full", "summary", "live"])
+      .enum(["full", "summary", "live", "downtime", "ideas"])
       .parse(new URL(req.url).searchParams.get("view") ?? "full");
-    if (view !== "full") {
+    const params = new URL(req.url).searchParams;
+    const department = z
+      .string()
+      .max(100)
+      .parse(params.get("department") ?? "");
+    const cursor = decodeCursor(params.get("cursor"));
+    const location = department
+      ? { equipmentSnapshot: { path: ["department"], equals: department } }
+      : {};
+    if (
+      (view === "downtime" && !g.includes("downtime")) ||
+      (view === "ideas" && !g.includes("ideas"))
+    )
+      throw new HttpError(403, "You do not have permission for this section");
+    if (view === "summary" || view === "live") {
       const [setting, notifications, active] = await Promise.all([
         db.setting.findUniqueOrThrow({ where: { key: "shifts" } }),
         db.notification.findMany({
@@ -32,7 +47,7 @@ export async function GET(req: Request) {
         }),
         view === "live" && g.includes("downtime")
           ? db.downtime.findMany({
-              where: { endedAt: null },
+              where: { ...location, endedAt: null },
               include: {
                 starter: { select: { name: true } },
                 stopper: { select: { name: true } },
@@ -49,24 +64,46 @@ export async function GET(req: Request) {
     }
     const [reasons, setting, downtime, ideas, people, notifications] =
       await Promise.all([
-        g.includes("downtime")
+        view !== "ideas" && g.includes("downtime")
           ? db.downtimeReason.findMany({ orderBy: { name: "asc" } })
           : [],
         db.setting.findUniqueOrThrow({ where: { key: "shifts" } }),
-        g.includes("downtime")
+        view !== "ideas" && g.includes("downtime")
           ? db.downtime.findMany({
-              orderBy: { startedAt: "desc" },
-              take: 1000,
+              where: {
+                ...location,
+                ...(cursor
+                  ? {
+                      OR: [
+                        { startedAt: { lt: cursor.at } },
+                        { startedAt: cursor.at, id: { lt: cursor.id } },
+                      ],
+                    }
+                  : {}),
+              },
+              orderBy: [{ startedAt: "desc" }, { id: "desc" }],
+              take: 101,
               include: {
                 starter: { select: { name: true } },
                 stopper: { select: { name: true } },
               },
             })
           : [],
-        g.includes("ideas")
+        view !== "downtime" && g.includes("ideas")
           ? db.idea.findMany({
-              orderBy: { createdAt: "desc" },
-              take: 1000,
+              where: {
+                ...location,
+                ...(cursor
+                  ? {
+                      OR: [
+                        { createdAt: { lt: cursor.at } },
+                        { createdAt: cursor.at, id: { lt: cursor.id } },
+                      ],
+                    }
+                  : {}),
+              },
+              orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+              take: 101,
               include: {
                 pilot: { select: { id: true, name: true } },
                 validator: { select: { id: true, name: true } },
@@ -78,7 +115,7 @@ export async function GET(req: Request) {
               },
             })
           : [],
-        g.includes("ideas")
+        view !== "downtime" && g.includes("ideas") && !cursor
           ? db.user.findMany({
               where: { active: true },
               select: { id: true, name: true, username: true },
@@ -91,17 +128,20 @@ export async function GET(req: Request) {
           take: 100,
         }),
       ]);
-    const active = g.includes("downtime")
-      ? await db.downtime.findMany({
-          where: { endedAt: null },
-          include: {
-            starter: { select: { name: true } },
-            stopper: { select: { name: true } },
-          },
-        })
-      : [];
+    const active =
+      view !== "ideas" && g.includes("downtime")
+        ? await db.downtime.findMany({
+            where: { ...location, endedAt: null },
+            include: {
+              starter: { select: { name: true } },
+              stopper: { select: { name: true } },
+            },
+          })
+        : [];
     const all = [
-      ...new Map([...downtime, ...active].map((e) => [e.id, e])).values(),
+      ...new Map(
+        [...downtime.slice(0, 100), ...active].map((e) => [e.id, e]),
+      ).values(),
     ];
     const now = new Date();
     return Response.json({
@@ -109,7 +149,9 @@ export async function GET(req: Request) {
       config: setting.value,
       serverNow: now.toISOString(),
       downtime: all,
-      ideas,
+      ideas: ideas.slice(0, 100),
+      downtimePage: pageInfo(downtime, (row) => row.startedAt),
+      ideasPage: pageInfo(ideas, (row) => row.createdAt),
       people,
       notifications,
     });

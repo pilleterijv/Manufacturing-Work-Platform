@@ -57,7 +57,7 @@ async function main() {
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "Migration"')).rows[0]
           .n,
-        3,
+        4,
       );
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "User"')).rows[0].n,
@@ -75,6 +75,7 @@ async function main() {
           ])
         ).rows[0].grants;
         assert.deepEqual([...grants].sort(), [
+          "dashboard",
           "downtime",
           "ideas",
           "leadership",
@@ -86,6 +87,7 @@ async function main() {
           ])
         ).rows[0].grants;
         assert.deepEqual([...operator].sort(), [
+          "dashboard",
           "downtime",
           "ideas",
           "studies",
