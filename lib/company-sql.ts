@@ -31,11 +31,11 @@ export async function pollCompanySql() {
     where: { id: process.env.COMPANY_SQL_SOURCE_ID },
   });
   if (!source?.active) return { configured: true, processed: 0 };
-  const view = sqlViewName(
-    process.env.COMPANY_SQL_VIEW || "dbo.FloorworkDowntimeEvents",
-  );
   let processed = 0;
   try {
+    const view = sqlViewName(
+      process.env.COMPANY_SQL_VIEW || "dbo.FloorworkDowntimeEvents",
+    );
     if (!pool?.connected) {
       if (pool) await pool.close().catch(() => {});
       pool = await new sql.ConnectionPool(companySqlConfig()).connect();

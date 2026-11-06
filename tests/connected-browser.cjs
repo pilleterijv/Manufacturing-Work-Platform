@@ -8,7 +8,11 @@ const { db } = require("../lib/db.ts"),
   { hashPassword } = require("../lib/security.ts"),
   { checkShiftWork } = require("../lib/shift-monitor.ts"),
   { deliverShiftEmails } = require("../lib/email-delivery.ts"),
-  { processSqlRows, companySqlConfig } = require("../lib/company-sql.ts");
+  {
+    processSqlRows,
+    companySqlConfig,
+    pollCompanySql,
+  } = require("../lib/company-sql.ts");
 const origin = process.env.APP_URL || "http://localhost:3000",
   users = [],
   equipment = [],
@@ -109,6 +113,7 @@ async function main() {
     contexts.push(c);
   }
   const [admin, manager, operator, other] = contexts;
+  const external = await browser.newContext();
   async function post(c, path, data) {
     const r = await c.request.post(origin + path, {
       headers: { Origin: origin },
@@ -385,6 +390,25 @@ async function main() {
   const old = await db.workSchedule.findUniqueOrThrow({
     where: { id: schedules[1] },
   });
+  const cancelCheck = await db.shiftCheck.create({
+    data: {
+      scheduleId: old.id,
+      shiftStart: new Date("2026-11-02T00:00:00Z"),
+      shiftEnd: new Date("2026-11-02T08:00:00Z"),
+      shiftName: "Day",
+      assigneeKey: "cancel-test",
+      missed: true,
+    },
+  });
+  const cancelEmail = await db.emailDelivery.create({
+    data: {
+      scheduleId: old.id,
+      checkId: cancelCheck.id,
+      userId: users[1].id,
+      subject: "Cancellation test",
+      message: "Queued only",
+    },
+  });
   r = await post(admin, "/api/shift-schedules", {
     action: "update",
     id: old.id,
@@ -394,6 +418,14 @@ async function main() {
     notifyEmail: false,
   });
   assert.equal(r.status, 200);
+  assert.equal(
+    (
+      await db.emailDelivery.findUniqueOrThrow({
+        where: { id: cancelEmail.id },
+      })
+    ).status,
+    "Cancelled",
+  );
   assert.equal(
     (
       await post(admin, "/api/shift-schedules", {
@@ -442,12 +474,24 @@ async function main() {
       200,
     );
   const call = async (data) => {
-    const rr = await admin.request.post(origin + "/api/integrations/events", {
-      headers: { Authorization: "Bearer " + token },
-      data,
-    });
+    const rr = await external.request.post(
+      origin + "/api/integrations/events",
+      {
+        headers: { Authorization: "Bearer " + token },
+        data,
+      },
+    );
     return { status: rr.status(), body: await rr.json() };
   };
+  assert.equal(
+    (
+      await external.request.post(origin + "/api/integrations/events", {
+        headers: { Authorization: "Bearer " + token },
+        data: { padding: "x".repeat(70 * 1024) },
+      })
+    ).status(),
+    413,
+  );
   assert.equal(
     (
       await operator.request.post(origin + "/api/integrations/events", {
@@ -464,7 +508,12 @@ async function main() {
       occurredAt: startTime.toISOString(),
     };
   const concurrent = await Promise.all([call(event), call(event)]);
-  assert(concurrent.every((r) => r.status === 200));
+  assert(
+    concurrent.every((r) => r.status === 200),
+    JSON.stringify(
+      concurrent.map((r) => ({ status: r.status, error: r.body.error })),
+    ),
+  );
   assert.equal(concurrent.filter((r) => r.body.duplicate).length, 1);
   const automatic = await db.downtime.findFirstOrThrow({
     where: { equipmentId: equipment[0].id, endedAt: null },
@@ -547,6 +596,49 @@ async function main() {
       .sqlCursor,
     "9007199254740994",
   );
+  const sqlVars = [
+    "COMPANY_SQL_SERVER",
+    "COMPANY_SQL_DATABASE",
+    "COMPANY_SQL_USER",
+    "COMPANY_SQL_PASSWORD",
+    "COMPANY_SQL_SOURCE_ID",
+    "COMPANY_SQL_VIEW",
+  ];
+  const priorSql = Object.fromEntries(
+    sqlVars.map((key) => [key, process.env[key]]),
+  );
+  try {
+    Object.assign(process.env, {
+      COMPANY_SQL_SERVER: "localhost",
+      COMPANY_SQL_DATABASE: "unused",
+      COMPANY_SQL_USER: "unused",
+      COMPANY_SQL_PASSWORD: randomUUID(),
+      COMPANY_SQL_SOURCE_ID: sourceId,
+      COMPANY_SQL_VIEW: "invalid;identifier",
+    });
+    const poll = await pollCompanySql();
+    assert.equal(poll.processed, 0);
+    assert.equal(
+      (
+        await db.integrationSource.findUniqueOrThrow({
+          where: { id: sourceId },
+        })
+      ).sqlCursor,
+      "9007199254740994",
+    );
+    assert.equal(
+      (
+        await db.setting.findUniqueOrThrow({
+          where: { key: "company-sql-health" },
+        })
+      ).value.ok,
+      false,
+    );
+  } finally {
+    for (const [key, value] of Object.entries(priorSql))
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+  }
   const sqlConfig = companySqlConfig();
   assert.equal(sqlConfig.options.encrypt, true);
   assert.equal(sqlConfig.options.trustServerCertificate, false);

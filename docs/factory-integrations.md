@@ -58,6 +58,8 @@ The view contract is:
 
 Default view: `dbo.FloorworkDowntimeEvents`. IT chooses how to translate TrakSYS’s actual schema into that contract, and should expose events from the agreed commissioning date rather than an unreviewed historical backfill. This application does not create or alter a company view.
 
+The sequence must represent a committed, ordered feed. An identity value allocated before a transaction commits is not by itself a guarantee of commit order: a late lower-numbered row could be skipped after the cursor advances. IT must provide a suitable outbox/CDC publisher or other ordered event feed; the connector does not enable SQL change tracking or CDC itself.
+
 The worker reads at most 100 rows per cycle in sequence order. Cursor values remain strings end-to-end to preserve SQL bigint precision. It advances the saved cursor only after successfully accepting a row; a bad/unmapped/conflicting event stops that batch so IT can resolve and retry it. SQL health and errors are visible in Integrations. Two workers cannot move the SQL cursor backwards, but deploy one worker per environment to avoid redundant polling.
 
 Set privately:
@@ -88,6 +90,8 @@ If SMTP is absent, email stays queued and the UI says it is not connected. Faile
 
 `npm start` and `START-FLOORWORK.cmd` launch the worker alongside the app. A custom deployment can set `FLOORWORK_WORKER_MODE=external` and separately supervise `node .floorwork/runtime/tools/background-worker.cjs` using the same private environment. Restart failed processes and monitor the last-check timestamps displayed in Shift requirements and Integrations. `npm run background:once` performs one local cycle for diagnostics.
 
+SQL polling, shift checks and email delivery run in separate periodic loops. Each job waits for its own previous run, preventing overlapping runs of that job; a slow or failing email relay does not delay the other services.
+
 The worker must stay running; closing the console, sleeping the host, or stopping the service pauses checks and SQL polling. Notifications do not rely on a manager’s browser being open. Existing installations must run migration 008 before starting the updated app/worker.
 
 ## Validation boundaries and sizing
@@ -95,3 +99,7 @@ The worker must stay running; closing the console, sleeping the host, or stoppin
 Automated tests cover photo-required enforcement/manager privacy, DST/overnight deadlines, per-person versus station completion, duplicate prevention, channel switches, local generated email/retry behavior, Bearer authentication/key rotation, event ordering/idempotency, conflict protection and SQL cursor precision/retry. SMTP-provider, TrakSYS 11.1 and company Azure SQL connectivity require target-environment tests with approved settings. Windows launcher changes are syntax-checked; native Windows execution remains unverified.
 
 For approximately 100 registered users, an initial 4-vCPU/8-GB shared application/database host is a planning starting point, not a measured production-capacity guarantee. Simultaneous activity, photograph volume, SQL event rate, reporting and availability requirements determine final sizing. App account counts do not create per-seat software fees; hosting, storage, backups, IT operations and existing TrakSYS/SQL/mail licensing are separate costs.
+
+### Local verification note (November 6, 2026)
+
+The prepared runtime passed a burst of 100 concurrent authenticated read requests (half live downtime, half record overview) using one temporary operator session and an empty/synthetic dataset: 100 successful responses, 1,293 ms median, 1,464 ms 95th percentile, 1,468 ms maximum on this shared 2-vCPU/8-GB development environment. This is a read-path smoke test, not a representative 100-user production capacity test: it does not cover concurrent photo uploads, report generation, a large database or live SQL/mail providers. An earlier run overlapping a production build had 16 timeouts/errors out of 100; build and prepare updates away from the live serving workload, then validate representative plant traffic on the chosen host.

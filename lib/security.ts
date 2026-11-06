@@ -55,6 +55,9 @@ export async function jsonBody(req: Request, max = 256 * 1024) {
   if (!origin || req.headers.get("origin") !== new URL(origin).origin)
     throw new HttpError(403, "Request origin is not allowed");
   configuredOrigin(origin);
+  return readJsonBody(req, max);
+}
+export async function readJsonBody(req: Request, max = 256 * 1024) {
   if (!(req.headers.get("content-type") ?? "").startsWith("application/json"))
     throw new HttpError(415, "Send JSON");
   const reader = req.body?.getReader();
