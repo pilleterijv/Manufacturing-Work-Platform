@@ -1,0 +1,21 @@
+[Unit]
+Description=Floorwork manufacturing application
+After=network.target postgresql.service
+[Service]
+Type=simple
+User=floorwork
+Group=floorwork
+WorkingDirectory=/opt/floorwork
+Environment=NODE_ENV=production
+EnvironmentFile=/etc/floorwork.env
+ExecStart=/usr/bin/node /opt/floorwork/.floorwork/runtime/server.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/floorwork/uploads
+UMask=0077
+[Install]
+WantedBy=multi-user.target

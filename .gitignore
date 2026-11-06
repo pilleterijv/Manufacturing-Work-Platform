@@ -1,0 +1,13 @@
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+uploads/
+/screenshots/
+*.tsbuildinfo
+next-env.d.ts
+*.zip
+.floorwork/
+.measurements/
+dist/

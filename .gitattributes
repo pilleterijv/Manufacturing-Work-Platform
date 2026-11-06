@@ -1,0 +1,3 @@
+# GitHub and git archive downloads contain the code, not the screenshot gallery.
+/docs/screenshots export-ignore
+/.measurements export-ignore

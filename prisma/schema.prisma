@@ -1,0 +1,296 @@
+generator client {
+ provider = "prisma-client-js"
+ engineType = "client"
+}
+datasource db {
+ provider = "postgresql"
+ url = env("DATABASE_URL")
+}
+model User {
+ id String @id @default(uuid())
+ email String?
+ username String @unique
+ name String
+ password String
+ role String
+ downtimeAccess Json @default("{\"mode\":\"all\",\"locations\":[],\"equipmentIds\":[]}")
+ active Boolean @default(true)
+ mustChange Boolean @default(true)
+ version Int @default(1)
+ sessions Session[]
+ records Record[]
+ photos Photo[]
+ downtimeStarted Downtime[] @relation("DowntimeStarter")
+ downtimeStopped Downtime[] @relation("DowntimeStopper")
+ ideasCreated Idea[] @relation("IdeaCreator")
+ ideasSubmitted Idea[] @relation("IdeaSubmitter")
+ ideasPiloted Idea[] @relation("IdeaPilot")
+ ideasValidated Idea[] @relation("IdeaValidator")
+ ideaParticipations IdeaParticipant[]
+ notifications Notification[]
+}
+model Session {
+ token String @id
+ userId String
+ version Int
+ expires DateTime
+ user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+}
+model Equipment {
+ id String @id @default(uuid())
+ name String
+ plant String
+ department String
+ area String
+ line String
+ standards Standard[]
+ downtime Downtime[]
+ ideas Idea[]
+}
+model Standard {
+ id String @id @default(uuid())
+ family String
+ revision Int
+ title String
+ equipmentId String
+ target Float
+ tolerance Float
+ steps Json
+ created DateTime @default(now())
+ equipment Equipment @relation(fields:[equipmentId],references:[id])
+ records Record[]
+ @@unique([family,revision])
+}
+model Record {
+ id String @id @default(uuid())
+ kind String
+ userId String
+ standardId String?
+ data Json
+ created DateTime @default(now())
+ user User @relation(fields:[userId],references:[id])
+ standard Standard? @relation(fields:[standardId],references:[id])
+}
+model Content {
+ id String @id @default(uuid())
+ kind String
+ title String
+ equipmentId String?
+ body String
+ active Boolean @default(true)
+}
+model Policy {
+ role String @id
+ grants Json
+}
+model Photo {
+ id String @id @default(uuid())
+ userId String
+ created DateTime @default(now())
+ user User @relation(fields:[userId],references:[id])
+}
+model Rate {
+ key String @id
+ count Int
+ expires DateTime
+}
+model DowntimeReason {
+ id String @id @default(uuid())
+ name String @unique
+ active Boolean @default(true)
+ events Downtime[]
+}
+model Downtime {
+ externalSourceId String?
+ externalSourceName String?
+ id String @id @default(uuid())
+ equipmentId String
+ reasonId String
+ reasonName String
+ equipmentSnapshot Json
+ shiftConfig Json
+ startedAt DateTime @default(now())
+ endedAt DateTime?
+ startedBy String
+ stoppedBy String?
+ equipment Equipment @relation(fields:[equipmentId],references:[id])
+ reason DowntimeReason @relation(fields:[reasonId],references:[id])
+ starter User @relation("DowntimeStarter",fields:[startedBy],references:[id])
+ stopper User? @relation("DowntimeStopper",fields:[stoppedBy],references:[id])
+ @@index([startedAt])
+}
+model Setting {
+ key String @id
+ value Json
+}
+model Idea {
+ id String @id @default(uuid())
+ title String
+ equipmentId String
+ equipmentSnapshot Json
+ currentState String
+ proposal String
+ process String @default("")
+ dueDate String
+ status String @default("Open")
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ createdBy String
+ submitterId String
+ pilotId String
+ validatorId String
+ version Int @default(1)
+ equipment Equipment @relation(fields:[equipmentId],references:[id])
+ creator User @relation("IdeaCreator",fields:[createdBy],references:[id])
+ submitter User @relation("IdeaSubmitter",fields:[submitterId],references:[id])
+ pilot User @relation("IdeaPilot",fields:[pilotId],references:[id])
+ validator User @relation("IdeaValidator",fields:[validatorId],references:[id])
+ participants IdeaParticipant[]
+ notifications Notification[]
+ @@index([createdAt])
+}
+model IdeaParticipant {
+ ideaId String
+ userId String
+ idea Idea @relation(fields:[ideaId],references:[id])
+ user User @relation(fields:[userId],references:[id])
+ @@id([ideaId,userId])
+}
+model Notification {
+ id String @id @default(uuid())
+ userId String
+ ideaId String?
+ kind String @default("idea")
+ sourceId String?
+ message String
+ createdAt DateTime @default(now())
+ readAt DateTime?
+ user User @relation(fields:[userId],references:[id])
+ idea Idea? @relation(fields:[ideaId],references:[id])
+ @@index([userId,createdAt])
+}
+
+model Problem {
+ id String @id @default(uuid())
+ reference String @unique
+ method String
+ title String
+ equipmentId String
+ equipmentSnapshot Json
+ occurredOn String
+ reportedBy String
+ ownerId String
+ reviewerId String
+ team String
+ dueDate String
+ previousId String?
+ answers Json
+ status String @default("Open")
+ createdBy String
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ closedAt DateTime?
+ version Int @default(1)
+ history Json
+ actions ProblemAction[]
+ @@index([createdAt,id])
+ @@index([status,dueDate])
+}
+model ProblemAction {
+ id String @id @default(uuid())
+ problemId String
+ type String
+ title String
+ checkpoint String @default("")
+ ownerId String
+ dueDate String
+ status String @default("Open")
+ comment String @default("")
+ completedAt DateTime?
+ version Int @default(1)
+ history Json
+ problem Problem @relation(fields:[problemId],references:[id])
+ @@index([problemId])
+ @@index([status,dueDate])
+}
+
+model WorkSchedule {
+ id String @id @default(uuid())
+ family String
+ equipmentId String
+ title String
+ assigneeIds Json
+ managerIds Json
+ shiftNames Json
+ weekdays Json
+ config Json
+ notifyInApp Boolean @default(true)
+ notifyEmail Boolean @default(true)
+ active Boolean @default(true)
+ effectiveFrom DateTime @default(now())
+ checkedThrough DateTime @default(now())
+ createdBy String
+ version Int @default(1)
+}
+model ShiftCheck {
+ id String @id @default(uuid())
+ scheduleId String
+ shiftStart DateTime
+ shiftEnd DateTime
+ shiftName String
+ assigneeKey String
+ completedRecordId String?
+ expectedStandardId String?
+ missed Boolean
+ checkedAt DateTime @default(now())
+ @@unique([scheduleId,shiftStart,assigneeKey])
+}
+model EmailDelivery {
+ id String @id @default(uuid())
+ scheduleId String
+ checkId String
+ userId String
+ subject String
+ message String
+ status String @default("Pending")
+ attempts Int @default(0)
+ nextAttemptAt DateTime @default(now())
+ claimedUntil DateTime?
+ sentAt DateTime?
+ lastError String?
+ @@unique([checkId,userId])
+ @@index([status,nextAttemptAt])
+}
+model IntegrationSource {
+ id String @id @default(uuid())
+ name String
+ tokenHash String
+ active Boolean @default(true)
+ createdBy String
+ createdAt DateTime @default(now())
+ lastReceivedAt DateTime?
+ lastError String?
+ sqlCursor String @default("0")
+}
+model MachineBinding {
+ id String @id @default(uuid())
+ sourceId String
+ externalId String
+ equipmentId String @unique
+ reasonId String
+ active Boolean @default(true)
+ lastAt DateTime?
+ lastState String?
+ activeDowntimeId String?
+ @@unique([sourceId,externalId])
+}
+model IntegrationReceipt {
+ id String @id @default(uuid())
+ sourceId String
+ eventId String
+ payloadHash String
+ receivedAt DateTime @default(now())
+ downtimeId String?
+ outcome String
+ @@unique([sourceId,eventId])
+}
