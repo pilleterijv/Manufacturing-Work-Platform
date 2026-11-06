@@ -125,7 +125,13 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
                               target="_blank"
                               rel="noreferrer"
                             >
-                              View evidence photo →
+                              <img
+                                className="photo-preview"
+                                loading="lazy"
+                                src={`/api/photos/${a.photo}`}
+                                alt="Saved task evidence"
+                              />
+                              View full evidence photo →
                             </a>
                           )}
                         </div>

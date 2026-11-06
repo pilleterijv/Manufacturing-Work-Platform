@@ -1,6 +1,9 @@
 import type { EquipmentSnapshot, ShiftConfig } from "./operations-rules";
 export type Person = { id: string; name: string; username?: string };
 export type DownEvent = {
+  externalSourceId?: string | null;
+  integrationManaged?: boolean;
+  externalSourceName?: string | null;
   id: string;
   equipmentId: string;
   reasonName: string;
@@ -42,7 +45,8 @@ export type OperationsData = {
   people: Person[];
   notifications: {
     id: string;
-    ideaId: string;
+    ideaId: string | null;
+    kind?: string;
     message: string;
     createdAt: string;
     readAt: string | null;

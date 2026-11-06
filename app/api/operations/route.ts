@@ -1,3 +1,4 @@
+import { annotateAutomaticTimers } from "@/lib/integrations";
 import {
   downtimeEquipmentWhere,
   authorizeDowntime,
@@ -73,7 +74,12 @@ export async function GET(req: Request) {
         config: setting.value,
         notifications,
         serverNow: new Date().toISOString(),
-        ...(view === "live" ? { active, equipment: permittedEquipment } : {}),
+        ...(view === "live"
+          ? {
+              active: await annotateAutomaticTimers(active),
+              equipment: permittedEquipment,
+            }
+          : {}),
       });
     }
     const [reasons, setting, downtime, ideas, people, notifications] =
@@ -164,7 +170,7 @@ export async function GET(req: Request) {
       reasons,
       config: setting.value,
       serverNow: now.toISOString(),
-      downtime: all,
+      downtime: await annotateAutomaticTimers(all),
       ideas: ideas.slice(0, 100),
       downtimePage: pageInfo(downtime, (row) => row.startedAt),
       ideasPage: pageInfo(ideas, (row) => row.createdAt),
@@ -269,6 +275,22 @@ export async function POST(req: Request) {
             "This downtime has already stopped or no longer exists",
           );
         await authorizeDowntime(tx, u, event.equipment);
+        if (event.externalSourceId) {
+          await tx.$queryRaw`SELECT id FROM "IntegrationSource" WHERE id=${event.externalSourceId} FOR SHARE`;
+          const [source, binding] = await Promise.all([
+            tx.integrationSource.findUnique({
+              where: { id: event.externalSourceId },
+            }),
+            tx.machineBinding.findUnique({
+              where: { equipmentId: event.equipmentId },
+            }),
+          ]);
+          if (source?.active && binding?.active)
+            throw new HttpError(
+              409,
+              "This timer is managed by its integration. Admin must disable its source or mapping before a manual stop",
+            );
+        }
         const result = await tx.downtime.updateMany({
           where: { id, endedAt: null },
           data: { endedAt: new Date(), stoppedBy: u.id },

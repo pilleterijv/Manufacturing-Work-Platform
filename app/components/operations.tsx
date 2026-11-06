@@ -276,7 +276,12 @@ export function Downtime({
           <button
             className={selected ? "danger" : "primary"}
             type="button"
-            disabled={busy || !equipmentId || (!selected && !reason)}
+            disabled={
+              busy ||
+              !equipmentId ||
+              (!selected && !reason) ||
+              !!selected?.integrationManaged
+            }
             onClick={() =>
               void save(
                 selected
@@ -285,9 +290,22 @@ export function Downtime({
               )
             }
           >
-            {busy ? "Saving…" : selected ? "Stop downtime" : "Start downtime"}
+            {busy
+              ? "Saving…"
+              : selected?.integrationManaged
+                ? "Automatic timer"
+                : selected
+                  ? "Stop downtime"
+                  : "Start downtime"}
           </button>
         </div>
+        {selected?.integrationManaged && (
+          <p className="notice">
+            Managed by {selected.externalSourceName}. The source records machine
+            recovery automatically. Admin can disable the source or mapping
+            before a manual stop.
+          </p>
+        )}
         <p className="small muted">
           Shift reporting uses {data.config.timezone}. Admins can configure the
           shift schedule; existing events retain their original schedule.
@@ -886,32 +904,45 @@ export function Notifications({
   save,
   busy,
   openIdea,
+  openWork,
 }: {
   data: OperationsData;
   save: Save;
   busy: boolean;
   openIdea: () => void;
+  openWork: () => void;
 }) {
   return (
     <section className="panel">
       <h2>Your messages</h2>
       <p className="muted">
-        Pilot assignments appear here. Only the recipient can read or mark their
-        messages.
+        Pilot assignments and missed-shift alerts appear here. Only the
+        recipient can read or mark their messages.
       </p>
       {data.notifications.map((n) => (
         <article
           className={"notification " + (!n.readAt ? "unread" : "")}
           key={n.id}
         >
-          <span className="badge">{n.readAt ? "Read" : "New assignment"}</span>
+          <span className="badge">
+            {n.readAt
+              ? "Read"
+              : n.kind === "missed-work"
+                ? "Missed standard work"
+                : "New assignment"}
+          </span>
           <p>{n.message}</p>
           <small className="muted">
             {new Date(n.createdAt).toLocaleString()}
           </small>
           <div className="button-row">
-            <button className="primary" onClick={openIdea}>
-              Open improvement ideas
+            <button
+              className="primary"
+              onClick={n.kind === "missed-work" ? openWork : openIdea}
+            >
+              {n.kind === "missed-work"
+                ? "Open standard work"
+                : "Open improvement ideas"}
             </button>
             {!n.readAt && (
               <button
@@ -1252,6 +1283,9 @@ const DowntimeHistoryRow = memo(function DowntimeHistoryRow({
     <tr key={d.id}>
       <td>
         <strong>{d.equipmentSnapshot.name}</strong>
+        {d.externalSourceName && (
+          <small>Automatic · {d.externalSourceName}</small>
+        )}
         <small>
           {d.equipmentSnapshot.department} / {d.equipmentSnapshot.line}
         </small>

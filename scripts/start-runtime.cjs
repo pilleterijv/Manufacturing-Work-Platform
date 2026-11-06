@@ -20,13 +20,43 @@ if (!fs.existsSync(serverPath)) {
       UPLOADS_DIR: process.env.UPLOADS_DIR || path.join(root, "uploads"),
     },
   });
+  const workerPath = path.join(
+    root,
+    ".floorwork/runtime/tools/background-worker.cjs",
+  );
+  const worker =
+    fs.existsSync(workerPath) &&
+    process.env.FLOORWORK_WORKER_MODE !== "external"
+      ? spawn(process.execPath, [workerPath], {
+          stdio: "inherit",
+          shell: false,
+          env: { ...process.env, NODE_ENV: "production" },
+        })
+      : null;
+  worker?.on("error", () =>
+    console.error("Shift/integration worker could not start."),
+  );
+  worker?.on("exit", (code) => {
+    if (code)
+      console.error(
+        "Shift/integration worker stopped. Restart the app and check configuration.",
+      );
+  });
   server.on("error", () => {
+    worker?.kill("SIGTERM");
     console.error("Unable to start the saved runtime");
     process.exitCode = 1;
   });
   server.on("exit", (code) => {
+    worker?.kill("SIGTERM");
     process.exitCode = code ?? 1;
   });
-  process.on("SIGINT", () => server.kill("SIGINT"));
-  process.on("SIGTERM", () => server.kill("SIGTERM"));
+  process.on("SIGINT", () => {
+    server.kill("SIGINT");
+    worker?.kill("SIGTERM");
+  });
+  process.on("SIGTERM", () => {
+    server.kill("SIGTERM");
+    worker?.kill("SIGTERM");
+  });
 }

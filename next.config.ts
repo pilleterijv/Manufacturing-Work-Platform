@@ -11,6 +11,8 @@ const config: NextConfig = {
     "pg",
     "exceljs",
     "sharp",
+    "mssql",
+    "nodemailer",
   ],
 };
 export default config;

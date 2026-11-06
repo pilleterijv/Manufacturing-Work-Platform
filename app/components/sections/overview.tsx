@@ -17,11 +17,13 @@ export default function Overview({
   go,
   grants,
   children,
+  admin = false,
 }: {
   data: Data;
   go: (s: string) => void;
   grants: Capability[];
   children?: ReactNode;
+  admin?: boolean;
 }) {
   const runs = data.records.filter((r) => r.kind === "run"),
     audits = data.records.filter((r) => r.kind === "audit");
@@ -145,6 +147,22 @@ export default function Overview({
                 "◈",
                 "Investigate 2D, 4D and 8D issues; follow up actions.",
               ],
+              [
+                "Shift requirements",
+                "manage",
+                "◷",
+                "Schedule work and switch missed-shift alerts on or off.",
+              ],
+              ...(admin
+                ? [
+                    [
+                      "Integrations",
+                      null,
+                      "⇄",
+                      "Map machines and connect factory event sources.",
+                    ] as [string, Capability | null, string, string],
+                  ]
+                : []),
               [
                 "My account",
                 null,

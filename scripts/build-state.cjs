@@ -47,6 +47,7 @@ function cachedBuild(root, fingerprint) {
         ".next/BUILD_ID",
         "tools/setup.cjs",
         "tools/create-admin.cjs",
+        "tools/background-worker.cjs",
         "node_modules/.prisma/client/query_compiler_bg.wasm",
       ].every((file) =>
         fs.existsSync(path.join(root, ".floorwork", "runtime", file)),

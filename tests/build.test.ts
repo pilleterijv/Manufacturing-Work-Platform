@@ -22,6 +22,7 @@ test("build cache invalidates source changes, ignores docs, and rejects missing 
       ".next/BUILD_ID",
       "tools/setup.cjs",
       "tools/create-admin.cjs",
+      "tools/background-worker.cjs",
       "node_modules/.prisma/client/query_compiler_bg.wasm",
       "node_modules/.prisma/client/query_compiler_bg.wasm",
     ]) {

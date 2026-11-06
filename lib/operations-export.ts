@@ -29,6 +29,7 @@ export async function addOperationsSheets(
       "Started by",
       "Stopped by",
       "State",
+      "Capture source",
     ]);
     await shifts.addRow([
       "Event ID",
@@ -76,6 +77,7 @@ export async function addOperationsSheets(
         d.starter.name,
         d.stopper?.name ?? "",
         d.endedAt ? "Stopped" : "In progress",
+        d.externalSourceName ?? "Manual",
       ]);
       for (const s of splitDowntime(d.startedAt, d.endedAt ?? now, c))
         await shifts.addRow([

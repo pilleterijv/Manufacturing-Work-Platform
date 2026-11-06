@@ -22,7 +22,10 @@
     "test:tablet": "node tests/tablet-dashboard.cjs",
     "test:problems": "node tests/problems-browser.cjs",
     "screenshots": "node scripts/capture-gallery.cjs",
-    "test:downtime-access": "node tests/downtime-access-browser.cjs"
+    "test:downtime-access": "node tests/downtime-access-browser.cjs",
+    "test:connected": "node tests/connected-browser.cjs",
+    "background": "tsx scripts/background-worker.ts",
+    "background:once": "tsx scripts/background-worker.ts --once"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.29.1",
@@ -31,7 +34,9 @@
     "@prisma/client": "6.19.3",
     "dotenv": "^17.2.3",
     "exceljs": "^4.4.0",
+    "mssql": "^12.7.14",
     "next": "^16.4.3",
+    "nodemailer": "^10.3.1",
     "pg": "^8.16.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -39,7 +44,9 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/mssql": "^12.3.0",
     "@types/node": "^24.10.0",
+    "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.15.6",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

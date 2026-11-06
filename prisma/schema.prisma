@@ -8,6 +8,7 @@ datasource db {
 }
 model User {
  id String @id @default(uuid())
+ email String?
  username String @unique
  name String
  password String
@@ -100,6 +101,8 @@ model DowntimeReason {
  events Downtime[]
 }
 model Downtime {
+ externalSourceId String?
+ externalSourceName String?
  id String @id @default(uuid())
  equipmentId String
  reasonId String
@@ -156,12 +159,14 @@ model IdeaParticipant {
 model Notification {
  id String @id @default(uuid())
  userId String
- ideaId String
+ ideaId String?
+ kind String @default("idea")
+ sourceId String?
  message String
  createdAt DateTime @default(now())
  readAt DateTime?
  user User @relation(fields:[userId],references:[id])
- idea Idea @relation(fields:[ideaId],references:[id])
+ idea Idea? @relation(fields:[ideaId],references:[id])
  @@index([userId,createdAt])
 }
 
@@ -207,4 +212,85 @@ model ProblemAction {
  problem Problem @relation(fields:[problemId],references:[id])
  @@index([problemId])
  @@index([status,dueDate])
+}
+
+model WorkSchedule {
+ id String @id @default(uuid())
+ family String
+ equipmentId String
+ title String
+ assigneeIds Json
+ managerIds Json
+ shiftNames Json
+ weekdays Json
+ config Json
+ notifyInApp Boolean @default(true)
+ notifyEmail Boolean @default(true)
+ active Boolean @default(true)
+ effectiveFrom DateTime @default(now())
+ checkedThrough DateTime @default(now())
+ createdBy String
+ version Int @default(1)
+}
+model ShiftCheck {
+ id String @id @default(uuid())
+ scheduleId String
+ shiftStart DateTime
+ shiftEnd DateTime
+ shiftName String
+ assigneeKey String
+ completedRecordId String?
+ expectedStandardId String?
+ missed Boolean
+ checkedAt DateTime @default(now())
+ @@unique([scheduleId,shiftStart,assigneeKey])
+}
+model EmailDelivery {
+ id String @id @default(uuid())
+ scheduleId String
+ checkId String
+ userId String
+ subject String
+ message String
+ status String @default("Pending")
+ attempts Int @default(0)
+ nextAttemptAt DateTime @default(now())
+ claimedUntil DateTime?
+ sentAt DateTime?
+ lastError String?
+ @@unique([checkId,userId])
+ @@index([status,nextAttemptAt])
+}
+model IntegrationSource {
+ id String @id @default(uuid())
+ name String
+ tokenHash String
+ active Boolean @default(true)
+ createdBy String
+ createdAt DateTime @default(now())
+ lastReceivedAt DateTime?
+ lastError String?
+ sqlCursor String @default("0")
+}
+model MachineBinding {
+ id String @id @default(uuid())
+ sourceId String
+ externalId String
+ equipmentId String @unique
+ reasonId String
+ active Boolean @default(true)
+ lastAt DateTime?
+ lastState String?
+ activeDowntimeId String?
+ @@unique([sourceId,externalId])
+}
+model IntegrationReceipt {
+ id String @id @default(uuid())
+ sourceId String
+ eventId String
+ payloadHash String
+ receivedAt DateTime @default(now())
+ downtimeId String?
+ outcome String
+ @@unique([sourceId,eventId])
 }

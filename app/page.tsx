@@ -12,6 +12,12 @@ const Overview = dynamic(() => import("./components/sections/overview"), {
 const Problems = dynamic(() => import("./components/sections/problems"), {
   loading: () => <p className="muted">Loading problem solving…</p>,
 });
+const ShiftSchedules = dynamic(
+  () => import("./components/sections/shift-schedules"),
+);
+const Integrations = dynamic(
+  () => import("./components/sections/integrations"),
+);
 const Work = dynamic(() => import("./components/sections/work"), {
   loading: () => <p className="muted">Loading section…</p>,
 });
@@ -267,7 +273,7 @@ export default function Home() {
         pending = false;
       }
     };
-    const timer = setInterval(poll, 20000);
+    const timer = setInterval(poll, tab === "Downtime" ? 5000 : 20000);
     const visible = () => {
       if (document.visibilityState === "visible") void poll();
     };
@@ -447,10 +453,12 @@ export default function Home() {
     ["Problem solving", "problems", "◈"],
     ["Notifications", null, "✉"],
     ["Manage", "manage", "⊞"],
+    ["Shift requirements", "manage", "◷"],
     ["Accounts", "users", "♙"],
     ["Permissions", "permissions", "⚙"],
     ["My account", null, "○"],
   ];
+  if (user.role === "Admin") nav.push(["Integrations", null, "⇄"]);
   const descriptions: Record<string, string> = {
     "Problem solving":
       "Structured 2D, 4D and 8D investigations, actions and effectiveness checks.",
@@ -471,6 +479,9 @@ export default function Home() {
     Troubleshooting: "Find the guidance to get your process back on track.",
     Analytics: "Understand variation, spot failures, and track performance.",
     Manage: "Build equipment, standards, and guides for your team.",
+    "Shift requirements":
+      "Schedule standard work and switch manager alert channels on or off.",
+    Integrations: "Map factory systems and monitor automated machine events.",
     Accounts: "Individual access, with accountability built in.",
     Permissions: "Choose what each role can do across the platform.",
     "My account": "Manage your password and your signed-in devices.",
@@ -591,7 +602,12 @@ export default function Home() {
               </p>
             )}
             {tab === "Overview" && (
-              <Overview data={data} go={setTab} grants={g}>
+              <Overview
+                data={data}
+                go={setTab}
+                grants={g}
+                admin={user.role === "Admin"}
+              >
                 {(g.includes("dashboard") || g.includes("leadership")) && (
                   <Leadership
                     timezone={operations.config.timezone}
@@ -669,6 +685,7 @@ export default function Home() {
                 save={(b) => save(b, "/api/operations")}
                 busy={busy}
                 openIdea={() => setTab("Improvement ideas")}
+                openWork={() => setTab("Standard work")}
               />
             )}
             {tab === "Leadership dashboard" && (
@@ -676,6 +693,12 @@ export default function Home() {
                 timezone={operations.config.timezone}
                 canExport={g.includes("export")}
               />
+            )}
+            {tab === "Shift requirements" && g.includes("manage") && (
+              <ShiftSchedules />
+            )}
+            {tab === "Integrations" && user.role === "Admin" && (
+              <Integrations />
             )}
             {tab === "Manage" && sectionReady && (
               <Manage data={data} save={save} busy={busy} />

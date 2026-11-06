@@ -25,7 +25,7 @@ async function main() {
       fs.rmSync(path.join(standalone, name), { force: true });
   fs.rmSync(path.join(standalone, "uploads"), { recursive: true, force: true });
   fs.mkdirSync(path.join(standalone, "tools"), { recursive: true });
-  for (const name of ["setup", "create-admin"])
+  for (const name of ["setup", "create-admin", "background-worker"])
     await require("esbuild").build({
       entryPoints: [`scripts/${name}.ts`],
       outfile: path.join(standalone, "tools", `${name}.cjs`),
@@ -33,7 +33,14 @@ async function main() {
       platform: "node",
       target: "node22",
       format: "cjs",
-      external: ["@prisma/client", "@prisma/adapter-pg", "pg", "next/*"],
+      external: [
+        "@prisma/client",
+        "@prisma/adapter-pg",
+        "pg",
+        "next/*",
+        "mssql",
+        "nodemailer",
+      ],
       logLevel: "warning",
     });
   const runtime = path.join(root, ".floorwork", "runtime"),

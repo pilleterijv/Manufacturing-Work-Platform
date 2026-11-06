@@ -142,11 +142,41 @@ async function main() {
       UPLOADS_DIR: path.join(root, "uploads"),
     },
   });
+  const worker =
+    process.env.FLOORWORK_WORKER_MODE === "external"
+      ? null
+      : spawn(
+          process.execPath,
+          [path.join(runtime, "tools", "background-worker.cjs")],
+          {
+            stdio: "inherit",
+            shell: false,
+            env: { ...process.env, NODE_ENV: "production" },
+          },
+        );
+  worker?.on("error", () =>
+    console.error("Shift/integration worker could not start"),
+  );
+  worker?.on("exit", (code) => {
+    if (code)
+      console.error(
+        "Shift/integration worker stopped; restart Floorwork after checking configuration",
+      );
+  });
+  server.on("exit", () => worker?.kill("SIGTERM"));
   server.on("error", () => {
+    worker?.kill("SIGTERM");
     console.error("Unable to start the application");
     process.exitCode = 1;
   });
-  process.on("SIGINT", () => server.kill("SIGINT"));
+  process.on("SIGINT", () => {
+    server.kill("SIGINT");
+    worker?.kill("SIGTERM");
+  });
+  process.on("SIGTERM", () => {
+    server.kill("SIGTERM");
+    worker?.kill("SIGTERM");
+  });
   for (let i = 0; i < 60; i++) {
     if (server.exitCode !== null)
       throw Error("The app stopped before it was ready");

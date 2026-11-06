@@ -27,6 +27,7 @@ export default function Accounts({
   const [id, setId] = useState(""),
     [username, setUsername] = useState(""),
     [name, setName] = useState(""),
+    [email, setEmail] = useState(""),
     [role, setRole] = useState("Operator"),
     [active, setActive] = useState(true),
     [password, setPassword] = useState("");
@@ -35,6 +36,7 @@ export default function Accounts({
     const u = data.users.find((u) => u.id === id);
     setUsername(u?.username ?? "");
     setName(u?.name ?? "");
+    setEmail(u?.email ?? "");
     setRole(u?.role ?? "Operator");
     setActive(u?.active ?? true);
     setPassword("");
@@ -66,6 +68,7 @@ export default function Accounts({
                 ...(id ? { id } : {}),
                 username,
                 name,
+                email,
                 role,
                 active,
                 ...(password ? { password } : {}),
@@ -90,6 +93,15 @@ export default function Accounts({
                 onChange={(e) => setName(e.target.value)}
                 required
                 maxLength={150}
+              />
+            </Field>
+            <Field label="Email address">
+              <input
+                type="email"
+                value={email}
+                maxLength={254}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="For shift notifications"
               />
             </Field>
             <Field label="Role">

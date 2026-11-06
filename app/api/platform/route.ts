@@ -165,6 +165,7 @@ export async function GET(req: Request) {
                 role: true,
                 active: true,
                 mustChange: true,
+                email: true,
                 ...(u.role === "Admin" ? { downtimeAccess: true } : {}),
               },
             })
@@ -464,6 +465,10 @@ export async function POST(req: Request) {
         .object({
           id: z.string().optional(),
           username: z.string().regex(/^[a-z0-9._-]{3,80}$/),
+          email: z
+            .union([z.email().max(254), z.literal("")])
+            .optional()
+            .transform((v) => (v === "" ? null : v)),
           name: z.string().min(1).max(150),
           role: z.enum(roles),
           active: z.boolean(),

@@ -14,7 +14,7 @@ their unique UUID, full equipment location and an optional process description.
 
 ## Download and run on Windows
 
-**[Download the application source as one small ZIP](https://github.com/pilleterijv/Manufacturing-Work-Platform/archive/refs/heads/codex/downtime-location-access.zip)**. You do not need to open or download the files individually. Screenshots stay available in GitHub's docs/screenshots folder and are excluded from the ZIP.
+**[Download the application source as one small ZIP](https://github.com/pilleterijv/Manufacturing-Work-Platform/archive/refs/heads/codex/rebuild-floorwork.zip)**. You do not need to open or download the files individually. Screenshots stay available in GitHub's docs/screenshots folder and are excluded from the ZIP.
 
 1. Install **Node.js 24 LTS** from https://nodejs.org/ and start **Docker Desktop**. Docker **AMD64** is for Intel/AMD computers; ARM64 is for ARM computers. An existing native PostgreSQL installation can be used instead of Docker; see below.
 2. Right-click the ZIP → **Extract All**. Open the extracted folder and double-click **START-FLOORWORK.cmd**.
@@ -126,3 +126,13 @@ As Admin, open **Accounts**, select an existing user, and use **Downtime locatio
 Assignments are enforced on start/stop requests, live timers, operational history and raw downtime exports. Revocation takes effect on the next request, including stopping existing timers; another authorized person or Admin can stop a timer after its starter loses access. Leadership/department aggregate dashboards still follow their separate role permissions. Only Admin can edit assignments, and Accounts-capable non-admins cannot promote anyone to Admin or edit Admin accounts. Other modules continue to use workspace role grants.
 
 Run `npm run test:downtime-access` against a local production app to verify the hierarchy, assignment editing, immediate revocation, unauthorized starts/stops and scoped reads/exports. Back up data before upgrading; preserve your existing `.env`, uploads and database volume.
+
+## Shift alerts, photo evidence and factory integrations
+
+**Shift requirements** lets managers schedule standard-work families by shift and weekday, either once per machine or once per assigned operator. Choose manager/supervisor recipients and independently switch in-app and email alerts on/off. Monitoring begins with the next full shift after activation. Late completions do not erase a missed-shift alert. **Accounts** now stores notification email addresses. SMTP remains unconnected until IT supplies private relay settings; pending email is queued, retried, and visible in the service status.
+
+Required per-step photos are already enforced by the server. Managers with Analytics/Audits access can view linked saved evidence, now with inline previews in expanded records. Unlinked photos and other operators’ photos remain private.
+
+The Admin-only **Integrations** section creates keyed sources and maps external machine IDs to Floorwork equipment. An authenticated webhook accepts down/running transitions; the optional Microsoft SQL Server/Azure SQL bridge reads an approved event view. Neither is a preconfigured connection to your TrakSYS 11.1 installation. Read [the IT setup guide](docs/factory-integrations.md) for the exact event/view contract, email setup, worker service and remaining validation.
+
+Migration 008 adds these tables and preserves existing users and records. `npm start` and the Windows launcher start the shift/integration worker. Custom hosting must also run it (or use `FLOORWORK_WORKER_MODE=external` and manage the worker as a separate service). New verification: `npm run test:connected`, `npm run background:once`. Native Windows, company Azure SQL, TrakSYS and SMTP-provider connectivity still require target-environment testing.
