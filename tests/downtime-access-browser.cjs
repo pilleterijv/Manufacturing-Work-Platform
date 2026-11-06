@@ -288,6 +288,8 @@ async function main() {
     locations: [],
     equipmentIds: [equipment[0].id],
   });
+  const dismiss = ap.getByRole("button", { name: "Dismiss", exact: true });
+  if (await dismiss.count()) await dismiss.click();
   await fs.mkdir("docs/screenshots/downtime-access", { recursive: true });
   await ap
     .locator("section")
