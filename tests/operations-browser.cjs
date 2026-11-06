@@ -1,3 +1,4 @@
+const { selectDowntimeMachine } = require("./helpers/downtime.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const { chromium } = require("playwright"),
@@ -163,9 +164,7 @@ async function main() {
       .count(),
     0,
   );
-  await op
-    .getByLabel("Equipment", { exact: true })
-    .selectOption(equipment[0].id);
+  await selectDowntimeMachine(op, equipment[0]);
   await op
     .getByLabel("Downtime reason", { exact: true })
     .selectOption(reason.id);
@@ -191,9 +190,7 @@ async function main() {
   await op.waitForTimeout(1100);
   await op.reload();
   await op.getByRole("button", { name: /Downtime$/ }).click();
-  await op
-    .getByLabel("Equipment", { exact: true })
-    .selectOption(equipment[0].id);
+  await selectDowntimeMachine(op, equipment[0]);
   await op
     .getByRole("button", { name: "Stop downtime", exact: true })
     .waitFor();
@@ -623,9 +620,7 @@ async function main() {
   const mobilePage = await mobile.newPage();
   await mobilePage.goto(origin);
   await mobilePage.getByRole("button", { name: /Downtime$/ }).click();
-  await mobilePage
-    .getByLabel("Equipment", { exact: true })
-    .selectOption(equipment[0].id);
+  await selectDowntimeMachine(mobilePage, equipment[0]);
   await mobilePage.screenshot({
     path: "docs/screenshots/mobile-downtime.png",
     fullPage: true,

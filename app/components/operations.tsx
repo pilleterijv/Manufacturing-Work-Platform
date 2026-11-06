@@ -1,4 +1,5 @@
 "use client";
+import { departmentKey } from "@/lib/downtime-access-rules";
 import { useEffect, useState, useMemo, useRef, memo } from "react";
 import { Temporal } from "@js-temporal/polyfill";
 import {
@@ -100,7 +101,54 @@ export function Downtime({
   busy: boolean;
 }) {
   const [equipmentId, setEquipment] = useState(""),
-    [reason, setReason] = useState("");
+    [reason, setReason] = useState(""),
+    [recordDepartment, setRecordDepartment] = useState(""),
+    [recordArea, setRecordArea] = useState<string | null>(null);
+  const departments = [
+    ...new Map(equipment.map((e) => [departmentKey(e), e])).entries(),
+  ].sort(
+    (a, b) =>
+      a[1].department.localeCompare(b[1].department) ||
+      a[1].plant.localeCompare(b[1].plant),
+  );
+  const areas = [
+    ...new Set(
+      equipment
+        .filter((e) => departmentKey(e) === recordDepartment)
+        .map((e) => e.area),
+    ),
+  ].sort();
+  const machines = equipment.filter(
+    (e) => departmentKey(e) === recordDepartment && e.area === recordArea,
+  );
+  function chooseMachine(id: string) {
+    const e = equipment.find((e) => e.id === id);
+    if (e) {
+      setRecordDepartment(departmentKey(e));
+      setRecordArea(e.area);
+      setEquipment(e.id);
+      setReason("");
+    }
+  }
+  useEffect(() => {
+    if (equipmentId && !equipment.some((e) => e.id === equipmentId)) {
+      setEquipment("");
+      setReason("");
+    }
+    if (
+      recordDepartment &&
+      !equipment.some((e) => departmentKey(e) === recordDepartment)
+    ) {
+      setRecordDepartment("");
+      setRecordArea(null);
+    } else if (
+      recordArea !== null &&
+      !equipment.some(
+        (e) => departmentKey(e) === recordDepartment && e.area === recordArea,
+      )
+    )
+      setRecordArea(null);
+  }, [equipment, equipmentId, recordDepartment, recordArea]);
   const now = useServerClock(data.serverNow);
   const selected = data.downtime.find(
     (d) => d.equipmentId === equipmentId && !d.endedAt,
@@ -121,16 +169,76 @@ export function Downtime({
           <span className="badge">DOWNTIME TRACKING</span>
         </div>
         <p className="muted">
-          Choose the machine and reason. Start when it stops; stop when
-          production resumes. The timer survives refreshes and sign-outs.
+          Choose the department, area, machine and reason. Start when it stops;
+          stop when production resumes. The timer survives refreshes and
+          sign-outs.
         </p>
+        {!equipment.length && (
+          <p className="notice">
+            No machines are assigned to you for downtime recording. Ask an
+            administrator to assign your locations or machines.
+          </p>
+        )}
         <div className="form-grid">
-          <Field label="Equipment">
-            <Equipment
-              equipment={equipment}
+          <Field label="Recording department">
+            <select
+              aria-label="Recording department"
+              value={recordDepartment}
+              onChange={(e) => {
+                setRecordDepartment(e.target.value);
+                setRecordArea(null);
+                setEquipment("");
+                setReason("");
+              }}
+            >
+              <option value="">Select department</option>
+              {departments.map(([key, d]) => (
+                <option key={key} value={key}>
+                  {d.department || "Unassigned department"} ·{" "}
+                  {d.plant || "Unassigned plant"}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Recording area">
+            <select
+              aria-label="Recording area"
+              disabled={!recordDepartment}
+              value={recordArea === null ? "" : JSON.stringify(recordArea)}
+              onChange={(e) => {
+                setRecordArea(
+                  e.target.value ? JSON.parse(e.target.value) : null,
+                );
+                setEquipment("");
+                setReason("");
+              }}
+            >
+              <option value="">Select area</option>
+              {areas.map((area) => (
+                <option key={area} value={JSON.stringify(area)}>
+                  {area || "No area configured"}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Machine">
+            <select
+              aria-label="Machine"
+              disabled={recordArea === null}
               value={equipmentId}
-              onChange={setEquipment}
-            />
+              onChange={(e) => {
+                setEquipment(e.target.value);
+                setReason("");
+              }}
+            >
+              <option value="">Select machine</option>
+              {machines.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name}
+                  {e.line ? ` · ${e.line}` : ""}
+                </option>
+              ))}
+            </select>
           </Field>
           <Field label="Downtime reason">
             <select
@@ -193,7 +301,7 @@ export function Downtime({
               <button
                 key={d.id}
                 className="active-down-card"
-                onClick={() => setEquipment(d.equipmentId)}
+                onClick={() => chooseMachine(d.equipmentId)}
               >
                 <span className="badge warn">DOWN</span>
                 <strong>{d.equipmentSnapshot.name}</strong>

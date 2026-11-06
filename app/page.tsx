@@ -247,9 +247,16 @@ export default function Home() {
           serverNow: next.serverNow,
           ...(live
             ? {
+                equipment: next.equipment,
                 downtime: [
                   ...next.active,
-                  ...prev.downtime.filter((d) => d.endedAt),
+                  ...prev.downtime.filter(
+                    (d) =>
+                      d.endedAt &&
+                      next.equipment.some(
+                        (e: { id: string }) => e.id === d.equipmentId,
+                      ),
+                  ),
                 ],
               }
             : {}),
@@ -632,7 +639,7 @@ export default function Home() {
             {tab === "Downtime" && operationsReady && (
               <Downtime
                 data={operations}
-                equipment={data.equipment}
+                equipment={operations.equipment}
                 admin={user.role === "Admin"}
                 department={opsDepartment}
                 onDepartment={setOpsDepartment}
@@ -678,7 +685,12 @@ export default function Home() {
               <Permissions data={data} save={save} busy={busy} />
             )}
             {tab === "Accounts" && sectionReady && (
-              <Accounts data={data} save={save} busy={busy} />
+              <Accounts
+                data={data}
+                save={save}
+                busy={busy}
+                admin={user.role === "Admin"}
+              />
             )}
             {tab === "My account" && (
               <section className="panel narrow">

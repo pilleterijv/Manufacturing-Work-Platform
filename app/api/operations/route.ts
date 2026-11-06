@@ -1,3 +1,7 @@
+import {
+  downtimeEquipmentWhere,
+  authorizeDowntime,
+} from "@/lib/downtime-access";
 import { z } from "zod";
 import { decodeCursor, pageInfo } from "@/lib/pagination";
 import { db } from "@/lib/db";
@@ -29,6 +33,16 @@ export async function GET(req: Request) {
       .max(100)
       .parse(params.get("department") ?? "");
     const cursor = decodeCursor(params.get("cursor"));
+    const permittedEquipment =
+      g.includes("downtime") && view !== "summary" && view !== "ideas"
+        ? await db.equipment.findMany({
+            where: downtimeEquipmentWhere(u),
+            orderBy: { name: "asc" },
+          })
+        : [];
+    const downtimeScope = {
+      equipmentId: { in: permittedEquipment.map((e) => e.id) },
+    };
     const location = department
       ? { equipmentSnapshot: { path: ["department"], equals: department } }
       : {};
@@ -47,7 +61,7 @@ export async function GET(req: Request) {
         }),
         view === "live" && g.includes("downtime")
           ? db.downtime.findMany({
-              where: { ...location, endedAt: null },
+              where: { ...location, ...downtimeScope, endedAt: null },
               include: {
                 starter: { select: { name: true } },
                 stopper: { select: { name: true } },
@@ -59,7 +73,7 @@ export async function GET(req: Request) {
         config: setting.value,
         notifications,
         serverNow: new Date().toISOString(),
-        ...(view === "live" ? { active } : {}),
+        ...(view === "live" ? { active, equipment: permittedEquipment } : {}),
       });
     }
     const [reasons, setting, downtime, ideas, people, notifications] =
@@ -72,6 +86,7 @@ export async function GET(req: Request) {
           ? db.downtime.findMany({
               where: {
                 ...location,
+                ...downtimeScope,
                 ...(cursor
                   ? {
                       OR: [
@@ -131,7 +146,7 @@ export async function GET(req: Request) {
     const active =
       view !== "ideas" && g.includes("downtime")
         ? await db.downtime.findMany({
-            where: { ...location, endedAt: null },
+            where: { ...location, ...downtimeScope, endedAt: null },
             include: {
               starter: { select: { name: true } },
               stopper: { select: { name: true } },
@@ -145,6 +160,7 @@ export async function GET(req: Request) {
     ];
     const now = new Date();
     return Response.json({
+      equipment: permittedEquipment,
       reasons,
       config: setting.value,
       serverNow: now.toISOString(),
@@ -223,6 +239,7 @@ export async function POST(req: Request) {
           ]);
           if (!equipment || !reason?.active)
             throw new HttpError(400, "Select equipment and an enabled reason");
+          await authorizeDowntime(tx, u, equipment);
           const config = shiftConfigSchema.parse(setting.value);
           await tx.downtime.create({
             data: {
@@ -241,16 +258,29 @@ export async function POST(req: Request) {
     }
     if (action === "stop") {
       const { id } = z.object({ id: z.string() }).parse(b);
-      const result = await db.downtime.updateMany({
-        where: { id, endedAt: null },
-        data: { endedAt: new Date(), stoppedBy: u.id },
+      await db.$transaction(async (tx) => {
+        const event = await tx.downtime.findUnique({
+          where: { id },
+          include: { equipment: true },
+        });
+        if (!event)
+          throw new HttpError(
+            409,
+            "This downtime has already stopped or no longer exists",
+          );
+        await authorizeDowntime(tx, u, event.equipment);
+        const result = await tx.downtime.updateMany({
+          where: { id, endedAt: null },
+          data: { endedAt: new Date(), stoppedBy: u.id },
+        });
+        if (!result.count)
+          throw new HttpError(
+            409,
+            "This downtime has already stopped or no longer exists",
+          );
       });
-      if (!result.count)
-        throw new HttpError(
-          409,
-          "This downtime has already stopped or no longer exists",
-        );
     }
+
     if (action === "idea") {
       await limit(`idea:${u.id}`, 30, 3600);
       const v = ideaSchema.parse(b);

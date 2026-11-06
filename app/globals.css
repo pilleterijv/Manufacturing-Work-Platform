@@ -1614,3 +1614,24 @@ input:not([type="checkbox"]) {
     padding: 14px;
   }
 }
+
+.access-tree > details {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  margin: 16px 0;
+}
+.access-tree summary {
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 44px;
+}
+.access-area {
+  border-left: 3px solid var(--line);
+  padding: 10px 0 10px 18px;
+  margin: 14px 0;
+}
+.access-tree input[type="checkbox"] {
+  min-width: 24px;
+  height: 24px;
+}

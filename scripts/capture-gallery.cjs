@@ -493,9 +493,10 @@ async function main() {
     "Verification totals, No-answer rates, completion times, audit follow-ups, timing variation and detailed records.",
   );
   await go("Downtime", "Track a stoppage");
-  await page
-    .getByLabel("Equipment", { exact: true })
-    .selectOption(equipment[0].id);
+  await require("../tests/helpers/downtime.cjs").selectDowntimeMachine(
+    page,
+    equipment[0],
+  );
   await page
     .getByLabel("Downtime reason", { exact: true })
     .selectOption(reasons[2].id);

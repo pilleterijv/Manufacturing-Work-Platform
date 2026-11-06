@@ -1,4 +1,5 @@
 "use client";
+import DowntimeAccessEditor from "../downtime-access-editor";
 import { useState, useEffect, useRef } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
 import type { Data, Step, Cycle, Standard } from "@/lib/workspace-types";
@@ -16,10 +17,12 @@ export default function Accounts({
   data,
   save,
   busy,
+  admin,
 }: {
   data: Data;
   save: Save;
   busy: boolean;
+  admin: boolean;
 }) {
   const [id, setId] = useState(""),
     [username, setUsername] = useState(""),
@@ -42,7 +45,7 @@ export default function Accounts({
         <h2>{id ? "Update account" : "Create individual account"}</h2>
         <Field label="Account">
           <select
-            aria-label="Standard work"
+            aria-label="Account"
             value={id}
             onChange={(e) => select(e.target.value)}
           >
@@ -131,6 +134,21 @@ export default function Accounts({
           </Submit>
         </form>
       </section>
+      {admin && id && data.users.find((u) => u.id === id) && (
+        <DowntimeAccessEditor
+          key={id}
+          user={data.users.find((u) => u.id === id)!}
+          equipment={data.equipment}
+          save={save}
+          busy={busy}
+        />
+      )}
+      {admin && !id && (
+        <p className="small muted">
+          Create the account, then select it to assign its downtime locations
+          and machines.
+        </p>
+      )}
       <section className="panel table-wrap">
         <table>
           <thead>

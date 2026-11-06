@@ -14,7 +14,7 @@ their unique UUID, full equipment location and an optional process description.
 
 ## Download and run on Windows
 
-**[Download the application source as one small ZIP](https://github.com/pilleterijv/Manufacturing-Work-Platform/archive/refs/heads/codex/dashboard-gallery.zip)**. You do not need to open or download the files individually. Screenshots stay available in GitHub's docs/screenshots folder and are excluded from the ZIP.
+**[Download the application source as one small ZIP](https://github.com/pilleterijv/Manufacturing-Work-Platform/archive/refs/heads/codex/downtime-location-access.zip)**. You do not need to open or download the files individually. Screenshots stay available in GitHub's docs/screenshots folder and are excluded from the ZIP.
 
 1. Install **Node.js 24 LTS** from https://nodejs.org/ and start **Docker Desktop**. Docker **AMD64** is for Intel/AMD computers; ARM64 is for ARM computers. An existing native PostgreSQL installation can be used instead of Docker; see below.
 2. Right-click the ZIP → **Extract All**. Open the extracted folder and double-click **START-FLOORWORK.cmd**.
@@ -116,3 +116,13 @@ For a reproducible source archive from Git, run npm run package:source; it packa
 The tablet/security update adds migrations 004 and 005; back up data before upgrading and review the new dashboard permission on custom role policies. Deployment templates are provided but have not changed your host firewall or published a live site.
 
 The dashboard/problem-solving update adds migration 006. It preserves existing records and grants the new `problems` capability to existing valid policies; review grants after upgrading.
+
+## Downtime locations and user assignments
+
+Downtime recording uses **department → area → machine** dropdowns. Department choices include the plant to distinguish duplicate names. Changing a parent clears the child selection, and selecting a currently-down machine card restores its full location.
+
+As Admin, open **Accounts**, select an existing user, and use **Downtime location access**. Choose unrestricted access or assign whole departments, areas, specific machines, or a combination. Empty restricted assignments block all downtime recording. Whole-location grants include future machines in that location; explicit machine grants follow the machine if it moves. Existing accounts remain unrestricted after migration 007, and Admin retains full access.
+
+Assignments are enforced on start/stop requests, live timers, operational history and raw downtime exports. Revocation takes effect on the next request, including stopping existing timers; another authorized person or Admin can stop a timer after its starter loses access. Leadership/department aggregate dashboards still follow their separate role permissions. Only Admin can edit assignments, and Accounts-capable non-admins cannot promote anyone to Admin or edit Admin accounts. Other modules continue to use workspace role grants.
+
+Run `npm run test:downtime-access` against a local production app to verify the hierarchy, assignment editing, immediate revocation, unauthorized starts/stops and scoped reads/exports. Back up data before upgrading; preserve your existing `.env`, uploads and database volume.
