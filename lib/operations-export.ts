@@ -1,3 +1,4 @@
+import { downtimeEquipmentWhere } from "./downtime-access";
 import { paged, type ExportBook } from "./excel-stream";
 import { db } from "./db";
 import { Capability } from "./rules";
@@ -9,6 +10,7 @@ import {
 export async function addOperationsSheets(
   book: ExportBook,
   grants: Capability[],
+  user: { role: string; downtimeAccess: unknown },
 ) {
   if (grants.includes("downtime")) {
     const events = book.addWorksheet("Downtime events"),
@@ -42,7 +44,10 @@ export async function addOperationsSheets(
     const asOf = new Date();
     const downtime = paged((cursor) =>
       db.downtime.findMany({
-        where: { startedAt: { lte: asOf } },
+        where: {
+          startedAt: { lte: asOf },
+          equipment: downtimeEquipmentWhere(user),
+        },
         take: 100,
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
         orderBy: { id: "asc" },

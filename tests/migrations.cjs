@@ -104,6 +104,14 @@ async function main() {
           ).rows[0].data,
           raw,
         );
+        assert.deepEqual(
+          (
+            await pool.query(
+              `SELECT "downtimeAccess" FROM "User" WHERE id='preserved-user'`,
+            )
+          ).rows[0].downtimeAccess,
+          { mode: "all", locations: [], equipmentIds: [] },
+        );
         assert.equal(
           (
             await pool.query(
@@ -131,7 +139,7 @@ async function main() {
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "Migration"')).rows[0]
           .n,
-        6,
+        7,
       );
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "Problem"')).rows[0]

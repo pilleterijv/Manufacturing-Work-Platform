@@ -185,7 +185,7 @@ export async function GET(req: Request) {
             }
           }
         }
-        await addOperationsSheets(book, g);
+        await addOperationsSheets(book, g, u);
       },
       req.signal,
     );

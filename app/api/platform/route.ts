@@ -1,3 +1,4 @@
+import { downtimeAccessSchema } from "@/lib/downtime-access-rules";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -164,6 +165,7 @@ export async function GET(req: Request) {
                 role: true,
                 active: true,
                 mustChange: true,
+                ...(u.role === "Admin" ? { downtimeAccess: true } : {}),
               },
             })
           : [],
@@ -216,11 +218,53 @@ export async function POST(req: Request) {
         study: "studies",
         audit: "audits",
         user: "users",
+        downtimeAccess: "users",
         policy: "permissions",
       } as const
     )[action as "standard"];
     if (!cap) throw new HttpError(400, "Unknown action");
     const u = await requireUser(action === "archive" ? undefined : cap);
+    if (action === "downtimeAccess") {
+      if (u.role !== "Admin")
+        throw new HttpError(
+          403,
+          "Only Admin can assign downtime locations and machines",
+        );
+      const id = z.string().uuid().parse(b.id);
+      const access = downtimeAccessSchema.parse(b.access);
+      await db.$transaction(async (tx) => {
+        const target = await tx.user.findUnique({ where: { id } });
+        if (!target) throw new HttpError(404, "User not found");
+        if (target.role === "Admin" && access.mode !== "all")
+          throw new HttpError(400, "Admin retains access to every machine");
+        const ids = [...new Set(access.equipmentIds)];
+        if (
+          (await tx.equipment.count({ where: { id: { in: ids } } })) !==
+          ids.length
+        )
+          throw new HttpError(
+            400,
+            "One or more selected machines no longer exist",
+          );
+        for (const l of access.locations) {
+          if (
+            !(await tx.equipment.findFirst({
+              where: {
+                plant: l.plant,
+                department: l.department,
+                ...(l.area === null ? {} : { area: l.area }),
+              },
+            }))
+          )
+            throw new HttpError(400, "A selected location no longer exists");
+        }
+        await tx.user.update({
+          where: { id },
+          data: { downtimeAccess: access },
+        });
+      });
+      return Response.json({ ok: true });
+    }
     if (action === "equipment") {
       const v = z
         .object({
@@ -427,6 +471,8 @@ export async function POST(req: Request) {
         })
         .parse(b);
       const { id, password, ...fields } = v;
+      if (u.role !== "Admin" && v.role === "Admin")
+        throw new HttpError(403, "Only Admin can assign the Admin role");
       if (id === u.id && (!v.active || v.role !== u.role))
         throw new HttpError(
           400,
@@ -440,6 +486,11 @@ export async function POST(req: Request) {
           if (id) {
             const old = await tx.user.findUnique({ where: { id } });
             if (!old) throw new HttpError(404, "User not found");
+            if (u.role !== "Admin" && old.role === "Admin")
+              throw new HttpError(
+                403,
+                "Only Admin can edit administrator accounts",
+              );
             if (
               old.role === "Admin" &&
               old.active &&

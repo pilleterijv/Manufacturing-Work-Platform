@@ -31,6 +31,7 @@ export type Idea = {
   participants: { user: Person }[];
 };
 export type OperationsData = {
+  equipment: EquipmentSnapshot[];
   downtimePage?: { hasMore: boolean; cursor: string | null };
   ideasPage?: { hasMore: boolean; cursor: string | null };
   reasons: { id: string; name: string; active: boolean }[];
@@ -48,6 +49,7 @@ export type OperationsData = {
   }[];
 };
 export const emptyOperations: OperationsData = {
+  equipment: [],
   reasons: [],
   config: {
     timezone: "America/Chicago",

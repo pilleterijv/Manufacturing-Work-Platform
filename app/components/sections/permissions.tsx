@@ -80,8 +80,10 @@ export default function Permissions({
         <Submit busy={busy}>Save role permissions</Submit>
       </form>
       <p className="small muted">
-        Roles currently apply across the workspace. Plant and line restrictions
-        are not implemented.
+        Role grants apply across the workspace. Administrators assign each
+        user’s downtime departments, areas and machines under Accounts. These
+        assignments restrict downtime recording and operational history, while
+        dashboard and leadership grants control aggregate reporting.
       </p>
     </section>
   );
