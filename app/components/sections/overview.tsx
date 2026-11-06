@@ -140,6 +140,12 @@ export default function Overview({
                 "Choose which workflows each role can use.",
               ],
               [
+                "Problem solving",
+                "problems",
+                "◈",
+                "Investigate 2D, 4D and 8D issues; follow up actions.",
+              ],
+              [
                 "My account",
                 null,
                 "○",
@@ -155,7 +161,7 @@ export default function Overview({
                 className="module-card"
                 key={name}
                 onClick={() => go(name)}
-                aria-label={`Open ${name}`}
+                aria-label={`Open ${name} section`}
               >
                 <span className="module-icon" aria-hidden="true">
                   {icon}

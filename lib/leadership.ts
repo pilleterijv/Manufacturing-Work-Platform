@@ -73,6 +73,8 @@ export async function leadershipReport(params: URLSearchParams) {
     equipmentCount,
     people,
     departmentRows,
+    problemGroups,
+    problemActions,
   ] = await Promise.all([
     db.$queryRaw<Counts[]>(Prisma.sql`${base} SELECT
       (count(*) FILTER (WHERE kind='run'))::int AS runs,
@@ -118,6 +120,25 @@ export async function leadershipReport(params: URLSearchParams) {
       UNION SELECT "equipmentSnapshot"->>'department' FROM "Downtime"
       UNION SELECT "equipmentSnapshot"->>'department' FROM "Idea"
       UNION SELECT COALESCE(data->'equipmentSnapshot'->>'department',data->'snapshot'->'equipment'->>'department') FROM "Record"`),
+    db.problem.groupBy({
+      by: ["method", "status"],
+      where: department
+        ? { equipmentSnapshot: { path: ["department"], equals: department } }
+        : {},
+      _count: true,
+    }),
+    db.problemAction.count({
+      where: {
+        status: { not: "Completed" },
+        ...(department
+          ? {
+              problem: {
+                equipmentSnapshot: { path: ["department"], equals: department },
+              },
+            }
+          : {}),
+      },
+    }),
   ]);
   // Scan events in bounded batches; aggregate slices immediately instead of
   // constructing a second full array containing every shift of every event.
@@ -202,6 +223,13 @@ export async function leadershipReport(params: URLSearchParams) {
       training: libraryRows.find((r) => r.kind === "video")?.total ?? 0,
       guides: libraryRows.find((r) => r.kind === "guide")?.total ?? 0,
       activePeople: people,
+      openProblems: problemGroups
+        .filter((p) => p.status !== "Closed")
+        .reduce((n, p) => n + p._count, 0),
+      closedProblems: problemGroups
+        .filter((p) => p.status === "Closed")
+        .reduce((n, p) => n + p._count, 0),
+      openProblemActions: problemActions,
     },
     shifts: [...shifts.values()].sort(
       (a, b) =>

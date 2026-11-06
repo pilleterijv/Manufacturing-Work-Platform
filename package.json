@@ -19,7 +19,9 @@
     "postbuild": "node scripts/prepare-runtime.cjs",
     "test:performance": "node tests/performance.cjs",
     "test:runtime": "node tests/runtime.cjs",
-    "test:tablet": "node tests/tablet-dashboard.cjs"
+    "test:tablet": "node tests/tablet-dashboard.cjs",
+    "test:problems": "node tests/problems-browser.cjs",
+    "screenshots": "node scripts/capture-gallery.cjs"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.29.1",

@@ -1033,6 +1033,12 @@ export function Leadership({
                   ["Troubleshooting guides", s.guides],
                   ["Ideas submitted in period", s.ideasCreated],
                   ["Completed ideas · all time", s.completedIdeas],
+                  ["Open problem-solving records · current", s.openProblems],
+                  [
+                    "Closed problem-solving records · all time",
+                    s.closedProblems,
+                  ],
+                  ["Open problem actions · current", s.openProblemActions],
                   ...(s.activePeople === null
                     ? []
                     : [["Active accounts · workspace", s.activePeople]]),

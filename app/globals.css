@@ -1530,3 +1530,87 @@ input:not([type="checkbox"]) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Methodology forms and the shared action follow-up queue. */
+.method-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.method-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.method-card .primary {
+  margin-top: auto;
+}
+.method-mark {
+  font-size: 36px;
+  line-height: 1.2;
+  color: var(--teal);
+  font-weight: 700;
+  display: block;
+  margin-bottom: 15px;
+}
+.problem-filters {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr 1.5fr auto;
+  gap: 12px;
+  align-items: end;
+}
+.problem-filters .field {
+  margin-bottom: 0;
+}
+.problem-filters + p {
+  margin-top: 15px;
+}
+.problem-discipline {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin: 24px 0;
+  padding: 20px;
+}
+.problem-discipline legend {
+  font-weight: 700;
+  padding: 0 8px;
+}
+.problem-action {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 16px 0;
+}
+.problem-action-update {
+  display: grid;
+  grid-template-columns: 1fr 2fr auto;
+  gap: 12px;
+  align-items: end;
+  margin: 16px 0;
+}
+.problem-action-update .field {
+  margin-bottom: 0;
+}
+@media (max-width: 1100px) {
+  .method-grid {
+    grid-template-columns: 1fr;
+  }
+  .problem-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+  .problem-action-update {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 720px) {
+  .problem-filters {
+    grid-template-columns: 1fr;
+  }
+  .problem-discipline {
+    padding: 12px;
+  }
+  .problem-action {
+    padding: 14px;
+  }
+}

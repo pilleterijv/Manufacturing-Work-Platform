@@ -163,3 +163,47 @@ model Notification {
  idea Idea @relation(fields:[ideaId],references:[id])
  @@index([userId,createdAt])
 }
+
+model Problem {
+ id String @id @default(uuid())
+ reference String @unique
+ method String
+ title String
+ equipmentId String
+ equipmentSnapshot Json
+ occurredOn String
+ reportedBy String
+ ownerId String
+ reviewerId String
+ team String
+ dueDate String
+ previousId String?
+ answers Json
+ status String @default("Open")
+ createdBy String
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ closedAt DateTime?
+ version Int @default(1)
+ history Json
+ actions ProblemAction[]
+ @@index([createdAt,id])
+ @@index([status,dueDate])
+}
+model ProblemAction {
+ id String @id @default(uuid())
+ problemId String
+ type String
+ title String
+ checkpoint String @default("")
+ ownerId String
+ dueDate String
+ status String @default("Open")
+ comment String @default("")
+ completedAt DateTime?
+ version Int @default(1)
+ history Json
+ problem Problem @relation(fields:[problemId],references:[id])
+ @@index([problemId])
+ @@index([status,dueDate])
+}

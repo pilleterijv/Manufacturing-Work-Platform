@@ -9,6 +9,9 @@ import { emptyOperations, type OperationsData } from "@/lib/operations-types";
 const Overview = dynamic(() => import("./components/sections/overview"), {
   loading: () => <p className="muted">Loading section…</p>,
 });
+const Problems = dynamic(() => import("./components/sections/problems"), {
+  loading: () => <p className="muted">Loading problem solving…</p>,
+});
 const Work = dynamic(() => import("./components/sections/work"), {
   loading: () => <p className="muted">Loading section…</p>,
 });
@@ -434,6 +437,7 @@ export default function Home() {
     ["Downtime", "downtime", "◷"],
     ["Leadership dashboard", "leadership", "◫"],
     ["Improvement ideas", "ideas", "✧"],
+    ["Problem solving", "problems", "◈"],
     ["Notifications", null, "✉"],
     ["Manage", "manage", "⊞"],
     ["Accounts", "users", "♙"],
@@ -441,6 +445,8 @@ export default function Home() {
     ["My account", null, "○"],
   ];
   const descriptions: Record<string, string> = {
+    "Problem solving":
+      "Structured 2D, 4D and 8D investigations, actions and effectiveness checks.",
     Downtime:
       "Track stoppages, understand shift losses, and keep the floor moving.",
     "Leadership dashboard":
@@ -588,6 +594,13 @@ export default function Home() {
                   />
                 )}
               </Overview>
+            )}
+            {tab === "Problem solving" && (
+              <Problems
+                userId={user.id}
+                userName={user.name}
+                canExport={g.includes("export")}
+              />
             )}
             {tab === "Standard work" && sectionReady && (
               <Work data={data} save={save} busy={busy} audit={false} />
