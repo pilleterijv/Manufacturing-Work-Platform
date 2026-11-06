@@ -578,7 +578,7 @@ export default function Home() {
               </p>
             )}
             {tab === "Overview" && (
-              <>
+              <Overview data={data} go={setTab} grants={g}>
                 {(g.includes("dashboard") || g.includes("leadership")) && (
                   <Leadership
                     timezone={operations.config.timezone}
@@ -587,8 +587,7 @@ export default function Home() {
                     canOverall={g.includes("leadership")}
                   />
                 )}
-                <Overview data={data} go={setTab} grants={g} />
-              </>
+              </Overview>
             )}
             {tab === "Standard work" && sectionReady && (
               <Work data={data} save={save} busy={busy} audit={false} />

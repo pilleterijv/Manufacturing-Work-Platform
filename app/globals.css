@@ -7,6 +7,82 @@
   --orange: #d97843;
   --white: #fff;
 }
+/* Overview launchpad: native buttons keep every section keyboard and touch accessible. */
+.dashboard-hero {
+  min-height: 220px;
+}
+.dashboard-hero h2 {
+  font-size: 36px;
+}
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 32px;
+}
+.module-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px;
+  min-height: 128px;
+  color: var(--ink);
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  text-align: left;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.module-card:hover {
+  border-color: var(--teal);
+  box-shadow: 0 4px 14px #173c3d0a;
+}
+.module-card strong {
+  display: block;
+  font-size: 14px;
+  margin: 2px 0 7px;
+}
+.module-card small {
+  display: block;
+  color: #627570;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.module-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: #edf3e6;
+  color: var(--teal);
+  font-size: 22px;
+}
+.module-arrow {
+  margin-left: auto;
+  color: #72817e;
+}
+.dashboard-report {
+  border-top: 1px solid var(--line);
+  padding-top: 28px;
+  margin-top: 12px;
+}
+@media (max-width: 1100px) {
+  .module-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 720px) {
+  .module-grid {
+    grid-template-columns: 1fr;
+  }
+  .module-card {
+    min-height: 100px;
+  }
+}
 * {
   box-sizing: border-box;
 }
