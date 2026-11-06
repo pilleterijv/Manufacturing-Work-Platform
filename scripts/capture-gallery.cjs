@@ -45,6 +45,8 @@ async function screenshot(page, id, title, description) {
   await page.waitForTimeout(250);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: path.join(out, id + ".png"), fullPage: true });
+  if (["18-problem-2d", "19-problem-4d", "20-problem-8d"].includes(id))
+    await page.locator(".problem-editor").scrollIntoViewIfNeeded();
   await page.screenshot({ path: path.join(out, id + "-preview.png") });
   shotList.push({ id, title, description });
   console.log("Captured " + id);
@@ -628,9 +630,7 @@ async function main() {
     "One follow-up queue for open corrective actions and checkpoints. Authorized owners/managers submit status and evidence comments; completed items remain in record history.",
   );
   await go("Manage", "Standard work editor");
-  await page
-    .getByLabel("Create or revise", { exact: true })
-    .selectOption(standards[0].id);
+  await page.locator(".page select").first().selectOption(standards[0].id);
   await page
     .getByRole("button", { name: "View revision history", exact: true })
     .click();

@@ -1,0 +1,137 @@
+[
+  {
+    "id": "01-sign-in",
+    "title": "Individual sign-in",
+    "description": "Local individual accounts, remembered sessions and password recovery through an administrator."
+  },
+  {
+    "id": "02-dashboard",
+    "title": "Workspace dashboard",
+    "description": "Role-aware launchpad for all sections, overall/department reporting, record totals and recent activity."
+  },
+  {
+    "id": "03-standard-work",
+    "title": "Standard work: checklist and evidence",
+    "description": "Revision-specific Yes/No checks, camera/file evidence, comments and completed verification history."
+  },
+  {
+    "id": "04-work-history",
+    "title": "Saved verification details",
+    "description": "Expand a saved record to inspect the original revision, answers, comments and evidence references."
+  },
+  {
+    "id": "05-time-study",
+    "title": "Time studies: stopwatch and observations",
+    "description": "Name work elements, record repeated stopwatch observations, review statistics and save raw timings. The visible short observation is a demonstration."
+  },
+  {
+    "id": "06-supervisor-audit",
+    "title": "Supervisor audits: checks and cycle timing",
+    "description": "Identify the operator, verify the standard, collect evidence and compare actual cycles against target and tolerance."
+  },
+  {
+    "id": "07-training",
+    "title": "Training library and video editor",
+    "description": "Search equipment-linked training, open linked YouTube/Vimeo playback and add resources. Live provider playback is not demonstrated."
+  },
+  {
+    "id": "08-troubleshooting",
+    "title": "Troubleshooting library",
+    "description": "Search readable equipment-specific instructions and add or archive guides."
+  },
+  {
+    "id": "09-analytics",
+    "title": "Analytics and detailed statistics",
+    "description": "Verification totals, No-answer rates, completion times, audit follow-ups, timing variation and detailed records."
+  },
+  {
+    "id": "10-downtime-ready",
+    "title": "Downtime: ready to start",
+    "description": "Choose the machine and reason. Admins also manage reasons, timer availability and shift schedules."
+  },
+  {
+    "id": "11-downtime-running",
+    "title": "Downtime: shared timer running",
+    "description": "An actual started event is persisted by the server and survives reload. Stop the timer when production resumes."
+  },
+  {
+    "id": "12-downtime-history",
+    "title": "Downtime: stopped event and shift history",
+    "description": "Stopped records retain their duration, reason, equipment, shift schedule and starter/stopper identities."
+  },
+  {
+    "id": "13-leadership-overall",
+    "title": "Leadership: overall performance",
+    "description": "Complete date-filtered reporting across work, audits, studies, downtime, ideas, problem solving and current resource libraries."
+  },
+  {
+    "id": "14-leadership-department",
+    "title": "Leadership: department performance",
+    "description": "The same dashboard scoped to Assembly, with department totals, downtime reasons, shift losses and an Excel export."
+  },
+  {
+    "id": "15-improvement-ideas",
+    "title": "Improvement ideas: submit and follow progress",
+    "description": "Assign submitter, pilot, validator and participants; describe current/proposed states, location and due date. Existing ideas appear in the pipeline below."
+  },
+  {
+    "id": "16-notifications",
+    "title": "Pilot notifications",
+    "description": "A real in-app assignment generated when the sample idea was created. Open the idea or mark the private message as read."
+  },
+  {
+    "id": "17-problem-solving",
+    "title": "Problem solving: methodology and record dashboard",
+    "description": "Workbook-based 2D / 4D / 8D selection guidance, department filters, open/closed counts, action totals, overdue follow-ups and the record viewer. Exact Microsoft Forms layouts await accessible references."
+  },
+  {
+    "id": "18-problem-2d",
+    "title": "2D problem-solving record",
+    "description": "Find & fix · simple, one-time problems. Method-specific evidence fields, assigned facilitator/reviewer, due date, tracked actions and change history."
+  },
+  {
+    "id": "19-problem-4d",
+    "title": "4D problem-solving record",
+    "description": "Department problem · recurring or medium complexity. Method-specific evidence fields, assigned facilitator/reviewer, due date, tracked actions and change history."
+  },
+  {
+    "id": "20-problem-8d",
+    "title": "8D problem-solving record",
+    "description": "Major / complex issue · customer or cross-functional impact. Method-specific evidence fields, assigned facilitator/reviewer, due date, tracked actions and change history."
+  },
+  {
+    "id": "21-action-portal",
+    "title": "Problem solving: action update portal",
+    "description": "One follow-up queue for open corrective actions and checkpoints. Authorized owners/managers submit status and evidence comments; completed items remain in record history."
+  },
+  {
+    "id": "22-manage",
+    "title": "Equipment and standard management",
+    "description": "Create equipment hierarchies, author Yes/No steps, require photos, set targets/tolerance and publish immutable standard revisions."
+  },
+  {
+    "id": "23-accounts",
+    "title": "Account administration",
+    "description": "Create or update individual users, assign a role, reset access and deactivate accounts. No sample credentials are included in this gallery."
+  },
+  {
+    "id": "24-permissions",
+    "title": "Role permissions",
+    "description": "Configure server-enforced grants for each role, including the new Problem Solving section."
+  },
+  {
+    "id": "25-my-account",
+    "title": "My account and session controls",
+    "description": "Change your password and revoke other remembered sessions."
+  },
+  {
+    "id": "26-tablet-dashboard",
+    "title": "Tablet dashboard",
+    "description": "The actual overview at a 768-pixel tablet width, with touch controls and responsive section cards."
+  },
+  {
+    "id": "27-mobile-dashboard",
+    "title": "Mobile dashboard",
+    "description": "Single-column section cards and horizontally scrolling navigation on a phone-sized viewport."
+  }
+]

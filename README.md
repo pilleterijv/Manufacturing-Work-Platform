@@ -14,7 +14,7 @@ their unique UUID, full equipment location and an optional process description.
 
 ## Download and run on Windows
 
-**[Download the application source as one small ZIP](https://github.com/pilleterijv/Manufacturing-Work-Platform/archive/refs/heads/codex/tablet-security-optimization.zip)**. You do not need to open or download the files individually. Screenshots stay available in GitHub's docs/screenshots folder and are excluded from the ZIP.
+**[Download the application source as one small ZIP](https://github.com/pilleterijv/Manufacturing-Work-Platform/archive/refs/heads/codex/dashboard-gallery.zip)**. You do not need to open or download the files individually. Screenshots stay available in GitHub's docs/screenshots folder and are excluded from the ZIP.
 
 1. Install **Node.js 24 LTS** from https://nodejs.org/ and start **Docker Desktop**. Docker **AMD64** is for Intel/AMD computers; ARM64 is for ARM computers. An existing native PostgreSQL installation can be used instead of Docker; see below.
 2. Right-click the ZIP → **Extract All**. Open the extracted folder and double-click **START-FLOORWORK.cmd**.
@@ -65,6 +65,9 @@ Use npm run dev for development. APP_ORIGIN must exactly match the origin you br
 
 ## Workflows
 
+- **Workspace dashboard:** role-aware section cards link to each permitted workflow; overall and department reporting appears alongside current totals and recent activity.
+- **Problem solving:** workbook-based 2D, 4D and 8D records, linked escalation, assigned facilitator/reviewer, method-specific evidence, tracked actions/checkpoints, a manager/owner action update portal, closure checks, change history and a dedicated Excel export. See [methodology mapping and reference limits](docs/problem-solving.md). The private Microsoft Forms design pages could not be read; exact form matching is pending accessible references.
+
 - **Standard work:** latest revisions, ordered Yes/No steps, required/optional photos and comments, completion history, timestamped records, and frozen standard snapshots.
 - **Time studies:** named work elements, repeated stopwatch observations, raw seconds/timestamps, average, median, minimum, maximum, range, and population standard deviation per element.
 - **Supervisor audits:** operator identification, Yes/No findings, photographic evidence, repeated cycle timing, target+tolerance checks, follow-up flags, and original criteria retained per audit.
@@ -87,6 +90,9 @@ npm audit
 npm run test:browser
 npm run test:operations
 npm run test:tablet
+npm run test:problems
+# Optional synthetic-data walkthrough of every section:
+npm run screenshots
 # Optional local PostgreSQL verification (requires CREATE DATABASE permission):
 npm run test:migrations
 ```
@@ -108,3 +114,5 @@ Raw Excel exports stage committed rows on private temporary disk and read record
 For a reproducible source archive from Git, run npm run package:source; it packages the committed HEAD into dist/Floorwork-source.zip and honors .gitattributes exclusions. Local uncommitted changes, dependencies, build output, private configuration, photos, and the screenshot gallery are not included.
 
 The tablet/security update adds migrations 004 and 005; back up data before upgrading and review the new dashboard permission on custom role policies. Deployment templates are provided but have not changed your host firewall or published a live site.
+
+The dashboard/problem-solving update adds migration 006. It preserves existing records and grants the new `problems` capability to existing valid policies; review grants after upgrading.

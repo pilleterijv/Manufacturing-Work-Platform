@@ -131,7 +131,17 @@ async function main() {
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "Migration"')).rows[0]
           .n,
-        5,
+        6,
+      );
+      assert.equal(
+        (await pool.query('SELECT count(*)::int AS n FROM "Problem"')).rows[0]
+          .n,
+        0,
+      );
+      assert.equal(
+        (await pool.query('SELECT count(*)::int AS n FROM "ProblemAction"'))
+          .rows[0].n,
+        0,
       );
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "User"')).rows[0].n,
@@ -153,6 +163,7 @@ async function main() {
           "downtime",
           "ideas",
           "leadership",
+          "problems",
           "work",
         ]);
         const operator = (
@@ -164,6 +175,7 @@ async function main() {
           "dashboard",
           "downtime",
           "ideas",
+          "problems",
           "studies",
         ]);
       }

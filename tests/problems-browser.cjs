@@ -51,7 +51,12 @@ async function main() {
     const c = await browser.newContext();
     const r = await c.request.post(origin + "/api/account", {
       headers: { Origin: origin },
-      data: { action: "login", username: u.username, password },
+      data: {
+        action: "login",
+        username: u.username,
+        password,
+        remember: false,
+      },
     });
     assert.equal(r.status(), 200);
     contexts.push(c);
@@ -273,7 +278,11 @@ async function main() {
     .getByRole("heading", { name: "Problem-solving records", exact: true })
     .waitFor();
   await page.getByLabel("Problem department").selectOption(eq.department);
-  await page.getByText(input.title, { exact: true }).first().waitFor();
+  await page
+    .getByRole("row")
+    .filter({ hasText: input.title })
+    .first()
+    .waitFor();
   assert.equal(
     await page
       .getByRole("button", { name: "Open Accounts section", exact: true })
