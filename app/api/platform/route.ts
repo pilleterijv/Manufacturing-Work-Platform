@@ -1,3 +1,12 @@
+import { allowedDowntimeEquipment } from "@/lib/downtime-access-rules";
+import {
+  equipmentScope,
+  equipmentIds,
+  recordScope,
+  assertEquipmentAccess,
+  eligiblePeople,
+  visiblePeople,
+} from "@/lib/location-access";
 import { downtimeAccessSchema } from "@/lib/downtime-access-rules";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
@@ -21,6 +30,7 @@ export async function GET(req: Request) {
   try {
     const u = await requireUser();
     const g = await grants(u);
+    const ids = await equipmentIds(u);
     const params = new URL(req.url).searchParams;
     const cursor = z
       .string()
@@ -55,7 +65,11 @@ export async function GET(req: Request) {
         .optional()
         .parse(params.get("before") ?? undefined);
       const revisions = await db.standard.findMany({
-        where: { family, ...(before ? { revision: { lt: before } } : {}) },
+        where: {
+          family,
+          equipmentId: { in: ids },
+          ...(before ? { revision: { lt: before } } : {}),
+        },
         orderBy: { revision: "desc" },
         take: 101,
       });
@@ -84,6 +98,7 @@ export async function GET(req: Request) {
     const requestedKind = params.get("kind");
     const historyKind = view === "records" ? requestedKind : view;
     const scope = {
+      AND: [recordScope(ids)],
       ...(g.includes("analytics") ? {} : { userId: u.id }),
       kind: {
         in:
@@ -128,12 +143,19 @@ export async function GET(req: Request) {
 
     const [equipment, standards, records, content, users, policies] =
       await Promise.all([
-        db.equipment.findMany({ orderBy: { name: "asc" } }),
+        db.equipment.findMany({
+          where: equipmentScope(u),
+          orderBy: { name: "asc" },
+        }),
         standardsNeeded
           ? db.$queryRaw<Prisma.StandardGetPayload<{}>[]>`
           SELECT s.* FROM "Standard" s JOIN (
             SELECT family, max(revision) AS revision FROM "Standard" GROUP BY family
-          ) latest ON s.family=latest.family AND s.revision=latest.revision ORDER BY s.title
+          ) latest ON s.family=latest.family AND s.revision=latest.revision
+          WHERE s."equipmentId" = ANY(${ids}::text[])
+          AND (${view} NOT IN ('work','audits') OR s.kind=CASE WHEN ${view}='audits' THEN 'audit' ELSE 'run' END)
+          AND (${view}<>'audits' OR ${u.role}='Admin' OR s."assigneeIds"='[]'::jsonb OR s."assigneeIds" @> ${JSON.stringify([u.id])}::jsonb)
+          ORDER BY s.title
         `
           : [],
         history
@@ -148,6 +170,7 @@ export async function GET(req: Request) {
           ? db.content.findMany({
               where: {
                 active: true,
+                OR: [{ equipmentId: null }, { equipmentId: { in: ids } }],
                 ...(view === "training"
                   ? { kind: "video" }
                   : view === "guides"
@@ -156,7 +179,8 @@ export async function GET(req: Request) {
               },
             })
           : [],
-        ["full", "users"].includes(view) && g.includes("users")
+        (["full", "users"].includes(view) && g.includes("users")) ||
+        (view === "manage" && g.includes("manage"))
           ? db.user.findMany({
               select: {
                 id: true,
@@ -166,7 +190,9 @@ export async function GET(req: Request) {
                 active: true,
                 mustChange: true,
                 email: true,
-                ...(u.role === "Admin" ? { downtimeAccess: true } : {}),
+                ...(u.role === "Admin"
+                  ? { downtimeAccess: true, workspaceAccess: true }
+                  : {}),
               },
             })
           : [],
@@ -181,6 +207,15 @@ export async function GET(req: Request) {
         audits: counts.find((c) => c.kind === "audit")?._count._all ?? 0,
         followUps,
       },
+      locations: await db.location.findMany({
+        where: { active: true },
+        orderBy: [
+          { plant: "asc" },
+          { department: "asc" },
+          { area: "asc" },
+          { line: "asc" },
+        ],
+      }),
       equipment,
       standards,
       page: {
@@ -197,7 +232,17 @@ export async function GET(req: Request) {
               : g.includes("studies") || g.includes("analytics"),
         ),
       content,
-      users,
+      users:
+        u.role === "Admin"
+          ? users
+          : (view === "manage" ? await visiblePeople(u, ids) : []).map(
+              (person) => ({
+                id: person.id,
+                name: person.name,
+                role: person.role,
+                active: person.active,
+              }),
+            ),
       policies,
     });
   } catch (e) {
@@ -220,12 +265,60 @@ export async function POST(req: Request) {
         audit: "audits",
         user: "users",
         downtimeAccess: "users",
+        workspaceAccess: "users",
+        location: "manage",
         policy: "permissions",
       } as const
     )[action as "standard"];
     if (!cap) throw new HttpError(400, "Unknown action");
     const u = await requireUser(action === "archive" ? undefined : cap);
-    if (action === "downtimeAccess") {
+    if (["user", "policy", "location"].includes(action) && u.role !== "Admin")
+      throw new HttpError(
+        403,
+        "Only Admin can manage accounts, policies and locations",
+      );
+    if (action === "location") {
+      const v = z
+        .object({
+          plant: z.string().trim().min(1).max(100),
+          department: z.string().trim().min(1).max(100),
+          area: z.string().trim().max(100).default(""),
+          line: z.string().trim().max(100).default(""),
+        })
+        .parse(b);
+      if (v.line && !v.area)
+        throw new HttpError(400, "Choose an area before adding a line");
+      const rows = await db.location.findMany();
+      const same = (a: string, c: string) =>
+        a.trim().toLowerCase() === c.trim().toLowerCase();
+      const parent = rows.find(
+        (r) => same(r.plant, v.plant) && same(r.department, v.department),
+      );
+      if (parent) {
+        v.plant = parent.plant;
+        v.department = parent.department;
+      }
+      const area = rows.find(
+        (r) =>
+          r.plant === v.plant &&
+          r.department === v.department &&
+          same(r.area, v.area),
+      );
+      if (area) v.area = area.area;
+      if (
+        rows.some(
+          (r) =>
+            same(r.plant, v.plant) &&
+            same(r.department, v.department) &&
+            same(r.area, v.area) &&
+            same(r.line, v.line),
+        )
+      )
+        throw new HttpError(409, "This location already exists");
+      await db.location.create({ data: v });
+      return Response.json({ ok: true });
+    }
+    if (action === "downtimeAccess" || action === "workspaceAccess") {
       if (u.role !== "Admin")
         throw new HttpError(
           403,
@@ -249,7 +342,7 @@ export async function POST(req: Request) {
           );
         for (const l of access.locations) {
           if (
-            !(await tx.equipment.findFirst({
+            !(await tx.location.findFirst({
               where: {
                 plant: l.plant,
                 department: l.department,
@@ -261,7 +354,10 @@ export async function POST(req: Request) {
         }
         await tx.user.update({
           where: { id },
-          data: { downtimeAccess: access },
+          data:
+            action === "workspaceAccess"
+              ? { workspaceAccess: access, version: { increment: 1 } }
+              : { downtimeAccess: access },
         });
       });
       return Response.json({ ok: true });
@@ -276,12 +372,54 @@ export async function POST(req: Request) {
           line: z.string().max(100),
         })
         .parse(b);
-      await db.equipment.create({ data: v });
+      const loc = await db.location.findFirst({
+        where: {
+          plant: v.plant,
+          department: v.department,
+          area: v.area,
+          ...(v.line ? { line: v.line } : {}),
+          active: true,
+        },
+      });
+      if (!loc)
+        throw new HttpError(
+          400,
+          "Choose an existing location from the dropdowns. Admin can add locations first",
+        );
+      if (
+        !allowedDowntimeEquipment(u.role, u.workspaceAccess, { ...loc, id: "" })
+      )
+        throw new HttpError(403, "This location is outside your assignments");
+      if (
+        await db.equipment.findFirst({
+          where: { ...v, name: { equals: v.name.trim(), mode: "insensitive" } },
+        })
+      )
+        throw new HttpError(
+          409,
+          "Equipment with this name already exists at this location",
+        );
+      await db.equipment.create({ data: { ...v, name: v.name.trim() } });
     }
     if (action === "standard") {
       const v = standardSchema.parse(b);
       if (!(await db.equipment.findUnique({ where: { id: v.equipmentId } })))
         throw new HttpError(400, "Select equipment");
+      await assertEquipmentAccess(u, v.equipmentId);
+      await eligiblePeople(v.equipmentId, v.assigneeIds);
+      if (
+        v.kind === "audit" &&
+        (await db.user.count({
+          where: {
+            id: { in: v.assigneeIds },
+            role: { in: ["Admin", "Manager", "DL/TL"] },
+          },
+        })) !== v.assigneeIds.length
+      )
+        throw new HttpError(
+          400,
+          "DL/TL tasks require DL/TL or Manager assignees",
+        );
       const family = v.family ?? crypto.randomUUID();
       await db.$transaction(
         async (tx) => {
@@ -289,6 +427,15 @@ export async function POST(req: Request) {
             where: { family },
             orderBy: { revision: "desc" },
           });
+          if (
+            last &&
+            (last.equipmentId !== v.equipmentId || last.kind !== v.kind)
+          )
+            throw new HttpError(
+              400,
+              "Equipment and task type cannot change within a standard family",
+            );
+          await assertEquipmentAccess(u, v.equipmentId, tx);
           await tx.standard.create({
             data: {
               ...v,
@@ -304,6 +451,17 @@ export async function POST(req: Request) {
     if (action === "guide" || action === "video") {
       const v = z
         .object({
+          id: z.string().uuid().optional(),
+          media: z
+            .array(
+              z.object({
+                id: z.string().uuid(),
+                kind: z.enum(["photo", "video"]),
+                caption: z.string().max(500),
+              }),
+            )
+            .max(20)
+            .default([]),
           title: z.string().min(1).max(150),
           equipmentId: z.string().optional(),
           body: z.string().min(1).max(10000),
@@ -321,15 +479,54 @@ export async function POST(req: Request) {
           throw new HttpError(400, "Use an HTTPS YouTube or Vimeo video link");
         }
       }
-      await db.content.create({
-        data: { ...v, equipmentId: v.equipmentId || null, kind: action },
-      });
+      if (v.equipmentId) await assertEquipmentAccess(u, v.equipmentId);
+      else if (u.role !== "Admin")
+        throw new HttpError(403, "Choose equipment in your assigned area");
+      if (v.id) {
+        const old = await db.content.findUnique({ where: { id: v.id } });
+        if (!old || old.kind !== action)
+          throw new HttpError(404, "Resource not found");
+        if (old.equipmentId) await assertEquipmentAccess(u, old.equipmentId);
+        else if (u.role !== "Admin")
+          throw new HttpError(403, "Only Admin can edit shared resources");
+      }
+      for (const m of v.media) {
+        const owned =
+          m.kind === "photo"
+            ? await db.photo.findFirst({ where: { id: m.id, userId: u.id } })
+            : await db.guideMedia.findFirst({
+                where: { id: m.id, userId: u.id },
+              });
+        const old = v.id
+          ? await db.content.findUnique({ where: { id: v.id } })
+          : null;
+        const retained =
+          old &&
+          Array.isArray(old.media) &&
+          old.media.some((x: any) => x.id === m.id && x.kind === m.kind);
+        if (!owned && !retained)
+          throw new HttpError(
+            403,
+            "Upload your own media or retain media already attached to this guide",
+          );
+      }
+      const { id, ...fields } = v;
+      const values = {
+        ...fields,
+        equipmentId: v.equipmentId || null,
+        kind: action,
+      };
+      if (id) await db.content.update({ where: { id }, data: values });
+      else await db.content.create({ data: values });
     }
     if (action === "archive") {
       const id = z.string().parse(b.id);
       const item = await db.content.findUnique({ where: { id } });
       if (!item) throw new HttpError(404, "Not found");
       await requireUser(item.kind === "guide" ? "manage" : "training");
+      if (item.equipmentId) await assertEquipmentAccess(u, item.equipmentId);
+      else if (u.role !== "Admin")
+        throw new HttpError(403, "Only Admin can archive shared resources");
       await db.content.update({ where: { id }, data: { active: false } });
     }
     if (action === "run" || action === "audit") {
@@ -356,6 +553,19 @@ export async function POST(req: Request) {
         where: { id: v.standardId },
       });
       if (!standard) throw new HttpError(404, "Standard not found");
+      await assertEquipmentAccess(u, standard.equipmentId);
+      if (standard.kind !== action)
+        throw new HttpError(400, "Choose the correct standard-work task type");
+      if (
+        action === "audit" &&
+        u.role !== "Admin" &&
+        (standard.assigneeIds as string[]).length &&
+        !(standard.assigneeIds as string[]).includes(u.id)
+      )
+        throw new HttpError(
+          403,
+          "This DL/TL task is assigned to another person",
+        );
       const steps = standard.steps as {
         id: string;
         text: string;
@@ -391,11 +601,6 @@ export async function POST(req: Request) {
         Date.now() - +new Date(v.started) > 86400000
       )
         throw new HttpError(400, "Invalid start time");
-      if (action === "audit" && (!v.operator?.trim() || !v.cycles?.length))
-        throw new HttpError(
-          400,
-          "Audits require an operator and at least one timed cycle",
-        );
       const data = {
         ...v,
         responses: v.responses.map((r) => ({
@@ -416,13 +621,16 @@ export async function POST(req: Request) {
             (c) => c.seconds > standard.target * (1 + standard.tolerance / 100),
           ),
       };
-      await db.record.create({
-        data: {
-          kind: action,
-          userId: u.id,
-          standardId: standard.id,
-          data: JSON.parse(JSON.stringify(data)),
-        },
+      await db.$transaction(async (tx) => {
+        await assertEquipmentAccess(u, standard.equipmentId, tx);
+        await tx.record.create({
+          data: {
+            kind: action,
+            userId: u.id,
+            standardId: standard.id,
+            data: JSON.parse(JSON.stringify(data)),
+          },
+        });
       });
     }
     if (action === "study") {
@@ -435,6 +643,7 @@ export async function POST(req: Request) {
         .parse(b);
       if (!(await db.equipment.findUnique({ where: { id: v.equipmentId } })))
         throw new HttpError(400, "Select equipment");
+      await assertEquipmentAccess(u, v.equipmentId);
       await db.record.create({
         data: {
           kind: "study",

@@ -1,3 +1,9 @@
+import {
+  equipmentIds,
+  equipmentSql,
+  visiblePeople,
+  type ScopedUser,
+} from "./location-access";
 import { Temporal } from "@js-temporal/polyfill";
 import { Prisma } from "@prisma/client";
 import { db } from "./db";
@@ -26,7 +32,12 @@ type CycleStats = {
   range: number | null;
   standardDeviation: number | null;
 };
-export async function leadershipReport(params: URLSearchParams) {
+export async function leadershipReport(
+  params: URLSearchParams,
+  user: ScopedUser,
+) {
+  const ids = await equipmentIds(user);
+  const permitted = { equipmentId: { in: ids } };
   const setting = await db.setting.findUniqueOrThrow({
     where: { key: "shifts" },
   });
@@ -58,11 +69,10 @@ export async function leadershipReport(params: URLSearchParams) {
   const recordScope = Prisma.sql`FROM "Record" r LEFT JOIN "Equipment" e
     ON e.id = COALESCE(r.data->>'equipmentId', r.data->'snapshot'->>'equipmentId')
     WHERE r.created >= ${start} AND r.created < ${end}
+    AND ${equipmentSql(ids, Prisma.sql`e.id`)}
     ${department ? Prisma.sql`AND COALESCE(r.data->'equipmentSnapshot'->>'department', r.data->'snapshot'->'equipment'->>'department', e.department) = ${department}` : Prisma.empty}`;
   const base = Prisma.sql`WITH scoped AS (SELECT r.kind, r.data ${recordScope})`;
-  const ideaScope = department
-    ? Prisma.sql`WHERE "equipmentSnapshot"->>'department' = ${department}`
-    : Prisma.empty;
+  const ideaScope = Prisma.sql`WHERE ${equipmentSql(ids, Prisma.sql`"equipmentId"`)} ${department ? Prisma.sql`AND "equipmentSnapshot"->>'department'=${department}` : Prisma.empty}`;
   const [
     countRows,
     responseRows,
@@ -102,41 +112,46 @@ export async function leadershipReport(params: URLSearchParams) {
     db.$queryRaw<
       { kind: string; total: number }[]
     >(Prisma.sql`SELECT c.kind,count(*)::int AS total
-      FROM "Content" c LEFT JOIN "Equipment" e ON e.id=c."equipmentId" WHERE c.active
+      FROM "Content" c LEFT JOIN "Equipment" e ON e.id=c."equipmentId" WHERE c.active AND (c."equipmentId" IS NULL OR ${equipmentSql(ids, Prisma.sql`c."equipmentId"`)})
       ${department ? Prisma.sql`AND (c."equipmentId" IS NULL OR e.department=${department})` : Prisma.empty} GROUP BY c.kind`),
     db.$queryRaw<
       { total: number }[]
     >(Prisma.sql`SELECT count(*)::int AS total FROM (
       SELECT DISTINCT ON (family) "equipmentId" FROM "Standard" ORDER BY family, revision DESC
     ) s JOIN "Equipment" e ON e.id=s."equipmentId"
-    ${department ? Prisma.sql`WHERE e.department=${department}` : Prisma.empty}`),
-    db.equipment.count({ where: department ? { department } : {} }),
+    WHERE ${equipmentSql(ids, Prisma.sql`e.id`)} ${department ? Prisma.sql`AND e.department=${department}` : Prisma.empty}`),
+    db.equipment.count({
+      where: { id: { in: ids }, ...(department ? { department } : {}) },
+    }),
     department
       ? Promise.resolve(null)
-      : db.user.count({ where: { active: true } }),
-    db.$queryRaw<
-      { department: string }[]
-    >(Prisma.sql`SELECT department FROM "Equipment"
-      UNION SELECT "equipmentSnapshot"->>'department' FROM "Downtime"
-      UNION SELECT "equipmentSnapshot"->>'department' FROM "Idea"
-      UNION SELECT COALESCE(data->'equipmentSnapshot'->>'department',data->'snapshot'->'equipment'->>'department') FROM "Record"`),
+      : visiblePeople(user, ids).then((p) => p.length),
+    db.equipment.findMany({
+      where: { id: { in: ids } },
+      select: { department: true },
+      distinct: ["department"],
+    }),
     db.problem.groupBy({
       by: ["method", "status"],
-      where: department
-        ? { equipmentSnapshot: { path: ["department"], equals: department } }
-        : {},
+      where: {
+        ...permitted,
+        ...(department
+          ? { equipmentSnapshot: { path: ["department"], equals: department } }
+          : {}),
+      },
       _count: true,
     }),
     db.problemAction.count({
       where: {
         status: { not: "Completed" },
-        ...(department
-          ? {
-              problem: {
+        problem: {
+          ...permitted,
+          ...(department
+            ? {
                 equipmentSnapshot: { path: ["department"], equals: department },
-              },
-            }
-          : {}),
+              }
+            : {}),
+        },
       },
     }),
   ]);
@@ -153,6 +168,7 @@ export async function leadershipReport(params: URLSearchParams) {
   const events = paged((cursor) =>
     db.downtime.findMany({
       where: {
+        ...permitted,
         startedAt: { lt: end },
         OR: [{ endedAt: null }, { endedAt: { gt: start } }],
         ...(department

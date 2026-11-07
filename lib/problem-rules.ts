@@ -45,6 +45,7 @@ export const methodology: Record<
         fields: [
           ["correction", "Correction / containment / mitigation"],
           ["corrective", "Corrective action"],
+          ["preventive", "Preventive actions"],
           ["recognition", "Team recognition"],
           ["effectiveness", "Effectiveness verification and evidence"],
         ],
@@ -180,6 +181,29 @@ export const answersSchema = z
     (a) => Object.keys(a).every((k) => allKeys.includes(k)),
     "Unknown methodology field",
   );
+export const actionTypes = [
+  "Containment",
+  "Correction",
+  "Corrective",
+  "Preventive",
+  "Checkpoint",
+] as const;
+export const requirementsSchema = z
+  .object({
+    fields: z.array(z.string()).max(100),
+    actionTypes: z.array(z.enum(actionTypes)).max(5),
+    requireAction: z.boolean(),
+  })
+  .strict()
+  .refine(
+    (r) => r.fields.every((k) => allKeys.includes(k)),
+    "Unknown required field",
+  );
+export const defaultRequirements = (method: Method) => ({
+  fields: methodology[method].sections.flatMap((s) => s.fields.map(([k]) => k)),
+  actionTypes: [] as string[],
+  requireAction: true,
+});
 export const problemSchema = z.object({
   title: z.string().trim().min(1).max(150),
   method: z.enum(methods),
@@ -192,9 +216,11 @@ export const problemSchema = z.object({
   dueDate: z.iso.date(),
   previousId: z.string().uuid().nullable(),
   answers: answersSchema,
+  requirements: requirementsSchema.optional(),
 });
 export const actionSchema = z
   .object({
+    required: z.boolean().default(true),
     type: z.enum([
       "Containment",
       "Correction",
@@ -214,13 +240,22 @@ export const actionSchema = z
 export function closureErrors(
   method: Method,
   answers: Record<string, string>,
-  actions: { status: string }[],
+  actions: { status: string; required?: boolean; type?: string }[],
+  requirements = defaultRequirements(method),
 ) {
   const errors = methodology[method].sections.flatMap((s) =>
-    s.fields.filter(([key]) => !answers[key]?.trim()).map(([, label]) => label),
+    s.fields
+      .filter(
+        ([key]) => requirements.fields.includes(key) && !answers[key]?.trim(),
+      )
+      .map(([, label]) => label),
   );
-  if (!actions.length) errors.push("At least one tracked action");
-  if (actions.some((a) => a.status !== "Completed"))
+  for (const type of requirements.actionTypes)
+    if (!actions.some((a) => a.type === type && a.status === "Completed"))
+      errors.push("Complete a " + type + " action");
+  if (requirements.requireAction && !actions.length)
+    errors.push("At least one tracked action");
+  if (actions.some((a) => a.required !== false && a.status !== "Completed"))
     errors.push("Complete all actions and checkpoints");
   return errors;
 }

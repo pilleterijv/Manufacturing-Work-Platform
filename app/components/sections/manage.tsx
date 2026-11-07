@@ -1,4 +1,5 @@
 "use client";
+import { LocationPicker } from "../location-picker";
 import { useState, useEffect, useRef } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
 import type { Data, Step, Cycle, Standard } from "@/lib/workspace-types";
@@ -26,6 +27,8 @@ export default function Manage({
     [moreRevisions, setMoreRevisions] = useState(false),
     [revisionError, setRevisionError] = useState(""),
     [revisionLoading, setRevisionLoading] = useState(false),
+    [kind, setKind] = useState("run"),
+    [assignees, setAssignees] = useState<string[]>([]),
     [title, setTitle] = useState(""),
     [equipment, setEquipment] = useState(""),
     [target, setTarget] = useState(45),
@@ -63,6 +66,8 @@ export default function Manage({
     setRevisionError("");
     setEditing(id);
     const s = data.standards.find((x) => x.id === id);
+    setKind(s?.kind ?? "run");
+    setAssignees(s?.assigneeIds ?? []);
     setTitle(s?.title ?? "");
     setEquipment(s?.equipmentId ?? "");
     setTarget(s?.target ?? 45);
@@ -134,6 +139,8 @@ export default function Manage({
             if (
               await save({
                 action: "standard",
+                kind,
+                assigneeIds: assignees,
                 title,
                 equipmentId: equipment,
                 target,
@@ -151,6 +158,16 @@ export default function Manage({
           }}
         >
           <div className="form-grid">
+            <Field label="Task type">
+              <select
+                value={kind}
+                disabled={!!editing}
+                onChange={(e) => setKind(e.target.value)}
+              >
+                <option value="run">Operator Standard Work</option>
+                <option value="audit">DL/TL Standard Work</option>
+              </select>
+            </Field>
             <Field label="Standard title">
               <input
                 required
@@ -188,6 +205,31 @@ export default function Manage({
               />
             </Field>
           </div>
+          {kind === "audit" && (
+            <Field label="Assigned DL/TLs (optional; no selection means all permitted people in the area)">
+              <select
+                multiple
+                value={assignees}
+                onChange={(e) =>
+                  setAssignees(
+                    Array.from(e.target.selectedOptions, (o) => o.value),
+                  )
+                }
+              >
+                {data.users
+                  .filter(
+                    (u) =>
+                      u.active &&
+                      ["DL/TL", "Manager", "Admin"].includes(u.role),
+                  )
+                  .map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+              </select>
+            </Field>
+          )}
           {steps.map((step, i) => (
             <div className="editor-step" key={step.id}>
               <Field label={`Step ${i + 1}`}>
@@ -260,15 +302,10 @@ export default function Manage({
           }}
         >
           <div className="form-grid">
-            {["name", "plant", "department", "area", "line"].map((name) => (
-              <Field label={name[0].toUpperCase() + name.slice(1)} key={name}>
-                <input
-                  name={name}
-                  required
-                  maxLength={name === "name" ? 150 : 100}
-                />
-              </Field>
-            ))}
+            <Field label="Equipment name">
+              <input name="name" required maxLength={150} />
+            </Field>
+            <LocationPicker data={data} />
           </div>
           <Submit busy={busy}>Add equipment</Submit>
         </form>

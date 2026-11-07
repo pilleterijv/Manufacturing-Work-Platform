@@ -29,6 +29,7 @@ async function main() {
           role,
           password: hash,
           mustChange: false,
+          workspaceAccess:{mode:"all",locations:[],equipmentIds:[]},
         },
       }),
     );
@@ -44,6 +45,7 @@ async function main() {
         data: { name, plant, department, area, line: "Line A" },
       }),
     );
+  for(const e of equipment) await db.location.upsert({where:{plant_department_area_line:{plant:e.plant,department:e.department,area:e.area,line:e.line}},create:{plant:e.plant,department:e.department,area:e.area,line:e.line},update:{}});
   reason = await db.downtimeReason.create({
     data: { name: "Location verification " + suffix },
   });

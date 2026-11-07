@@ -1,3 +1,9 @@
+import {
+  equipmentIds,
+  assertEquipmentAccess,
+  eligiblePeople,
+  visiblePeople,
+} from "@/lib/location-access";
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
@@ -12,6 +18,7 @@ import {
 } from "@/lib/security";
 import {
   problemSchema,
+  defaultRequirements,
   actionSchema,
   methods,
   problemStatuses,
@@ -33,7 +40,8 @@ async function today() {
 }
 export async function GET(req: Request) {
   try {
-    await requireUser("problems");
+    const u = await requireUser("problems");
+    const ids = await equipmentIds(u);
     const p = new URL(req.url).searchParams;
     if (p.get("id")) {
       const record = await db.problem.findUnique({
@@ -41,6 +49,7 @@ export async function GET(req: Request) {
         include: { actions: { orderBy: { id: "asc" } } },
       });
       if (!record) throw new HttpError(404, "Problem-solving record not found");
+      await assertEquipmentAccess(u, record.equipmentId);
       return Response.json(record);
     }
     const department = z
@@ -60,6 +69,7 @@ export async function GET(req: Request) {
       .max(150)
       .parse(p.get("search") ?? "");
     const scope: Prisma.ProblemWhereInput = {
+      equipmentId: { in: ids },
       ...(department
         ? { equipmentSnapshot: { path: ["department"], equals: department } }
         : {}),
@@ -112,6 +122,7 @@ export async function GET(req: Request) {
             "Status",
             "Comment",
             "Completed UTC",
+            "Required for closure",
           ]);
           await audit.addRow(["Reference", "Entity", "Event JSON"]);
           for await (const r of paged((cursor) =>
@@ -159,6 +170,7 @@ export async function GET(req: Request) {
                 a.status,
                 a.comment,
                 a.completedAt?.toISOString(),
+                a.required,
               ]);
               for (const e of a.history as object[])
                 await audit.addRow([r.reference, a.id, JSON.stringify(e)]);
@@ -222,12 +234,13 @@ export async function GET(req: Request) {
           version: true,
         },
       }),
-      db.equipment.findMany({ orderBy: { name: "asc" } }),
-      db.user.findMany({
-        where: { active: true },
-        select: { id: true, name: true },
+      db.equipment.findMany({
+        where: { id: { in: ids } },
         orderBy: { name: "asc" },
       }),
+      visiblePeople(u, ids).then((ps) =>
+        ps.map(({ id, name }) => ({ id, name })),
+      ),
       db.problem.groupBy({
         by: ["method", "status"],
         where: scope,
@@ -252,9 +265,7 @@ export async function GET(req: Request) {
         },
       }),
     ]);
-    const departments = await db.$queryRaw<
-      { department: string }[]
-    >`SELECT department FROM "Equipment" UNION SELECT "equipmentSnapshot"->>'department' FROM "Problem"`;
+    const departments = equipment.map((e) => ({ department: e.department }));
     return Response.json({
       items: rows.slice(0, 100),
       hasMore: rows.length > 100,
@@ -284,7 +295,7 @@ export async function POST(req: Request) {
     await limit("problems:" + u.id, 120, 60);
     const body = await jsonBody(req);
     const action = z
-      .enum(["create", "update", "addAction", "updateAction"])
+      .enum(["create", "update", "addAction", "updateAction", "editAction"])
       .parse(body.action);
     const entry = { at: new Date().toISOString(), by: u.id, name: u.name };
     if (action === "create") {
@@ -316,11 +327,25 @@ export async function POST(req: Request) {
             methods.indexOf(previous.method as Method))
       )
         throw new HttpError(400, "Link a lower-level record when escalating");
+      await assertEquipmentAccess(u, input.equipmentId);
+      await eligiblePeople(input.equipmentId, [
+        input.ownerId,
+        input.reviewerId,
+      ]);
+      if (previous) {
+        await assertEquipmentAccess(u, previous.equipmentId);
+        if (previous.equipmentId !== input.equipmentId)
+          throw new HttpError(
+            400,
+            "Escalations must retain the same equipment",
+          );
+      }
       const id = randomUUID(),
         reference = `${input.method}-${new Date().getUTCFullYear()}-${id.slice(0, 8).toUpperCase()}`;
       const record = await db.problem.create({
         data: {
           ...input,
+          requirements: input.requirements ?? defaultRequirements(input.method),
           id,
           reference,
           equipmentSnapshot: equipment,
@@ -341,12 +366,53 @@ export async function POST(req: Request) {
         include: { actions: true },
       });
       if (!r) throw new HttpError(404, "Record not found");
+      await assertEquipmentAccess(u, r.equipmentId, tx);
       const lead =
         u.role === "Admin" ||
         u.id === r.ownerId ||
         u.id === r.createdBy ||
         u.id === r.reviewerId;
       const manager = g.includes("manage");
+      if (action === "editAction") {
+        if (!lead && !manager)
+          throw new HttpError(
+            403,
+            "Only the problem leader or manager can edit action requirements",
+          );
+        if (r.status === "Closed")
+          throw new HttpError(409, "Reopen the record before editing actions");
+        const aid = idSchema.parse(body.actionId),
+          old = r.actions.find((a) => a.id === aid);
+        if (!old) throw new HttpError(404, "Action not found");
+        if (old.version !== version)
+          throw new HttpError(409, "Action changed; refresh before saving");
+        const input = actionSchema.parse(body);
+        await eligiblePeople(r.equipmentId, [input.ownerId], tx);
+        await tx.problemAction.update({
+          where: { id: aid },
+          data: {
+            ...input,
+            version: { increment: 1 },
+            history: history(old.history, {
+              ...entry,
+              event: "Action details and requirements edited",
+              values: input,
+            }),
+          },
+        });
+        return tx.problem.update({
+          where: { id: r.id },
+          data: {
+            version: { increment: 1 },
+            history: history(r.history, {
+              ...entry,
+              event: "Action edited",
+              actionId: aid,
+              values: input,
+            }),
+          },
+        });
+      }
       if (action === "updateAction") {
         const aid = idSchema.parse(body.actionId),
           a = r.actions.find((a) => a.id === aid);
@@ -398,6 +464,7 @@ export async function POST(req: Request) {
         if (r.actions.length >= 100)
           throw new HttpError(400, "Maximum 100 actions per record");
         const input = actionSchema.parse(body);
+        await eligiblePeople(r.equipmentId, [input.ownerId], tx);
         if (
           !(await tx.user.findFirst({
             where: { id: input.ownerId, active: true },
@@ -455,11 +522,19 @@ export async function POST(req: Request) {
       });
       if (people !== new Set([input.ownerId, input.reviewerId]).size)
         throw new HttpError(400, "Choose active facilitators and reviewers");
+      await eligiblePeople(
+        r.equipmentId,
+        [input.ownerId, input.reviewerId],
+        tx,
+      );
       if (status === "Closed") {
         const missing = closureErrors(
           r.method as Method,
           input.answers,
           r.actions,
+          input.requirements ??
+            (r.requirements as any) ??
+            defaultRequirements(r.method as Method),
         );
         if (missing.length)
           throw new HttpError(400, "Before closing: " + missing.join("; "));
@@ -468,6 +543,10 @@ export async function POST(req: Request) {
         where: { id },
         data: {
           ...input,
+          requirements:
+            input.requirements ??
+            r.requirements ??
+            defaultRequirements(r.method as Method),
           status,
           closedAt: status === "Closed" ? new Date() : null,
           version: { increment: 1 },

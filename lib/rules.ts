@@ -52,6 +52,8 @@ export const stepSchema = z.object({
 });
 export const standardSchema = z
   .object({
+    kind: z.enum(["run", "audit"]).default("run"),
+    assigneeIds: z.array(z.string().uuid()).max(1000).default([]),
     title: z.string().min(1).max(150),
     equipmentId: z.string(),
     target: z.number().positive().max(86400),

@@ -59,7 +59,7 @@ const Leadership = dynamic(
 const platformViews: Record<string, string> = {
   Overview: "overview",
   "Standard work": "work",
-  "Supervisor audits": "audits",
+  "DL/TL Standard Work": "audits",
   "Time studies": "studies",
   Training: "training",
   Troubleshooting: "guides",
@@ -443,7 +443,7 @@ export default function Home() {
     ["Overview", null, "◫"],
     ["Standard work", "work", "☑"],
     ["Time studies", "studies", "◷"],
-    ["Supervisor audits", "audits", "◎"],
+    ["DL/TL Standard Work", "audits", "◎"],
     ["Training", null, "▷"],
     ["Troubleshooting", null, "◇"],
     ["Analytics", "analytics", "▥"],
@@ -473,7 +473,7 @@ export default function Home() {
     "Standard work":
       "Follow each step. Verify the result. Capture the evidence.",
     "Time studies": "Observe the process and turn raw timing into insight.",
-    "Supervisor audits":
+    "DL/TL Standard Work":
       "Verify the standard and measure actual operator cycle times.",
     Training: "Practical know-how, ready when your team needs it.",
     Troubleshooting: "Find the guidance to get your process back on track.",
@@ -628,7 +628,7 @@ export default function Home() {
             {tab === "Standard work" && sectionReady && (
               <Work data={data} save={save} busy={busy} audit={false} />
             )}
-            {tab === "Supervisor audits" && sectionReady && (
+            {tab === "DL/TL Standard Work" && sectionReady && (
               <Work data={data} save={save} busy={busy} audit />
             )}
             {tab === "Time studies" && sectionReady && (

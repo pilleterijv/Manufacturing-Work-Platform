@@ -98,6 +98,25 @@ async function main() {
       },
     });
   }
+  for (const e of await db.equipment.findMany()) {
+    const same = await db.location.findFirst({
+      where: {
+        plant: { equals: e.plant.trim(), mode: "insensitive" },
+        department: { equals: e.department.trim(), mode: "insensitive" },
+        area: { equals: e.area.trim(), mode: "insensitive" },
+        line: { equals: e.line.trim(), mode: "insensitive" },
+      },
+    });
+    if (!same)
+      await db.location.create({
+        data: {
+          plant: e.plant,
+          department: e.department,
+          area: e.area,
+          line: e.line,
+        },
+      });
+  }
   await db.session.deleteMany({ where: { expires: { lt: new Date() } } });
   await db.rate.deleteMany({ where: { expires: { lt: new Date() } } });
   console.log("Database ready. No application accounts were created.");

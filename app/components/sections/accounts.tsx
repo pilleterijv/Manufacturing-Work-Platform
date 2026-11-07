@@ -1,4 +1,5 @@
 "use client";
+import { LocationsEditor } from "../location-picker";
 import DowntimeAccessEditor from "../downtime-access-editor";
 import { useState, useEffect, useRef } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
@@ -43,6 +44,7 @@ export default function Accounts({
   }
   return (
     <>
+      {admin && <LocationsEditor data={data} save={save} busy={busy} />}
       <section className="panel">
         <h2>{id ? "Update account" : "Create individual account"}</h2>
         <Field label="Account">
@@ -147,18 +149,29 @@ export default function Accounts({
         </form>
       </section>
       {admin && id && data.users.find((u) => u.id === id) && (
-        <DowntimeAccessEditor
-          key={id}
-          user={data.users.find((u) => u.id === id)!}
-          equipment={data.equipment}
-          save={save}
-          busy={busy}
-        />
+        <>
+          <DowntimeAccessEditor
+            key={id + "workspace"}
+            workspace
+            locations={data.locations}
+            user={data.users.find((u) => u.id === id)!}
+            equipment={data.equipment}
+            save={save}
+            busy={busy}
+          />
+          <DowntimeAccessEditor
+            key={id}
+            user={data.users.find((u) => u.id === id)!}
+            equipment={data.equipment}
+            save={save}
+            busy={busy}
+          />
+        </>
       )}
       {admin && !id && (
         <p className="small muted">
-          Create the account, then select it to assign its downtime locations
-          and machines.
+          Create the account, then select it to assign its departments, areas,
+          downtime locations and machines.
         </p>
       )}
       <section className="panel table-wrap">

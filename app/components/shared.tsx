@@ -90,7 +90,7 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
                           )?.name}
                     </small>
                   </td>
-                  <td>{r.kind}</td>
+                  <td>{r.kind==="audit"?"DL/TL Standard Work":r.kind}</td>
                   <td>{r.user.name}</td>
                   <td>{new Date(r.created).toLocaleString()}</td>
                   <td>
@@ -184,7 +184,7 @@ export function EquipmentSelect({
       <option value="">Select equipment</option>
       {data.equipment.map((e) => (
         <option key={e.id} value={e.id}>
-          {e.name} · {e.line}
+          {[e.plant,e.department,e.area,e.line,e.name].filter(Boolean).join(" / ")}
         </option>
       ))}
     </select>

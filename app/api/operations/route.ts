@@ -1,3 +1,10 @@
+import {
+  equipmentIds,
+  assertEquipmentAccess,
+  eligiblePeople,
+  visiblePeople,
+  notificationScope,
+} from "@/lib/location-access";
 import { annotateAutomaticTimers } from "@/lib/integrations";
 import {
   downtimeEquipmentWhere,
@@ -25,6 +32,8 @@ export async function GET(req: Request) {
   try {
     const u = await requireUser();
     const g = await grants(u);
+    const ids = await equipmentIds(u);
+    const notices = await notificationScope(u, ids);
     const view = z
       .enum(["full", "summary", "live", "downtime", "ideas"])
       .parse(new URL(req.url).searchParams.get("view") ?? "full");
@@ -56,7 +65,7 @@ export async function GET(req: Request) {
       const [setting, notifications, active] = await Promise.all([
         db.setting.findUniqueOrThrow({ where: { key: "shifts" } }),
         db.notification.findMany({
-          where: { userId: u.id },
+          where: notices,
           orderBy: { createdAt: "desc" },
           take: 100,
         }),
@@ -114,6 +123,7 @@ export async function GET(req: Request) {
           ? db.idea.findMany({
               where: {
                 ...location,
+                equipmentId: { in: ids },
                 ...(cursor
                   ? {
                       OR: [
@@ -137,14 +147,12 @@ export async function GET(req: Request) {
             })
           : [],
         view !== "downtime" && g.includes("ideas") && !cursor
-          ? db.user.findMany({
-              where: { active: true },
-              select: { id: true, name: true, username: true },
-              orderBy: { name: "asc" },
-            })
+          ? visiblePeople(u, ids).then((ps) =>
+              ps.map(({ id, name, username }) => ({ id, name, username })),
+            )
           : [],
         db.notification.findMany({
-          where: { userId: u.id },
+          where: notices,
           orderBy: { createdAt: "desc" },
           take: 100,
         }),
@@ -214,6 +222,17 @@ export async function POST(req: Request) {
           active: z.boolean(),
         })
         .parse(b);
+      const duplicate = await db.downtimeReason.findFirst({
+        where: {
+          name: { equals: v.name, mode: "insensitive" },
+          ...(v.id ? { id: { not: v.id } } : {}),
+        },
+      });
+      if (duplicate)
+        throw new HttpError(
+          409,
+          "This reason already exists; use the existing reason",
+        );
       if (v.id)
         await db.downtimeReason.update({
           where: { id: v.id },
@@ -312,6 +331,7 @@ export async function POST(req: Request) {
         });
         if (!equipment)
           throw new HttpError(400, "Select equipment for department reporting");
+        await assertEquipmentAccess(u, v.equipmentId, tx);
         const ids = [
           ...new Set([
             v.pilotId,
@@ -329,6 +349,7 @@ export async function POST(req: Request) {
             400,
             "Every assigned person must have an active account",
           );
+        await eligiblePeople(v.equipmentId, ids, tx);
         const { participantIds, ...fields } = v;
         const idea = await tx.idea.create({
           data: {
@@ -359,6 +380,7 @@ export async function POST(req: Request) {
         .parse(b);
       const idea = await db.idea.findUnique({ where: { id: v.id } });
       if (!idea) throw new HttpError(404, "Idea not found");
+      await assertEquipmentAccess(u, idea.equipmentId);
       const allowed =
         u.role === "Admin" ||
         (v.status === "Completed"
@@ -382,7 +404,7 @@ export async function POST(req: Request) {
     if (action === "readNotification") {
       const { id } = z.object({ id: z.string() }).parse(b);
       const n = await db.notification.updateMany({
-        where: { id, userId: u.id },
+        where: { id, ...(await notificationScope(u, await equipmentIds(u))) },
         data: { readAt: new Date() },
       });
       if (!n.count) throw new HttpError(404, "Notification not found");

@@ -24,7 +24,9 @@ export default function Work({
   busy: boolean;
   audit: boolean;
 }) {
-  const latest = data.standards;
+  const latest = data.standards.filter(
+    (s) => s.kind === (audit ? "audit" : "run"),
+  );
   const [id, setId] = useState(""),
     [responses, setResponses] = useState<
       Record<
@@ -83,10 +85,12 @@ export default function Work({
     <>
       <section className="panel">
         <div className="section-title">
-          <h2>{audit ? "New standard work audit" : "Start a verification"}</h2>
-          <span className="badge">
-            {audit ? "SUPERVISOR" : "STANDARD WORK"}
-          </span>
+          <h2>
+            {audit
+              ? "Complete assigned DL/TL Standard Work"
+              : "Start a verification"}
+          </h2>
+          <span className="badge">{audit ? "DL/TL" : "STANDARD WORK"}</span>
         </div>
         <Field label="Standard work">
           <select
@@ -123,10 +127,6 @@ export default function Work({
                 );
                 return;
               }
-              if (audit && !cycles.length) {
-                setLocalError("Record at least one audit cycle");
-                return;
-              }
               if (
                 await save({
                   action: audit ? "audit" : "run",
@@ -155,12 +155,11 @@ export default function Work({
             <div className={audit ? "audit-grid" : ""}>
               <div>
                 {audit && (
-                  <Field label="Operator being audited">
+                  <Field label="Operator / context (optional)">
                     <input
                       value={operator}
                       onChange={(e) => setOperator(e.target.value)}
                       maxLength={150}
-                      required
                       placeholder="Operator name or employee ID"
                     />
                   </Field>
@@ -248,8 +247,8 @@ export default function Work({
                     tolerance={s.tolerance}
                   />
                   <p className="small muted">
-                    Cycle timestamps and the current standard criteria are
-                    preserved with this audit.
+                    Optional cycle timestamps and the current standard criteria
+                    are preserved with this audit.
                   </p>
                 </div>
               )}
@@ -260,13 +259,17 @@ export default function Work({
               </div>
             )}
             <Submit busy={busy || uploading}>
-              {audit ? "Save audit" : "Complete standard work"}
+              {audit
+                ? "Complete DL/TL Standard Work"
+                : "Complete standard work"}
             </Submit>
           </form>
         )}
       </section>
       <div className="section-title">
-        <h2>{audit ? "Audit history" : "Completed verifications"}</h2>
+        <h2>
+          {audit ? "DL/TL Standard Work history" : "Completed verifications"}
+        </h2>
         <span className="muted">Historical revisions preserved</span>
       </div>
       <History

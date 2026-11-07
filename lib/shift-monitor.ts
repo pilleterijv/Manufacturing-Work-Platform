@@ -1,3 +1,4 @@
+import { allowedDowntimeEquipment } from "./downtime-access-rules";
 import { db } from "./db";
 import { endedShiftWindows } from "./shift-schedule-rules";
 import { shiftConfigSchema } from "./operations-rules";
@@ -54,7 +55,7 @@ export async function checkShiftWork(now = new Date()) {
               if (exists) continue;
               const record = await tx.record.findFirst({
                 where: {
-                  kind: "run",
+                  kind: current.kind,
                   standard: {
                     family: current.family,
                     equipmentId: current.equipmentId,
@@ -100,9 +101,14 @@ export async function checkShiftWork(now = new Date()) {
                     active: true,
                     role: { in: ["Admin", "Manager", "DL/TL"] },
                   },
-                  select: { id: true },
                 });
-                for (const manager of managers) {
+                for (const manager of managers.filter((m) =>
+                  allowedDowntimeEquipment(
+                    m.role,
+                    m.workspaceAccess,
+                    equipment,
+                  ),
+                )) {
                   if (current.notifyInApp)
                     await tx.notification.create({
                       data: {

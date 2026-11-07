@@ -3,6 +3,8 @@ import { useEffect, useState, useRef } from "react";
 import { api } from "@/lib/client-api";
 import {
   methods,
+  defaultRequirements,
+  actionTypes,
   methodology,
   checkpoints,
   problemStatuses,
@@ -20,6 +22,7 @@ type Equipment = {
   line: string;
 };
 type Action = {
+  required: boolean;
   id: string;
   type: string;
   checkpoint: string;
@@ -207,6 +210,7 @@ export default function Problems({
     setDraft({
       ...empty,
       method: m,
+      requirements: { ...defaultRequirements(m), actionTypes: [] },
       occurredOn: data!.today,
       dueDate: data!.today,
       ownerId: userId,
@@ -413,7 +417,12 @@ export default function Problems({
               {queue.items.map((a) => (
                 <article className="problem-action" key={a.id}>
                   <div className="section-title">
-                    <h3>{a.title}</h3>
+                    <h3>
+                      {a.title}{" "}
+                      <span className="badge">
+                        {a.required ? "Required" : "Optional"}
+                      </span>
+                    </h3>
                     <span
                       className={
                         "badge " + (a.dueDate < data.today ? "warn" : "")
@@ -596,10 +605,71 @@ export default function Problems({
                       </Field>
                     </div>
                     <p className="small muted">
-                      Save incomplete work as an open record. All methodology
-                      fields and completed actions are required before the
-                      assigned reviewer or Admin can close it.
+                      Save incomplete work as an open record. Choose the
+                      required fields and action categories below. Required
+                      tracked actions must be completed before closure; optional
+                      actions can remain open.
                     </p>
+                    <fieldset>
+                      <legend>Closure requirements</legend>
+                      <label className="check">
+                        <input
+                          type="checkbox"
+                          checked={
+                            (
+                              draft.requirements ??
+                              defaultRequirements(draft.method)
+                            ).requireAction
+                          }
+                          onChange={(e) =>
+                            patch({
+                              requirements: {
+                                ...defaultRequirements(draft.method),
+                                ...draft.requirements,
+                                actionTypes:
+                                  draft.requirements?.actionTypes ?? [],
+                                requireAction: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                        At least one tracked action required
+                      </label>
+                      <p>Require a completed action in these categories:</p>
+                      {actionTypes
+                        .filter(
+                          (t) => t !== "Checkpoint" || draft.method !== "2D",
+                        )
+                        .map((t) => (
+                          <label className="check" key={t}>
+                            <input
+                              type="checkbox"
+                              checked={
+                                draft.requirements?.actionTypes.includes(t) ??
+                                false
+                              }
+                              onChange={(e) =>
+                                patch({
+                                  requirements: {
+                                    ...defaultRequirements(draft.method),
+                                    ...draft.requirements,
+                                    actionTypes: e.target.checked
+                                      ? [
+                                          ...(draft.requirements?.actionTypes ??
+                                            []),
+                                          t,
+                                        ]
+                                      : (
+                                          draft.requirements?.actionTypes ?? []
+                                        ).filter((x) => x !== t),
+                                  },
+                                })
+                              }
+                            />
+                            {t}
+                          </label>
+                        ))}
+                    </fieldset>
                     {methodology[draft.method].sections.map((section) => (
                       <fieldset
                         className="problem-discipline"
@@ -609,6 +679,30 @@ export default function Problems({
                         <div className="form-grid">
                           {section.fields.map(([key, label]) => (
                             <Field key={key} label={label}>
+                              <label className="check">
+                                <input
+                                  type="checkbox"
+                                  checked={(
+                                    draft.requirements ??
+                                    defaultRequirements(draft.method)
+                                  ).fields.includes(key)}
+                                  onChange={(e) => {
+                                    const r = draft.requirements ?? {
+                                      ...defaultRequirements(draft.method),
+                                      actionTypes: [],
+                                    };
+                                    patch({
+                                      requirements: {
+                                        ...r,
+                                        fields: e.target.checked
+                                          ? [...r.fields, key]
+                                          : r.fields.filter((k) => k !== key),
+                                      },
+                                    });
+                                  }}
+                                />
+                                Required for closure
+                              </label>
                               {[
                                 "standardExists",
                                 "standardClear",
@@ -701,6 +795,95 @@ export default function Problems({
                                 new Date(a.completedAt).toLocaleString()
                               : ""}
                           </p>
+                          <details>
+                            <summary>
+                              Edit action details, assignment and requirement
+                            </summary>
+                            <form
+                              onSubmit={async (e) => {
+                                e.preventDefault();
+                                const f = new FormData(e.currentTarget);
+                                await post({
+                                  action: "editAction",
+                                  id: selected.id,
+                                  actionId: a.id,
+                                  version: a.version,
+                                  title: f.get("title"),
+                                  type: f.get("type"),
+                                  ownerId: f.get("ownerId"),
+                                  dueDate: f.get("dueDate"),
+                                  checkpoint: f.get("checkpoint") ?? "",
+                                  required: f.get("required") === "on",
+                                });
+                              }}
+                            >
+                              <Field label="Action description">
+                                <input
+                                  name="title"
+                                  required
+                                  maxLength={500}
+                                  defaultValue={a.title}
+                                />
+                              </Field>
+                              <Field label="Action type">
+                                <select name="type" defaultValue={a.type}>
+                                  {actionTypes
+                                    .filter(
+                                      (t) =>
+                                        t !== "Checkpoint" ||
+                                        selected.method !== "2D",
+                                    )
+                                    .map((t) => (
+                                      <option key={t}>{t}</option>
+                                    ))}
+                                </select>
+                              </Field>
+                              <Field label="Action owner">
+                                <select
+                                  name="ownerId"
+                                  defaultValue={a.ownerId}
+                                  required
+                                >
+                                  {peopleOptions}
+                                </select>
+                              </Field>
+                              <Field label="Action due date">
+                                <input
+                                  name="dueDate"
+                                  type="date"
+                                  defaultValue={a.dueDate}
+                                  required
+                                />
+                              </Field>
+                              {selected.method !== "2D" && (
+                                <Field label="Checkpoint category">
+                                  <select
+                                    name="checkpoint"
+                                    defaultValue={a.checkpoint}
+                                  >
+                                    <option value="">Not a checkpoint</option>
+                                    {checkpoints.map((t) => (
+                                      <option key={t}>{t}</option>
+                                    ))}
+                                  </select>
+                                </Field>
+                              )}
+                              <label className="check">
+                                <input
+                                  name="required"
+                                  type="checkbox"
+                                  defaultChecked={a.required}
+                                />
+                                Required for closure
+                              </label>
+                              <button
+                                className="outline"
+                                disabled={busy || selected.status === "Closed"}
+                              >
+                                Save action details
+                              </button>
+                            </form>
+                          </details>
                           <ActionUpdate
                             key={a.id + ":" + a.version}
                             a={a}
@@ -743,6 +926,7 @@ export default function Problems({
                             if (
                               await post({
                                 action: "addAction",
+                                required: f.required === "on",
                                 ...f,
                                 id: selected.id,
                                 version: selected.version,
@@ -795,6 +979,14 @@ export default function Problems({
                               </Field>
                             )}
                           </div>
+                          <label className="check">
+                            <input
+                              type="checkbox"
+                              name="required"
+                              defaultChecked
+                            />
+                            Required for closure
+                          </label>
                           <button className="primary" disabled={busy}>
                             Add tracked action
                           </button>

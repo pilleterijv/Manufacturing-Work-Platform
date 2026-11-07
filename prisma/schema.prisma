@@ -13,6 +13,7 @@ model User {
  name String
  password String
  role String
+ workspaceAccess Json @default("{\"mode\":\"restricted\",\"locations\":[],\"equipmentIds\":[]}")
  downtimeAccess Json @default("{\"mode\":\"all\",\"locations\":[],\"equipmentIds\":[]}")
  active Boolean @default(true)
  mustChange Boolean @default(true)
@@ -47,6 +48,15 @@ model Equipment {
  downtime Downtime[]
  ideas Idea[]
 }
+model Location {
+ id String @id @default(uuid())
+ plant String
+ department String
+ area String @default("")
+ line String @default("")
+ active Boolean @default(true)
+ @@unique([plant,department,area,line])
+}
 model Standard {
  id String @id @default(uuid())
  family String
@@ -55,6 +65,8 @@ model Standard {
  equipmentId String
  target Float
  tolerance Float
+ kind String @default("run")
+ assigneeIds Json @default("[]")
  steps Json
  created DateTime @default(now())
  equipment Equipment @relation(fields:[equipmentId],references:[id])
@@ -77,6 +89,7 @@ model Content {
  title String
  equipmentId String?
  body String
+ media Json @default("[]")
  active Boolean @default(true)
 }
 model Policy {
@@ -184,6 +197,7 @@ model Problem {
  team String
  dueDate String
  previousId String?
+ requirements Json?
  answers Json
  status String @default("Open")
  createdBy String
@@ -197,6 +211,7 @@ model Problem {
  @@index([status,dueDate])
 }
 model ProblemAction {
+ required Boolean @default(true)
  id String @id @default(uuid())
  problemId String
  type String
@@ -215,6 +230,7 @@ model ProblemAction {
 }
 
 model WorkSchedule {
+ kind String @default("run")
  id String @id @default(uuid())
  family String
  equipmentId String
@@ -293,4 +309,12 @@ model IntegrationReceipt {
  downtimeId String?
  outcome String
  @@unique([sourceId,eventId])
+}
+
+model GuideMedia {
+ id String @id @default(uuid())
+ userId String
+ mime String
+ bytes Int
+ created DateTime @default(now())
 }

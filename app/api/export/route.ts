@@ -1,3 +1,4 @@
+import { equipmentIds, recordScope } from "@/lib/location-access";
 import { streamWorkbook, paged } from "@/lib/excel-stream";
 import { db } from "@/lib/db";
 import { requireUser, grants, failure } from "@/lib/security";
@@ -7,10 +8,12 @@ export async function GET(req: Request) {
   try {
     const u = await requireUser("export");
     const g = await grants(u);
+    const ids = await equipmentIds(u);
     const asOf = new Date();
     const records = paged((cursor) =>
       db.record.findMany({
         where: {
+          AND: [recordScope(ids)],
           ...(g.includes("analytics") ? {} : { userId: u.id }),
           created: { lte: asOf },
           kind: {
@@ -126,7 +129,7 @@ export async function GET(req: Request) {
               d.snapshot.tolerance,
               d.followUp,
             ]);
-            for (const c of d.cycles)
+            for (const c of d.cycles ?? [])
               await sheets["Audit cycles"].addRow([
                 r.id,
                 c.element,
@@ -154,7 +157,7 @@ export async function GET(req: Request) {
             r.kind === "study" &&
             (g.includes("studies") || g.includes("analytics"))
           ) {
-            for (const c of d.cycles)
+            for (const c of d.cycles ?? [])
               await sheets["Time observations"].addRow([
                 r.id,
                 d.title,

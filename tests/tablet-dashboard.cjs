@@ -26,6 +26,7 @@ async function main() {
           role,
           password: hash,
           mustChange: false,
+          workspaceAccess:{mode:"all",locations:[],equipmentIds:[]},
         },
       }),
     );

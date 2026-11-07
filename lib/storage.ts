@@ -29,3 +29,23 @@ export async function readPhoto(id: string) {
     ? cloud.getBlockBlobClient(`${id}.webp`).downloadToBuffer()
     : readFile(path.join(root, `${id}.webp`));
 }
+export async function storeVideo(id: string, data: Buffer, mime: string) {
+  const cloud = await container();
+  if (cloud)
+    await cloud
+      .getBlockBlobClient(`${id}.video`)
+      .uploadData(data, { blobHTTPHeaders: { blobContentType: mime } });
+  else {
+    await mkdir(root, { recursive: true });
+    await writeFile(path.join(root, `${id}.video`), data, {
+      flag: "wx",
+      mode: 0o600,
+    });
+  }
+}
+export async function readVideo(id: string) {
+  const cloud = await container();
+  return cloud
+    ? cloud.getBlockBlobClient(`${id}.video`).downloadToBuffer()
+    : readFile(path.join(root, `${id}.video`));
+}

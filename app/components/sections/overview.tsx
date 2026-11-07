@@ -76,7 +76,7 @@ export default function Overview({
                 "Time work elements and review observations.",
               ],
               [
-                "Supervisor audits",
+                "DL/TL Standard Work",
                 "audits",
                 "◎",
                 "Verify standards and flag follow-ups.",
@@ -217,7 +217,7 @@ export default function Overview({
           detail="Raw observations preserved"
         />
         <Metric
-          label="Supervisor audits"
+          label="DL/TL Standard Work"
           value={data.overview?.audits ?? audits.length}
           detail="Timed process checks"
         />

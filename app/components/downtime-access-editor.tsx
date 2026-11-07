@@ -11,24 +11,40 @@ export default function DowntimeAccessEditor({
   equipment,
   save,
   busy,
+  workspace = false,
+  locations = [],
 }: {
   user: {
     id: string;
     name: string;
     role: string;
     downtimeAccess?: DowntimeAccess;
+    workspaceAccess?: DowntimeAccess;
   };
   equipment: Equipment[];
+  workspace?: boolean;
+  locations?: import("@/lib/workspace-types").Location[];
   save: (body: unknown) => Promise<boolean>;
   busy: boolean;
 }) {
   const [access, setAccess] = useState<DowntimeAccess>(
     user.role === "Admin"
       ? allDowntimeAccess
-      : (user.downtimeAccess ?? allDowntimeAccess),
+      : ((workspace ? user.workspaceAccess : user.downtimeAccess) ?? {
+          mode: "restricted",
+          locations: [],
+          equipmentIds: [],
+        }),
   );
   const departments = [
-    ...new Map(equipment.map((e) => [departmentKey(e), e])).values(),
+    ...new Map(
+      [
+        ...equipment,
+        ...(workspace
+          ? locations.map((l) => ({ ...l, name: "", id: "" }))
+          : []),
+      ].map((e) => [departmentKey(e), e]),
+    ).values(),
   ].sort(
     (a, b) =>
       a.plant.localeCompare(b.plant) ||
@@ -62,23 +78,31 @@ export default function DowntimeAccessEditor({
   }
   return (
     <section className="panel">
-      <h2>Downtime location access · {user.name}</h2>
+      <h2>
+        {workspace
+          ? "Department and area assignments"
+          : "Downtime location access"}{" "}
+        · {user.name}
+      </h2>
       <p className="muted">
-        Choose where this person can record downtime. Assignments add together.
-        A whole department or area includes its current and future machines;
-        individual machine assignments follow that machine if its location
-        changes.
+        Choose where this person can work. Assignments add together. A whole
+        department or area includes its current and future machines; individual
+        machine assignments follow that machine if its location changes.
       </p>
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          void save({ action: "downtimeAccess", id: user.id, access });
+          void save({
+            action: workspace ? "workspaceAccess" : "downtimeAccess",
+            id: user.id,
+            access,
+          });
         }}
       >
         <label className="field">
-          <span>Downtime access</span>
+          <span>{workspace ? "Workspace access" : "Downtime access"}</span>
           <select
-            aria-label="Downtime access"
+            aria-label={workspace ? "Workspace access" : "Downtime access"}
             disabled={user.role === "Admin"}
             value={access.mode}
             onChange={(e) =>
@@ -102,16 +126,25 @@ export default function DowntimeAccessEditor({
         {access.mode === "restricted" && (
           <>
             <p className="small muted">
-              With no assignments, this person cannot record downtime. Location
-              assignments include the plant so departments with the same name
-              remain separate.
+              With no assignments, this person cannot act in any restricted
+              location. Location assignments include the plant so departments
+              with the same name remain separate.
             </p>
             <div className="access-tree">
               {departments.map((d) => {
                 const key = departmentKey(d),
                   allDepartment = assigned(d.plant, d.department, null),
                   machines = equipment.filter((e) => departmentKey(e) === key),
-                  areas = [...new Set(machines.map((e) => e.area))].sort();
+                  areas = [
+                    ...new Set([
+                      ...machines.map((e) => e.area),
+                      ...(workspace
+                        ? locations
+                            .filter((l) => departmentKey(l) === key && l.area)
+                            .map((l) => l.area)
+                        : []),
+                    ]),
+                  ].sort();
                 return (
                   <details key={key} open>
                     <summary>
@@ -202,13 +235,14 @@ export default function DowntimeAccessEditor({
           </>
         )}
         <p className="small muted">
-          Changes take effect on the next server request, including
-          already-running timers. Downtime history, live timers and operational
-          downtime exports follow these assignments. Overall/department
-          dashboards remain controlled by dashboard and leadership permissions.
+          {workspace
+            ? "These assignments apply to standard work, DL/TL tasks, studies, guides, problems, ideas, dashboards and exports. Roles determine which functions are permitted. Managers can be assigned to multiple departments. Saving signs the person out to apply the change."
+            : "Downtime assignments further restrict the workspace assignments; they cannot grant access outside them."}
         </p>
         <button className="primary" disabled={busy || user.role === "Admin"}>
-          Save downtime access
+          {workspace
+            ? "Save department and area assignments"
+            : "Save downtime access"}
         </button>
       </form>
     </section>
