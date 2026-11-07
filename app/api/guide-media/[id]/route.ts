@@ -13,7 +13,15 @@ export async function GET(
       throw new HttpError(404, "Video not found");
     const media = await db.guideMedia.findUnique({ where: { id } });
     if (!media) throw new HttpError(404, "Video not found");
-    if (media.userId !== u.id && !(await linkedGuideMedia(u, id, "video")))
+    const linked = await linkedGuideMedia(u, id, "video");
+    const anyLink =
+      media.userId === u.id
+        ? await db.content.findFirst({
+            where: { media: { array_contains: [{ id, kind: "video" }] } },
+            select: { id: true },
+          })
+        : null;
+    if (!linked && (media.userId !== u.id || anyLink))
       throw new HttpError(403, "Video access denied");
     const data = await readVideo(id),
       headers: Record<string, string> = {

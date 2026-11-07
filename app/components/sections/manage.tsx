@@ -87,7 +87,15 @@ export default function Manage({
             <option value="">New standard</option>
             {data.standards.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.title} · revision {s.revision}
+                {s.title} · revision {s.revision} ·{" "}
+                {(() => {
+                  const e = data.equipment.find((e) => e.id === s.equipmentId);
+                  return e
+                    ? [e.plant, e.department, e.area, e.line, e.name]
+                        .filter(Boolean)
+                        .join(" / ")
+                    : s.equipmentId;
+                })()}
               </option>
             ))}
           </select>

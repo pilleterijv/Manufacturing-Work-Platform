@@ -4,6 +4,17 @@ import { db } from "@/lib/db";
 import { requireUser, grants, failure } from "@/lib/security";
 import { stats } from "@/lib/rules";
 import { addOperationsSheets } from "@/lib/operations-export";
+const locationColumns = [
+  "Plant",
+  "Department",
+  "Area",
+  "Line",
+  "Equipment name",
+];
+const locationValues = (equipment: any) =>
+  ["plant", "department", "area", "line", "name"].map(
+    (key) => equipment?.[key] ?? "",
+  );
 export async function GET(req: Request) {
   try {
     const u = await requireUser("export");
@@ -41,8 +52,8 @@ export async function GET(req: Request) {
             "Responses",
             "Time observations",
             "Statistics",
-            "Audits",
-            "Audit cycles",
+            "DL-TL Standard Work",
+            "DL-TL cycles",
           ].map((name) => [name, book.addWorksheet(name)]),
         );
         await sheets["Standard work"].addRow([
@@ -51,7 +62,8 @@ export async function GET(req: Request) {
           "Recorder",
           "Standard",
           "Revision",
-          "Equipment",
+          "Equipment ID",
+          ...locationColumns,
           "Duration seconds",
           "Follow up",
         ]);
@@ -66,7 +78,8 @@ export async function GET(req: Request) {
         await sheets["Time observations"].addRow([
           "Study",
           "Title",
-          "Equipment",
+          "Equipment ID",
+          ...locationColumns,
           "Element",
           "Seconds",
           "Timestamp",
@@ -82,18 +95,20 @@ export async function GET(req: Request) {
           "Range",
           "Standard deviation (population)",
         ]);
-        await sheets.Audits.addRow([
+        await sheets["DL-TL Standard Work"].addRow([
           "ID",
           "Date",
-          "Auditor",
-          "Operator",
+          "Recorded by",
+          "Operator / context",
           "Standard",
           "Revision",
+          "Equipment ID",
+          ...locationColumns,
           "Target seconds",
           "Tolerance percent",
           "Follow up",
         ]);
-        await sheets["Audit cycles"].addRow([
+        await sheets["DL-TL cycles"].addRow([
           "Audit",
           "Element",
           "Seconds",
@@ -114,23 +129,26 @@ export async function GET(req: Request) {
               d.snapshot.title,
               d.snapshot.revision,
               d.snapshot.equipmentId,
+              ...locationValues(d.snapshot.equipment),
               d.durationSeconds,
               d.followUp,
             ]);
           if (r.kind === "audit" && g.includes("audits")) {
-            await sheets.Audits.addRow([
+            await sheets["DL-TL Standard Work"].addRow([
               r.id,
               r.created,
               r.user.name,
               d.operator,
               d.snapshot.title,
               d.snapshot.revision,
+              d.snapshot.equipmentId,
+              ...locationValues(d.snapshot.equipment),
               d.snapshot.target,
               d.snapshot.tolerance,
               d.followUp,
             ]);
             for (const c of d.cycles ?? [])
-              await sheets["Audit cycles"].addRow([
+              await sheets["DL-TL cycles"].addRow([
                 r.id,
                 c.element,
                 c.seconds,
@@ -162,6 +180,7 @@ export async function GET(req: Request) {
                 r.id,
                 d.title,
                 d.equipmentId,
+                ...locationValues(d.equipmentSnapshot),
                 c.element,
                 c.seconds,
                 c.at,

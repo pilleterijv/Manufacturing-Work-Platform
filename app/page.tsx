@@ -508,7 +508,12 @@ export default function Home() {
           <span className="nav-label">WORKSPACE</span>
           <nav>
             {nav
-              .filter(([, c]) => !c || g.includes(c))
+              .filter(
+                ([, c]) =>
+                  (!c || g.includes(c)) &&
+                  (!(c === "users" || c === "permissions") ||
+                    user.role === "Admin"),
+              )
               .map(([name, , icon]) => (
                 <button
                   key={name}

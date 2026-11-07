@@ -98,16 +98,23 @@ async function main() {
       },
     });
   }
+  const locationKey = (e: {
+    plant: string;
+    department: string;
+    area: string;
+    line: string;
+  }) =>
+    JSON.stringify(
+      [e.plant, e.department, e.area, e.line].map((v) =>
+        v.trim().toLowerCase(),
+      ),
+    );
+  const knownLocations = new Set(
+    (await db.location.findMany()).map(locationKey),
+  );
   for (const e of await db.equipment.findMany()) {
-    const same = await db.location.findFirst({
-      where: {
-        plant: { equals: e.plant.trim(), mode: "insensitive" },
-        department: { equals: e.department.trim(), mode: "insensitive" },
-        area: { equals: e.area.trim(), mode: "insensitive" },
-        line: { equals: e.line.trim(), mode: "insensitive" },
-      },
-    });
-    if (!same)
+    const key = locationKey(e);
+    if (!knownLocations.has(key)) {
       await db.location.create({
         data: {
           plant: e.plant,
@@ -116,6 +123,8 @@ async function main() {
           line: e.line,
         },
       });
+      knownLocations.add(key);
+    }
   }
   await db.session.deleteMany({ where: { expires: { lt: new Date() } } });
   await db.rate.deleteMany({ where: { expires: { lt: new Date() } } });

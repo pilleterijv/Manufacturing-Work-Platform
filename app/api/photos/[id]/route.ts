@@ -15,29 +15,38 @@ export async function GET(
       throw new HttpError(404, "Photo not found");
     const photo = await db.photo.findUnique({ where: { id } });
     if (!photo) throw new HttpError(404, "Photo not found");
-    if (photo.userId !== u.id) {
-      const g = await grants(u);
-      const ids = await equipmentIds(u);
-      const guide = await linkedGuideMedia(u, id, "photo");
-      const kinds = [
-        ...(g.includes("analytics") ? ["run"] : []),
-        ...(g.includes("audits") ? ["audit"] : []),
-      ];
-      if (!kinds.length && !guide)
-        throw new HttpError(403, "Photo access denied");
-      const linked =
-        guide ||
-        (kinds.length > 0 &&
-          (
-            await db.$queryRaw<{ id: string }[]>(Prisma.sql`
-        SELECT id FROM "Record" WHERE kind IN ('run','audit')
-        AND kind IN (${Prisma.join(kinds)})
-        AND ${equipmentSql(ids, Prisma.sql`COALESCE(data->>'equipmentId',data->'snapshot'->>'equipmentId')`)}
-        AND (data->'responses') @> ${JSON.stringify([{ photo: id }])}::jsonb LIMIT 1
-      `)
-          ).length > 0);
-      if (!linked) throw new HttpError(403, "Photo access denied");
-    }
+    const owner = photo.userId === u.id,
+      g = await grants(u),
+      ids = await equipmentIds(u);
+    const guide = await linkedGuideMedia(u, id, "photo");
+    const kinds = [
+      ...(owner || g.includes("analytics") ? ["run"] : []),
+      ...(owner || g.includes("audits") ? ["audit"] : []),
+    ];
+    const recordLink = kinds.length
+      ? (
+          await db.$queryRaw<{ id: string }[]>(Prisma.sql`
+      SELECT id FROM "Record" WHERE kind IN (${Prisma.join(kinds)})
+      ${owner && !g.includes("analytics") && !g.includes("audits") ? Prisma.sql`AND "userId"=${u.id}` : Prisma.empty}
+      AND ${equipmentSql(ids, Prisma.sql`COALESCE(data->>'equipmentId',data->'snapshot'->>'equipmentId')`)}
+      AND (data->'responses') @> ${JSON.stringify([{ photo: id }])}::jsonb LIMIT 1`)
+        ).length > 0
+      : false;
+    const anyGuide = owner
+      ? await db.content.findFirst({
+          where: { media: { array_contains: [{ id, kind: "photo" }] } },
+          select: { id: true },
+        })
+      : null;
+    const anyRecord = owner
+      ? (
+          await db.$queryRaw<{ id: string }[]>(
+            Prisma.sql`SELECT id FROM "Record" WHERE (data->'responses') @> ${JSON.stringify([{ photo: id }])}::jsonb LIMIT 1`,
+          )
+        ).length > 0
+      : false;
+    if (!guide && !recordLink && !(owner && !anyGuide && !anyRecord))
+      throw new HttpError(403, "Photo access denied");
     return new Response(new Uint8Array(await readPhoto(id)), {
       headers: {
         "Content-Type": "image/webp",

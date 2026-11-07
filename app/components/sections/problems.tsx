@@ -17,6 +17,7 @@ type Person = { id: string; name: string };
 type Equipment = {
   id: string;
   name: string;
+  plant: string;
   department: string;
   area: string;
   line: string;
@@ -330,9 +331,9 @@ export default function Problems({
           <button className="outline">Search</button>
         </form>
         <p className="small muted">
-          Department filters organize reporting; workspace permissions control
-          access. Summary counts cover every matching record, including pages
-          not loaded.
+          Department filters organize reporting; role permissions and
+          department/area assignments control access. Summary counts cover every
+          matching record, including pages not loaded.
         </p>
       </section>
       {error && (
@@ -541,8 +542,15 @@ export default function Problems({
                           </option>
                           {data.equipment.map((eq) => (
                             <option key={eq.id} value={eq.id}>
-                              {eq.name} · {eq.department} / {eq.area} /{" "}
-                              {eq.line}
+                              {[
+                                eq.plant,
+                                eq.department,
+                                eq.area,
+                                eq.line,
+                                eq.name,
+                              ]
+                                .filter(Boolean)
+                                .join(" / ")}
                             </option>
                           ))}
                         </select>

@@ -71,13 +71,22 @@ export async function visiblePeople(u: ScopedUser, ids: string[]) {
     where: { active: true },
     orderBy: { name: "asc" },
   });
-  return people.filter(
-    (p) =>
-      p.id === u.id ||
-      equipment.some((e) =>
-        allowedDowntimeEquipment(p.role, p.workspaceAccess, e),
-      ),
-  );
+  return people
+    .filter(
+      (p) =>
+        p.id === u.id ||
+        equipment.some((e) =>
+          allowedDowntimeEquipment(p.role, p.workspaceAccess, e),
+        ),
+    )
+    .map(({ id, name, username, role, active, email }) => ({
+      id,
+      name,
+      username,
+      role,
+      active,
+      hasEmail: !!email,
+    }));
 }
 export const equipmentSql = (ids: string[], column: Prisma.Sql) =>
   Prisma.sql`${column} = ANY(${ids}::text[])`;
@@ -85,19 +94,13 @@ export async function notificationScope(
   u: ScopedUser,
   ids: string[],
 ): Promise<Prisma.NotificationWhereInput> {
-  const schedules = await db.workSchedule.findMany({
-    where: { equipmentId: { in: ids } },
-    select: { id: true },
-  });
-  const checks = await db.shiftCheck.findMany({
-    where: { scheduleId: { in: schedules.map((s) => s.id) } },
-    select: { id: true },
-  });
-  return {
-    userId: u.id,
-    OR: [
-      { idea: { equipmentId: { in: ids } } },
-      { kind: "missed-work", sourceId: { in: checks.map((c) => c.id) } },
-    ],
-  };
+  const notices = await db.$queryRaw<{ id: string }[]>(Prisma.sql`
+    SELECT n.id FROM "Notification" n
+    LEFT JOIN "Idea" i ON i.id=n."ideaId"
+    LEFT JOIN "ShiftCheck" c ON c.id=n."sourceId" AND n.kind='missed-work'
+    LEFT JOIN "WorkSchedule" s ON s.id=c."scheduleId"
+    WHERE n."userId"=${u.id}
+    AND (i."equipmentId"=ANY(${ids}::text[]) OR s."equipmentId"=ANY(${ids}::text[]))
+    ORDER BY n."createdAt" DESC,n.id DESC LIMIT 100`);
+  return { userId: u.id, id: { in: notices.map((n) => n.id) } };
 }

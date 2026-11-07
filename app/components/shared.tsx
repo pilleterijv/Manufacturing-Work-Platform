@@ -62,7 +62,7 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
         <div className="empty">
           <span>◇</span>
           <h3>Your first observation starts here</h3>
-          <p>Completed work, time studies, and audits will appear here.</p>
+          <p>Completed work, time studies, and DL/TL Standard Work will appear here.</p>
         </div>
       ) : (
         <div className="table-wrap">

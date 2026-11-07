@@ -258,7 +258,7 @@ async function main() {
   const workbook = new Excel.Workbook();
   await workbook.xlsx.load(await exportResponse.body());
   assert.equal(workbook.worksheets.length, 9);
-  assert(workbook.getWorksheet("Audit cycles").rowCount > 1);
+  assert(workbook.getWorksheet("DL-TL cycles").rowCount > 1);
   const operator = await browser.newContext();
   await login(operator, users[3].username);
   assert.equal(
@@ -382,6 +382,7 @@ async function main() {
         await request(manager, "/api/platform", {
           action: "guide",
           title: "Archive regression " + suffix,
+          equipmentId:equipment.id,
           body: "Approved guidance.",
         })
       ).status,

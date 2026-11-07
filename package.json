@@ -25,7 +25,8 @@
     "test:downtime-access": "node tests/downtime-access-browser.cjs",
     "test:connected": "node tests/connected-browser.cjs",
     "background": "tsx scripts/background-worker.ts",
-    "background:once": "tsx scripts/background-worker.ts --once"
+    "background:once": "tsx scripts/background-worker.ts --once",
+    "test:locations": "node tests/location-workflows.cjs"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.29.1",

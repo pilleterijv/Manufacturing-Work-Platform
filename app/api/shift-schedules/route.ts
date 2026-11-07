@@ -36,9 +36,11 @@ export async function GET() {
       ]);
     return Response.json({
       schedules,
-      people: people.map(({ email, ...person }) => ({
-        ...person,
-        hasEmail: !!email,
+      people: people.map(({ id, name, role, hasEmail }) => ({
+        id,
+        name,
+        role,
+        hasEmail,
       })),
       standards,
       config: setting.value,

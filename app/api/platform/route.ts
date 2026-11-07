@@ -291,6 +291,8 @@ export async function POST(req: Request) {
       const rows = await db.location.findMany();
       const same = (a: string, c: string) =>
         a.trim().toLowerCase() === c.trim().toLowerCase();
+      const plant = rows.find((r) => same(r.plant, v.plant));
+      if (plant) v.plant = plant.plant;
       const parent = rows.find(
         (r) => same(r.plant, v.plant) && same(r.department, v.department),
       );
@@ -322,7 +324,7 @@ export async function POST(req: Request) {
       if (u.role !== "Admin")
         throw new HttpError(
           403,
-          "Only Admin can assign downtime locations and machines",
+          "Only Admin can assign departments, areas and machines",
         );
       const id = z.string().uuid().parse(b.id);
       const access = downtimeAccessSchema.parse(b.access);

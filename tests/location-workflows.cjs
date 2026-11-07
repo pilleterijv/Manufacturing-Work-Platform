@@ -166,6 +166,16 @@ async function main() {
     }),
     403,
   );
+  const scheduleDirectory = await check(
+    await get(manager, "/api/shift-schedules"),
+  );
+  for (const person of scheduleDirectory.people)
+    assert.deepEqual(Object.keys(person).sort(), [
+      "hasEmail",
+      "id",
+      "name",
+      "role",
+    ]);
   const runFamily = randomUUID(),
     auditFamily = randomUUID();
   const standard = {
@@ -359,6 +369,58 @@ async function main() {
       status: "Closed",
     }),
   );
+  const fourInput = {
+    ...problem,
+    method: "4D",
+    title: prefix + " recurring issue",
+    requirements: {
+      fields: ["problem"],
+      requireAction: false,
+      actionTypes: [],
+    },
+  };
+  const four = await check(await post(manager, "/api/problems", fourInput));
+  let fourRecord = await db.problem.findUniqueOrThrow({
+    where: { id: four.id },
+  });
+  await check(
+    await post(manager, "/api/problems", {
+      action: "addAction",
+      id: four.id,
+      version: fourRecord.version,
+      type: "Corrective",
+      title: "Revise setup",
+      ownerId: users[3].id,
+      dueDate: "2026-12-01",
+      required: true,
+    }),
+  );
+  const fourAction = await db.problemAction.findFirstOrThrow({
+    where: { problemId: four.id },
+  });
+  await check(
+    await post(manager, "/api/problems", {
+      action: "editAction",
+      id: four.id,
+      actionId: fourAction.id,
+      version: fourAction.version,
+      type: "Preventive",
+      title: "Optional prevention improvement",
+      ownerId: users[1].id,
+      dueDate: "2026-12-02",
+      required: false,
+    }),
+  );
+  fourRecord = await db.problem.findUniqueOrThrow({ where: { id: four.id } });
+  await check(
+    await post(manager, "/api/problems", {
+      ...fourInput,
+      action: "update",
+      id: four.id,
+      version: fourRecord.version,
+      status: "Closed",
+    }),
+  );
   // Scope also applies to guides, private evidence, video range requests and exports.
   const image = await require("sharp")({
     create: { width: 40, height: 40, channels: 3, background: "#147264" },
@@ -455,6 +517,20 @@ async function main() {
   const workbook = new (require("exceljs").Workbook)();
   await workbook.xlsx.load(await exportResponse.body());
   assert.equal(workbook.getWorksheet("Standard work").rowCount, 1);
+  const ownExport = await get(manager, "/api/export");
+  assert.equal(ownExport.status(), 200);
+  const ownWorkbook = new (require("exceljs").Workbook)();
+  await ownWorkbook.xlsx.load(await ownExport.body());
+  const workSheet = ownWorkbook.getWorksheet("Standard work"),
+    header = workSheet.getRow(1).values;
+  assert.equal(
+    workSheet.getRow(2).getCell(header.indexOf("Department")).value,
+    "A",
+  );
+  assert.equal(
+    workSheet.getRow(2).getCell(header.indexOf("Equipment ID")).value,
+    eqs[0].id,
+  );
   const problemExport = await get(other, "/api/problems?format=xlsx");
   assert.equal(problemExport.status(), 200);
   const problemBook = new (require("exceljs").Workbook)();
@@ -538,15 +614,17 @@ async function main() {
     .first()
     .click();
   // Choose this synthetic guide if other resources exist.
-  const article = mp
-    .locator("article")
-    .filter({
-      has: mp.getByRole("heading", { name: guide.title, exact: true }),
-    });
+  const article = mp.locator("article").filter({
+    has: mp.getByRole("heading", { name: guide.title, exact: true }),
+  });
   await article.getByRole("button", { name: "Edit guide and media" }).click();
   await mp.getByRole("button", { name: "Edit photo", exact: true }).click();
   await mp.getByRole("heading", { name: "Edit photo", exact: true }).waitFor();
   await mp.getByRole("button", { name: "Rotate", exact: true }).click();
+  await mp.screenshot({
+    path: "docs/screenshots/location-tasks/photo-editor.png",
+    fullPage: true,
+  });
   await mp
     .getByRole("button", { name: "Save edited photo", exact: true })
     .click();
@@ -564,6 +642,21 @@ async function main() {
     fullPage: true,
   });
   assert.deepEqual(errors, []);
+  await mp
+    .getByRole("button", { name: "◈ Problem solving", exact: true })
+    .click();
+  await mp.getByLabel("Find a record").fill(prefix + " recurring issue");
+  await mp.getByRole("button", { name: "Search", exact: true }).click();
+  await mp
+    .getByRole("row")
+    .filter({ hasText: prefix + " recurring issue" })
+    .getByRole("button", { name: "View / update", exact: true })
+    .click();
+  await mp.getByText("Closure requirements", { exact: true }).waitFor();
+  await mp.screenshot({
+    path: "docs/screenshots/location-tasks/problem-action-requirements.png",
+    fullPage: true,
+  });
   // Assignment revocation invalidates existing sessions and access is gone after login.
   await check(
     await post(admin, "/api/platform", {
@@ -580,6 +673,14 @@ async function main() {
     0,
   );
   await check(await get(revoked, "/api/problems?id=" + created.id), 403);
+  assert.equal(
+    (await get(revoked, "/api/photos/" + photos.at(-1))).status(),
+    403,
+  );
+  assert.equal(
+    (await get(revoked, "/api/guide-media/" + video.id)).status(),
+    403,
+  );
   console.log(
     "PASS: catalog dropdowns; department/area isolation and defaults; manager/DL assignments; assigned DL/TL tasks; configurable 2D action requirements and edits; protected device media, photo markup and video ranges; scoped reports, exports and revocation.",
   );

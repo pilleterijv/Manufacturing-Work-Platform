@@ -53,7 +53,9 @@ function Equipment({
       <option value="">Select equipment</option>
       {equipment.map((e) => (
         <option key={e.id} value={e.id}>
-          {e.name} · {e.department} / {e.line}
+          {[e.plant, e.department, e.area, e.line, e.name]
+            .filter(Boolean)
+            .join(" / ")}
         </option>
       ))}
     </select>
@@ -1133,7 +1135,7 @@ export function Leadership({
               true,
             )}
             {metric(
-              "Supervisor audits",
+              "DL/TL Standard Work",
               s.audits,
               `${s.auditFollowUps} require follow-up`,
             )}
@@ -1189,10 +1191,10 @@ export function Leadership({
                 ))}
               </div>
               <p className="small muted">
-                Work, studies, audits, downtime, and new ideas use the selected
-                period. Equipment, standards, libraries, and the idea pipeline
-                show their current state. Department libraries include shared
-                resources.
+                Work, studies, DL/TL Standard Work, downtime, and new ideas use
+                the selected period. Equipment, standards, libraries, and the
+                idea pipeline show their current state. Department libraries
+                include shared resources.
               </p>
             </section>
             <section className="panel">
