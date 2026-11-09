@@ -146,7 +146,9 @@ export default function Defects({
                 />
               </Field>
             ))}
-            <button disabled={busy}>Save MaintainX mapping</button>
+            <button className="outline" disabled={busy}>
+              Save MaintainX mapping
+            </button>
           </form>
         </section>
       )}
@@ -216,11 +218,14 @@ export default function Defects({
                   <Field label="Update comment">
                     <input name="comment" maxLength={2000} />
                   </Field>
-                  <button disabled={busy}>Update defect</button>
+                  <button className="outline" disabled={busy}>
+                    Update defect
+                  </button>
                 </form>
                 {d.status === "Open" &&
                   d.maintainxStatus === "Not submitted" && (
                     <button
+                      className="outline"
                       disabled={
                         busy ||
                         !data.maintainxConfigured ||
@@ -254,7 +259,7 @@ export default function Defects({
                     <input type="checkbox" name="confirmedAbsent" />I checked
                     MaintainX and no work order exists for this defect
                   </label>
-                  <button disabled={busy}>
+                  <button className="outline" disabled={busy}>
                     Reconcile MaintainX submission
                   </button>
                 </form>
@@ -272,6 +277,7 @@ export default function Defects({
         {data && !data.defects.length && <p>No defects match these filters.</p>}
         {data?.hasMore && (
           <button
+            className="outline"
             disabled={busy}
             onClick={() => load(true).catch((e) => setError(e.message))}
           >

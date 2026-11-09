@@ -7,7 +7,7 @@ import {
   failure,
   HttpError,
 } from "@/lib/security";
-import { equipmentIds } from "@/lib/location-access";
+import { equipmentIds, equipmentScope } from "@/lib/location-access";
 import { visibleAreas } from "@/lib/area-access";
 import { dashboardDepartmentSchema } from "@/lib/floor-rules";
 import { localToday, type ShiftConfig } from "@/lib/operations-rules";
@@ -215,11 +215,16 @@ export async function POST(req: Request) {
             400,
             "Department dashboards are for managers and DL/TLs",
           );
-        const ids = await equipmentIds(target);
+        const equipment = await tx.equipment.findMany({
+          where: equipmentScope(target),
+          select: { id: true, plant: true, department: true },
+        });
         if (
-          !(await tx.equipment.findFirst({
-            where: { id: { in: ids }, ...department },
-          }))
+          !equipment.some(
+            (e) =>
+              e.plant === department.plant &&
+              e.department === department.department,
+          )
         )
           throw new HttpError(
             403,

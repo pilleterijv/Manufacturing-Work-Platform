@@ -224,6 +224,7 @@ export default function Maintenance({
                   Photo or video required
                 </label>
                 <button
+                  className="outline"
                   type="button"
                   disabled={draft.steps.length === 1}
                   onClick={() =>
@@ -239,6 +240,7 @@ export default function Maintenance({
             ))}
             <div className="button-row">
               <button
+                className="outline"
                 type="button"
                 disabled={draft.steps.length >= 100}
                 onClick={() =>
@@ -256,7 +258,11 @@ export default function Maintenance({
               <button className="primary" disabled={busy}>
                 Save {label} plan
               </button>
-              <button type="button" onClick={() => setDraft(null)}>
+              <button
+                className="outline"
+                type="button"
+                onClick={() => setDraft(null)}
+              >
                 Cancel {label} edit
               </button>
             </div>
@@ -304,6 +310,7 @@ export default function Maintenance({
                 )}
               {data.canManage && (
                 <button
+                  className="outline"
                   onClick={() => {
                     setSelected(null);
                     setDraft(p);
@@ -319,7 +326,10 @@ export default function Maintenance({
           <p>No {label} plans match these filters.</p>
         )}
         {data?.hasMore && (
-          <button onClick={() => load(true).catch((e) => setError(e.message))}>
+          <button
+            className="outline"
+            onClick={() => load(true).catch((e) => setError(e.message))}
+          >
             Load more {label} plans
           </button>
         )}
@@ -364,6 +374,7 @@ export default function Maintenance({
                 <div className="yes-no">
                   {[true, false].map((answer) => (
                     <button
+                      className="outline"
                       type="button"
                       key={String(answer)}
                       aria-pressed={responses[s.id]?.answer === answer}
@@ -425,7 +436,11 @@ export default function Maintenance({
             <button className="primary" disabled={busy || uploading}>
               Complete {label} and save evidence
             </button>
-            <button type="button" onClick={() => setSelected(null)}>
+            <button
+              className="outline"
+              type="button"
+              onClick={() => setSelected(null)}
+            >
               Cancel {label}
             </button>
           </form>

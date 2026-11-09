@@ -142,6 +142,30 @@ export default function Overview({
                 "Choose which workflows each role can use.",
               ],
               [
+                "Preventive maintenance",
+                "maintenance",
+                "⚒",
+                "Schedule machine PMs and retain completion evidence.",
+              ],
+              [
+                "TPM / CIL",
+                "maintenance",
+                "⚒",
+                "Clean, inspect and lubricate assigned machines.",
+              ],
+              [
+                "5S audits",
+                "fiveS",
+                "◎",
+                "Score area standards and record photo or video evidence.",
+              ],
+              [
+                "Defect reporting",
+                "defects",
+                "◇",
+                "Report abnormalities and submit MaintainX work orders.",
+              ],
+              [
                 "Problem solving",
                 "problems",
                 "◈",

@@ -27,6 +27,10 @@ export async function GET(req: Request) {
   try {
     const u = await requireUser("defects"),
       ids = await equipmentIds(u),
+      equipment = await db.equipment.findMany({
+        where: { id: { in: ids } },
+        orderBy: { name: "asc" },
+      }),
       { person, search } = readFilters(req.url),
       where = {
         equipmentId: { in: ids },
@@ -38,6 +42,18 @@ export async function GET(req: Request) {
             ? [
                 {
                   OR: [
+                    {
+                      equipmentId: {
+                        in: equipment
+                          .filter((e) =>
+                            [e.name, e.plant, e.department, e.area]
+                              .join(" ")
+                              .toLowerCase()
+                              .includes(search.toLowerCase()),
+                          )
+                          .map((e) => e.id),
+                      },
+                    },
                     {
                       title: { contains: search, mode: "insensitive" as const },
                     },
@@ -115,14 +131,15 @@ export async function GET(req: Request) {
       defects: rows.slice(0, 100),
       hasMore: rows.length > 100,
       cursor: rows[99]?.id,
-      equipment: await db.equipment.findMany({
-        where: { id: { in: ids } },
-        orderBy: { name: "asc" },
-      }),
+      equipment,
       people: await visiblePeople(u, ids),
       canManage: (await grants(u)).includes("manage"),
       maintainxConfigured: maintainxReady(),
-      assets: await maintainxMapping(),
+      assets: Object.fromEntries(
+        Object.entries(await maintainxMapping()).filter(([id]) =>
+          ids.includes(id),
+        ),
+      ),
     });
   } catch (e) {
     return failure(e);
@@ -249,7 +266,7 @@ export async function POST(req: Request) {
       });
       if (b.action === "submit") {
         try {
-          await submitMaintainx(id);
+          await submitMaintainx(id, u);
         } catch (e) {
           throw new HttpError(409, (e as Error).message);
         }

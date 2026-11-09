@@ -2,6 +2,8 @@
 
 A browser application for standard work, photographic evidence, time studies, DL/TL Standard Work, troubleshooting, training, role permissions, downtime tracking, improvement ideas, leadership reporting, and Excel exports. PostgreSQL is the primary database; Excel is an export format.
 
+This update adds area-based **5S audits**, machine **TPM/CIL**, **defect reporting with optional MaintainX work-order submission**, personal/assigned-department dashboards, registration approval, password-recovery emails and searchable account pickers. See [setup and limits](docs/five-s-tpm-access.md) and [screenshots](docs/screenshots/five-s-tpm). Migration 011 preserves existing work. Live MaintainX/SMTP require private IT setup; no company work orders or emails have been sent by development tests.
+
 ## PMs, people filters, overdue reminders and connected data
 
 See [feature setup and validation](docs/maintenance-data-validation.md) and the [company ownership/server integration handover](docs/company-ownership-deployment.md). This update adds machine PMs, scoped people/text filters, overdue in-app/email reminders, device video evidence and Excel production-results imports, with read-only SQL Server/PostgreSQL feeds for operational sections. Migration 010 is additive. Email, company databases and TrakSYS still require private IT configuration and live validation.

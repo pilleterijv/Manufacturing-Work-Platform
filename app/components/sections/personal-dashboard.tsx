@@ -65,12 +65,14 @@ export default function PersonalDashboard({
           </Field>
           <div className="button-row">
             <button
+              className="outline"
               aria-pressed={scope === "personal"}
               onClick={() => setScope("personal")}
             >
               Personal assignments
             </button>
             <button
+              className="outline"
               disabled={!data.department}
               aria-pressed={scope === "department"}
               onClick={() => setScope("department")}
@@ -82,7 +84,7 @@ export default function PersonalDashboard({
       )}
       {data && (
         <>
-          <div className="metrics">
+          <div className="metrics assignment-metrics">
             {[
               "Ideas",
               "Problem solvings",

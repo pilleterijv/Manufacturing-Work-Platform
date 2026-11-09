@@ -1,3 +1,4 @@
+import { assertEquipmentAccess, type ScopedUser } from "./location-access";
 import { db } from "./db";
 import { z } from "zod";
 export const maintainxMappingSchema = z.record(
@@ -31,6 +32,7 @@ export function maintainxPayload(
 // No automatic retry after an ambiguous response: a work order may already exist.
 export async function submitMaintainx(
   id: string,
+  actor: ScopedUser,
   request: typeof fetch = fetch,
 ) {
   if (!maintainxReady()) throw Error("MaintainX is not configured");
@@ -38,13 +40,28 @@ export async function submitMaintainx(
     old = await db.defect.findUniqueOrThrow({ where: { id } }),
     asset = assets[old.equipmentId];
   if (!asset) throw Error("Ask Admin to map this machine to a MaintainX asset");
-  const claimed = await db.defect.updateMany({
-    where: { id, maintainxStatus: "Not submitted", status: "Open" },
-    data: {
-      maintainxStatus: "Sending",
-      submissionAt: new Date(),
-      submissionError: null,
-    },
+  const claimed = await db.$transaction(async (tx) => {
+    await assertEquipmentAccess(actor, old.equipmentId, tx);
+    const fresh = await tx.user.findUniqueOrThrow({ where: { id: actor.id } }),
+      policy = await tx.policy.findUnique({ where: { role: fresh.role } }),
+      permissions = Array.isArray(policy?.grants) ? policy.grants : [];
+    if (fresh.role !== "Admin" && !permissions.includes("defects"))
+      throw Error("Defect permission was revoked");
+    return tx.defect.updateMany({
+      where: {
+        id,
+        maintainxStatus: "Not submitted",
+        status: "Open",
+        ...(!(fresh.role === "Admin" || permissions.includes("manage"))
+          ? { OR: [{ reportedBy: fresh.id }, { assigneeId: fresh.id }] }
+          : {}),
+      },
+      data: {
+        maintainxStatus: "Sending",
+        submissionAt: new Date(),
+        submissionError: null,
+      },
+    });
   });
   if (!claimed.count)
     throw Error("Already submitted or awaiting reconciliation; reload");

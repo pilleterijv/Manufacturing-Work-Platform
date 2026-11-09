@@ -11,12 +11,14 @@ export function PublicAccessForms() {
     <div className="access-forms">
       <div className="button-row">
         <button
+          className="outline"
           type="button"
           onClick={() => setMode(mode === "register" ? "" : "register")}
         >
           Request an account
         </button>
         <button
+          className="outline"
           type="button"
           onClick={() => setMode(mode === "forgot" ? "" : "forgot")}
         >
@@ -78,7 +80,7 @@ export function PublicAccessForms() {
               <input name="identity" required maxLength={254} />
             </Field>
           )}
-          <button disabled={busy}>
+          <button className="outline" disabled={busy}>
             {mode === "register"
               ? "Submit registration request"
               : "Email password link"}
@@ -175,7 +177,9 @@ export function AccessRequests({ reload }: { reload: () => void }) {
   return (
     <section className="panel">
       <h2>Registration requests</h2>
-      <button onClick={() => void load()}>Review registration requests</button>
+      <button className="outline" onClick={() => void load()}>
+        Review registration requests
+      </button>
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
       {data && (
@@ -199,6 +203,7 @@ export function AccessRequests({ reload }: { reload: () => void }) {
             <div className="button-row">
               {["Approved", "Rejected"].map((decision) => (
                 <button
+                  className="outline"
                   key={decision}
                   disabled={busy}
                   onClick={async () => {

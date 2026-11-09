@@ -134,6 +134,11 @@ export async function POST(req: Request) {
           const old = await tx.fiveSPlan.findUnique({ where: { id } });
           if (!old || old.version !== version)
             throw new HttpError(409, "5S plan changed; reload");
+          if (old.locationId !== v.locationId)
+            throw new HttpError(
+              400,
+              "Create a new 5S plan for another area; existing plans keep their area",
+            );
           await assertAreaAccess(u, old.locationId, tx);
           await tx.fiveSPlan.update({
             where: { id },

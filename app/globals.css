@@ -1635,3 +1635,26 @@ input:not([type="checkbox"]) {
   min-width: 24px;
   height: 24px;
 }
+
+.person-picker {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.personal-dashboard .assignment-metrics {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.personal-dashboard .button-row button[aria-pressed="true"] {
+  background: var(--teal);
+  color: white;
+}
+@media (max-width: 1100px) {
+  .personal-dashboard .assignment-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .personal-dashboard .assignment-metrics {
+    grid-template-columns: 1fr;
+  }
+}

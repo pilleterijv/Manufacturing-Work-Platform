@@ -711,9 +711,17 @@ export async function POST(req: Request) {
           ),
       };
       await db.$transaction(async (tx) => {
-        await assertEquipmentAccess(u, standard.equipmentId, tx);
+        const machine = await assertEquipmentAccess(
+          u,
+          standard.equipmentId,
+          tx,
+        );
         for (const step of steps) {
-          if (!step.fiveSPlanId) continue;
+          if (!step.fiveSPlanId) {
+            if (v.responses.find((r) => r.stepId === step.id)?.fiveSAuditId)
+              throw new HttpError(400, "This step has no linked 5S plan");
+            continue;
+          }
           const r = v.responses.find((r) => r.stepId === step.id),
             audit = r?.fiveSAuditId
               ? await tx.fiveSAudit.findUnique({
@@ -735,7 +743,16 @@ export async function POST(req: Request) {
               400,
               "Complete today's linked 5S audit before saving this DL/TL step",
             );
-          await assertAreaAccess(u, audit.locationId, tx);
+          const area = await assertAreaAccess(u, audit.locationId, tx);
+          if (
+            area.plant !== machine.plant ||
+            area.department !== machine.department ||
+            area.area !== machine.area
+          )
+            throw new HttpError(
+              400,
+              "The completed 5S audit must match this machine's area",
+            );
         }
         await tx.record.create({
           data: {

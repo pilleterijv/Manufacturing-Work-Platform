@@ -56,6 +56,7 @@ export default function FiveS({
         </p>
         {data?.canManage && (
           <button
+            className="outline"
             onClick={() => {
               setSelected(null);
               setDraft({
@@ -109,6 +110,7 @@ export default function FiveS({
             <Field label="Audit area">
               <select
                 required
+                disabled={!!draft.id}
                 value={draft.locationId}
                 onChange={(e) =>
                   setDraft({ ...draft, locationId: e.target.value })
@@ -198,6 +200,7 @@ export default function FiveS({
                   Photo or video required
                 </label>
                 <button
+                  className="outline"
                   type="button"
                   disabled={draft.questions.length <= 5}
                   onClick={() =>
@@ -215,6 +218,7 @@ export default function FiveS({
             ))}
             <div className="button-row">
               <button
+                className="outline"
                 type="button"
                 disabled={draft.questions.length >= 100}
                 onClick={() =>
@@ -237,7 +241,11 @@ export default function FiveS({
               <button className="primary" disabled={busy}>
                 Save 5S plan
               </button>
-              <button type="button" onClick={() => setDraft(null)}>
+              <button
+                className="outline"
+                type="button"
+                onClick={() => setDraft(null)}
+              >
                 Cancel edit
               </button>
             </div>
@@ -280,6 +288,7 @@ export default function FiveS({
                 )}
               {data.canManage && (
                 <button
+                  className="outline"
                   onClick={() => {
                     setSelected(null);
                     setDraft(p);
@@ -381,7 +390,11 @@ export default function FiveS({
             <button className="primary" disabled={busy || uploading}>
               Save completed 5S audit
             </button>
-            <button type="button" onClick={() => setSelected(null)}>
+            <button
+              className="outline"
+              type="button"
+              onClick={() => setSelected(null)}
+            >
               Cancel audit
             </button>
           </form>

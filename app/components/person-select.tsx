@@ -9,9 +9,15 @@ export default function PersonSelect({
   people: { id: string; name: string; username?: string; active?: boolean }[];
 }) {
   const [query, setQuery] = useState("");
-  const selected = Array.isArray(props.value)
-    ? props.value
-    : [props.value ?? props.defaultValue];
+  const [picked, setPicked] = useState<string | string[]>(() =>
+    props.multiple
+      ? Array.isArray(props.defaultValue)
+        ? [...props.defaultValue]
+        : []
+      : String(props.defaultValue ?? ""),
+  );
+  const value = props.value ?? picked;
+  const selected = Array.isArray(value) ? value : [String(value)];
   return (
     <span className="person-picker">
       <input
@@ -21,7 +27,19 @@ export default function PersonSelect({
         maxLength={150}
         onChange={(e) => setQuery(e.target.value)}
       />
-      <select {...props}>
+      <select
+        {...props}
+        defaultValue={undefined}
+        value={value}
+        onChange={(e) => {
+          setPicked(
+            props.multiple
+              ? Array.from(e.target.selectedOptions, (o) => o.value)
+              : e.target.value,
+          );
+          props.onChange?.(e);
+        }}
+      >
         {!props.multiple && <option value="">Choose a person</option>}
         {people
           .filter(

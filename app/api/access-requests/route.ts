@@ -115,6 +115,12 @@ export async function POST(req: Request) {
         password = await hashPassword(v.password),
         tokenHash = resetDigest(v.token);
       await db.$transaction(async (tx) => {
+        const candidate = await tx.passwordReset.findUnique({
+          where: { tokenHash },
+        });
+        if (!candidate)
+          throw new HttpError(400, "Reset link is invalid or expired");
+        await tx.$queryRaw`SELECT id FROM "User" WHERE id=${candidate.userId} FOR UPDATE`;
         await tx.$queryRaw`SELECT "tokenHash" FROM "PasswordReset" WHERE "tokenHash"=${tokenHash} FOR UPDATE`;
         const reset = await tx.passwordReset.findUnique({
           where: { tokenHash },

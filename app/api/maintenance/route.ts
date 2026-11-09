@@ -60,10 +60,14 @@ export async function GET(req: Request) {
     if (params.get("format") === "xlsx") {
       await requireUser("export");
       return await streamWorkbook(
-        "floorwork-maintenance.xlsx",
+        kind === "cil" ? "floorwork-cil.xlsx" : "floorwork-maintenance.xlsx",
         async (book) => {
-          const sheet = book.addWorksheet("PM plans"),
-            history = book.addWorksheet("PM completions");
+          const sheet = book.addWorksheet(
+              kind === "cil" ? "CIL plans" : "PM plans",
+            ),
+            history = book.addWorksheet(
+              kind === "cil" ? "CIL completions" : "PM completions",
+            );
           await sheet.addRow([
             "ID",
             "Task",
