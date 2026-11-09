@@ -39,6 +39,7 @@ export default function Work({
           video?: string | null;
           comment: string;
           at?: string;
+          fiveSAuditId?: string;
         }
       >
     >({}),
@@ -47,6 +48,13 @@ export default function Work({
     [operator, setOperator] = useState(""),
     [localError, setLocalError] = useState(""),
     [uploading, setUploading] = useState(false);
+  const [fiveS, setFiveS] = useState<any>(null);
+  useEffect(() => {
+    if (audit && data.standards.some((s) => s.steps.some((x) => x.fiveSPlanId)))
+      api("/api/five-s")
+        .then(setFiveS)
+        .catch((e) => setLocalError(e.message));
+  }, [audit, data.standards]);
   const s = data.standards.find((s) => s.id === id);
   function select(id: string) {
     setId(id);
@@ -166,6 +174,36 @@ export default function Work({
                       </span>
                       <div>
                         <h3>{step.text}</h3>
+                        {step.fiveSPlanId && (
+                          <Field label="Completed linked 5S audit">
+                            <select
+                              required
+                              value={responses[step.id]?.fiveSAuditId ?? ""}
+                              onChange={(e) =>
+                                update(step.id, {
+                                  fiveSAuditId: e.target.value,
+                                })
+                              }
+                            >
+                              <option value="">
+                                Complete the linked audit in 5S audits, then
+                                return here
+                              </option>
+                              {fiveS?.records
+                                .filter(
+                                  (r: any) =>
+                                    r.planId === step.fiveSPlanId &&
+                                    r.userId === fiveS.userId,
+                                )
+                                .map((r: any) => (
+                                  <option key={r.id} value={r.id}>
+                                    {r.snapshot.title} · {r.score}/{r.maximum} ·{" "}
+                                    {new Date(r.createdAt).toLocaleString()}
+                                  </option>
+                                ))}
+                            </select>
+                          </Field>
+                        )}
                         <p className="small muted">
                           {step.photo
                             ? "Photo or video evidence required"

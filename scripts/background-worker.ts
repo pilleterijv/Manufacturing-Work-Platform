@@ -15,6 +15,12 @@ process.on("SIGINT", () => {
   stopping = true;
 });
 const jobs = [
+  {
+    name: "expired-password-links",
+    interval: 1800000,
+    run: () =>
+      db.passwordReset.deleteMany({ where: { expires: { lt: new Date() } } }),
+  },
   { name: "external-data", interval: 30000, run: pollExternalData },
   { name: "sql", interval: 10000, run: pollCompanySql },
   { name: "shifts", interval: 60000, run: checkShiftWork },

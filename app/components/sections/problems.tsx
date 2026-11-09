@@ -1,4 +1,5 @@
 "use client";
+import PersonSelect from "../person-select";
 import EvidenceInput from "../evidence-input";
 import { useEffect, useState, useRef } from "react";
 import { api, filterUrl } from "@/lib/client-api";
@@ -581,24 +582,24 @@ export default function Problems({
                         />
                       </Field>
                       <Field label="Facilitator / owner">
-                        <select
+                        <PersonSelect
+                          people={data?.people ?? []}
+                          aria-label="Facilitator / owner"
                           required
                           value={draft.ownerId}
                           onChange={(e) => patch({ ownerId: e.target.value })}
-                        >
-                          {peopleOptions}
-                        </select>
+                        />
                       </Field>
                       <Field label="Reviewer">
-                        <select
+                        <PersonSelect
+                          people={data?.people ?? []}
+                          aria-label="Reviewer"
                           required
                           value={draft.reviewerId}
                           onChange={(e) =>
                             patch({ reviewerId: e.target.value })
                           }
-                        >
-                          {peopleOptions}
-                        </select>
+                        />
                       </Field>
                       <Field label="Record due date">
                         <input
@@ -606,6 +607,24 @@ export default function Problems({
                           required
                           value={draft.dueDate}
                           onChange={(e) => patch({ dueDate: e.target.value })}
+                        />
+                      </Field>
+                      <Field label="Add team member from employee directory">
+                        <PersonSelect
+                          aria-label="Add team member from employee directory"
+                          people={data?.people ?? []}
+                          value=""
+                          onChange={(e) => {
+                            const p = data?.people.find(
+                              (p) => p.id === e.target.value,
+                            );
+                            if (p)
+                              patch({
+                                team: [draft.team, p.name]
+                                  .filter(Boolean)
+                                  .join(", "),
+                              });
+                          }}
                         />
                       </Field>
                       <Field label="Team / participants">
@@ -861,13 +880,13 @@ export default function Problems({
                                 </select>
                               </Field>
                               <Field label="Action owner">
-                                <select
+                                <PersonSelect
+                                  people={data?.people ?? []}
+                                  aria-label="Action owner"
                                   name="ownerId"
                                   defaultValue={a.ownerId}
                                   required
-                                >
-                                  {peopleOptions}
-                                </select>
+                                />
                               </Field>
                               <Field label="Action due date">
                                 <input
@@ -978,9 +997,12 @@ export default function Problems({
                               </select>
                             </Field>
                             <Field label="Action owner">
-                              <select name="ownerId" required>
-                                {peopleOptions}
-                              </select>
+                              <PersonSelect
+                                people={data?.people ?? []}
+                                aria-label="Action owner"
+                                name="ownerId"
+                                required
+                              />
                             </Field>
                             <Field label="Action due date">
                               <input

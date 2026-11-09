@@ -27,7 +27,8 @@
     "background": "tsx scripts/background-worker.ts",
     "background:once": "tsx scripts/background-worker.ts --once",
     "test:locations": "node tests/location-workflows.cjs",
-    "test:maintenance-data": "node tests/maintenance-data-reminders.cjs"
+    "test:maintenance-data": "node tests/maintenance-data-reminders.cjs",
+    "test:floor-expansion": "node tests/floor-expansion-browser.cjs"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.29.1",

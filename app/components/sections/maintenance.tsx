@@ -1,4 +1,5 @@
 "use client";
+import PersonSelect from "../person-select";
 import { useState, useEffect, useRef } from "react";
 import { api, filterUrl } from "@/lib/client-api";
 import EvidenceInput, { EvidenceView } from "../evidence-input";
@@ -7,10 +8,13 @@ import type { Evidence } from "@/lib/evidence-schema";
 export default function Maintenance({
   userId,
   admin,
+  kind = "pm",
 }: {
   userId: string;
   admin: boolean;
+  kind?: "pm" | "cil";
 }) {
+  const label = kind === "cil" ? "CIL" : "PM";
   const uploads = useRef(0);
   const [data, setData] = useState<any>(null),
     [draft, setDraft] = useState<any>(null),
@@ -27,8 +31,9 @@ export default function Maintenance({
     [notice, setNotice] = useState("");
   async function load(more = false) {
     const d = await api(
-      "/api/maintenance" +
-        (more && data?.cursor ? "?cursor=" + data.cursor : ""),
+      "/api/maintenance?kind=" +
+        kind +
+        (more && data?.cursor ? "&cursor=" + data.cursor : ""),
     );
     setData((old: any) =>
       more ? { ...d, plans: [...old.plans, ...d.plans] } : d,
@@ -41,11 +46,11 @@ export default function Maintenance({
     setBusy(true);
     setError("");
     try {
-      await api("/api/maintenance", body);
+      await api("/api/maintenance", { ...body, kind });
       await load();
       setSelected(null);
       setDraft(null);
-      setNotice("PM saved.");
+      setNotice(`${label} saved.`);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -59,10 +64,19 @@ export default function Maintenance({
   return (
     <>
       <section className="panel">
-        <h2>Machine preventive maintenance</h2>
-        <p>Assigned PM tasks, due dates and permanent completion evidence.</p>
-        <a className="outline" href={filterUrl("/api/maintenance?format=xlsx")}>
-          Export PM plans and history
+        <h2>
+          {kind === "cil"
+            ? "TPM · Clean, Inspect and Lubricate"
+            : "Machine preventive maintenance"}
+        </h2>
+        <p>
+          Assigned {label} tasks, due dates and permanent completion evidence.
+        </p>
+        <a
+          className="outline"
+          href={filterUrl("/api/maintenance?format=xlsx&kind=" + kind)}
+        >
+          Export {label} plans and history
         </a>
         {error && <p role="alert">{error}</p>}
         {notice && <p role="status">{notice}</p>}
@@ -76,19 +90,30 @@ export default function Maintenance({
                 equipmentId: "",
                 assigneeId: "",
                 nextDue: data.today,
-                intervalDays: 30,
+                intervalDays: kind === "cil" ? 1 : 30,
                 active: true,
-                steps: [{ id: crypto.randomUUID(), text: "", photo: false }],
+                steps: (kind === "cil"
+                  ? [
+                      "Clean the specified machine points",
+                      "Inspect for abnormalities",
+                      "Lubricate specified points per machine instructions",
+                    ]
+                  : [""]
+                ).map((text) => ({
+                  id: crypto.randomUUID(),
+                  text,
+                  photo: false,
+                })),
               });
             }}
           >
-            Create PM plan
+            Create {label} plan
           </button>
         )}
       </section>
       {draft && (
         <section className="panel">
-          <h2>{draft.id ? "Edit PM plan" : "New PM plan"}</h2>
+          <h2>{draft.id ? `Edit ${label} plan` : `New ${label} plan`}</h2>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -96,7 +121,7 @@ export default function Maintenance({
             }}
           >
             <div className="form-grid">
-              <Field label="PM title">
+              <Field label={`${label} title`}>
                 <input
                   required
                   maxLength={150}
@@ -106,7 +131,7 @@ export default function Maintenance({
                   }
                 />
               </Field>
-              <Field label="PM machine">
+              <Field label={`${label} machine`}>
                 <select
                   required
                   value={draft.equipmentId}
@@ -122,23 +147,18 @@ export default function Maintenance({
                   ))}
                 </select>
               </Field>
-              <Field label="PM assignee">
-                <select
+              <Field label={`${label} assignee`}>
+                <PersonSelect
+                  aria-label={`${label} assignee`}
+                  people={data.people}
                   required
                   value={draft.assigneeId}
                   onChange={(e) =>
                     setDraft({ ...draft, assigneeId: e.target.value })
                   }
-                >
-                  <option value="">Choose a person</option>
-                  {data.people.map((p: any) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
+                />
               </Field>
-              <Field label="Next PM due">
+              <Field label={`Next ${label} due`}>
                 <input
                   required
                   type="date"
@@ -173,7 +193,7 @@ export default function Maintenance({
             </label>
             {draft.steps.map((s: any, i: number) => (
               <div key={s.id} className="editor-step">
-                <Field label={`PM step ${i + 1}`}>
+                <Field label={`${label} step ${i + 1}`}>
                   <input
                     required
                     maxLength={500}
@@ -231,20 +251,20 @@ export default function Maintenance({
                   })
                 }
               >
-                Add PM step
+                Add {label} step
               </button>
               <button className="primary" disabled={busy}>
-                Save PM plan
+                Save {label} plan
               </button>
               <button type="button" onClick={() => setDraft(null)}>
-                Cancel PM edit
+                Cancel {label} edit
               </button>
             </div>
           </form>
         </section>
       )}
       <section className="panel">
-        <h2>PM task list</h2>
+        <h2>{label} task list</h2>
         {data?.plans.map((p: any) => (
           <article className="problem-action" key={p.id}>
             <h3>
@@ -279,7 +299,7 @@ export default function Maintenance({
                       setResponses({});
                     }}
                   >
-                    Perform PM
+                    Perform {label}
                   </button>
                 )}
               {data.canManage && (
@@ -289,22 +309,26 @@ export default function Maintenance({
                     setDraft(p);
                   }}
                 >
-                  Edit PM
+                  Edit {label}
                 </button>
               )}
             </div>
           </article>
         ))}
-        {data && !data.plans.length && <p>No PM plans match these filters.</p>}
+        {data && !data.plans.length && (
+          <p>No {label} plans match these filters.</p>
+        )}
         {data?.hasMore && (
           <button onClick={() => load(true).catch((e) => setError(e.message))}>
-            Load more PM plans
+            Load more {label} plans
           </button>
         )}
       </section>
       {selected && (
         <section className="panel">
-          <h2>Perform PM · {selected.title}</h2>
+          <h2>
+            Perform {label} · {selected.title}
+          </h2>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -317,7 +341,7 @@ export default function Maintenance({
                 )
               ) {
                 setError(
-                  "Answer every PM step and attach required photo/video evidence",
+                  `Answer every ${label} step and attach required photo/video evidence`,
                 );
                 return;
               }
@@ -357,7 +381,7 @@ export default function Maintenance({
                     </button>
                   ))}
                 </div>
-                <Field label={`PM comment ${i + 1}`}>
+                <Field label={`${label} comment ${i + 1}`}>
                   <textarea
                     maxLength={1000}
                     value={responses[s.id]?.comment ?? ""}
@@ -375,8 +399,8 @@ export default function Maintenance({
                 <EvidenceInput
                   label={
                     s.photo
-                      ? "PM photo or video · required"
-                      : "PM photo or video · optional"
+                      ? `${label} photo or video · required`
+                      : `${label} photo or video · optional`
                   }
                   value={responses[s.id]?.media ?? []}
                   onBusy={(b) => {
@@ -399,16 +423,16 @@ export default function Maintenance({
               </section>
             ))}
             <button className="primary" disabled={busy || uploading}>
-              Complete PM and save evidence
+              Complete {label} and save evidence
             </button>
             <button type="button" onClick={() => setSelected(null)}>
-              Cancel PM
+              Cancel {label}
             </button>
           </form>
         </section>
       )}
       <section className="panel">
-        <h2>PM completion history</h2>
+        <h2>{label} completion history</h2>
         <p className="small muted">
           Latest 100 matching completions. Export contains the full matching
           history.

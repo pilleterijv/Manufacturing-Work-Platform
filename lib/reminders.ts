@@ -76,7 +76,7 @@ export async function overdueEntity(
           type,
           id,
           equipmentId: r.equipmentId,
-          title: r.title,
+          title: r.kind === "cil" ? "CIL · " + r.title : r.title,
           due: r.nextDue,
           personal: [r.assigneeId],
         }

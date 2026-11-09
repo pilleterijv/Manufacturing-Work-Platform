@@ -8,6 +8,7 @@ datasource db {
 }
 model User {
  id String @id @default(uuid())
+ dashboardDepartment Json?
  overdueInApp Boolean @default(true)
  overdueEmail Boolean @default(true)
  email String?
@@ -327,6 +328,7 @@ model GuideMedia {
 }
 
 model MaintenancePlan {
+ kind String @default("pm")
  id String @id @default(uuid())
  equipmentId String
  title String
@@ -389,4 +391,71 @@ model ExternalRevision {
  rowId String
  snapshot Json
  importedAt DateTime @default(now())
+}
+
+model FiveSPlan {
+ id String @id @default(uuid())
+ locationId String
+ title String
+ questions Json
+ assigneeIds Json
+ active Boolean @default(true)
+ version Int @default(1)
+ createdBy String
+ history Json
+}
+model FiveSAudit {
+ id String @id @default(uuid())
+ planId String
+ locationId String
+ userId String
+ snapshot Json
+ responses Json
+ media Json
+ score Int
+ maximum Int
+ createdAt DateTime @default(now())
+ @@index([locationId,createdAt])
+}
+model Defect {
+ id String @id @default(uuid())
+ equipmentId String
+ title String
+ description String
+ priority String
+ status String @default("Open")
+ reportedBy String
+ assigneeId String?
+ media Json
+ equipmentSnapshot Json
+ version Int @default(1)
+ history Json
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ maintainxStatus String @default("Not submitted")
+ maintainxId String?
+ submissionAt DateTime?
+ submissionError String?
+ @@index([equipmentId,status])
+}
+model RegistrationRequest {
+ id String @id @default(uuid())
+ username String
+ name String
+ email String
+ department String
+ reason String
+ status String @default("Pending")
+ reviewedBy String?
+ createdUserId String?
+ createdAt DateTime @default(now())
+ reviewedAt DateTime?
+ @@index([status,createdAt])
+}
+model PasswordReset {
+ tokenHash String @id
+ userId String
+ userVersion Int
+ expires DateTime
+ createdAt DateTime @default(now())
 }

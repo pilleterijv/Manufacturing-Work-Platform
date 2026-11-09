@@ -1,4 +1,8 @@
 "use client";
+import {
+  PublicAccessForms,
+  ResetPasswordForm,
+} from "./components/access-forms";
 import SectionFiltersBar from "./components/section-filters";
 import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
@@ -13,6 +17,11 @@ import {
 } from "@/lib/client-api";
 import { Field, Submit, HistoryPagingContext } from "./components/shared";
 import { emptyOperations, type OperationsData } from "@/lib/operations-types";
+const PersonalDashboard = dynamic(
+  () => import("./components/sections/personal-dashboard"),
+);
+const FiveS = dynamic(() => import("./components/sections/five-s"));
+const Defects = dynamic(() => import("./components/sections/defects"));
 const Maintenance = dynamic(() => import("./components/sections/maintenance"));
 const Reminders = dynamic(() => import("./components/sections/reminders"));
 const ExternalData = dynamic(() => import("./components/external-data"));
@@ -95,6 +104,10 @@ const empty: Data = {
   policies: [],
 };
 export default function Home() {
+  const [resetMode, setResetMode] = useState(false);
+  useEffect(() => {
+    setResetMode(location.hash.startsWith("#reset="));
+  }, []);
   const [filters, setFilters] = useState<SectionFilters>({
     person: "",
     search: "",
@@ -380,6 +393,7 @@ export default function Home() {
     filters,
   ]);
   const sectionReady = platformReady && platformTab === tab;
+  if (resetMode) return <ResetPasswordForm />;
   if (!loaded) return <main className="loading">Opening Floorwork…</main>;
   if (!user || user.mustChange)
     return (
@@ -475,6 +489,7 @@ export default function Home() {
             )}
             <Submit busy={busy}>{user ? "Set password" : "Sign in →"}</Submit>
           </form>
+          {!user && <PublicAccessForms />}
           <p className="small muted">
             {user
               ? "All existing sessions will be signed out."
@@ -489,6 +504,9 @@ export default function Home() {
     ["Standard work", "work", "☑"],
     ["Time studies", "studies", "◷"],
     ["Preventive maintenance", "maintenance", "⚒"],
+    ["TPM / CIL", "maintenance", "⚒"],
+    ["5S audits", "fiveS", "◎"],
+    ["Defect reporting", "defects", "◇"],
     ["Production results", "analytics", "▥"],
     ["DL/TL Standard Work", "audits", "◎"],
     ["Training", null, "▷"],
@@ -507,6 +525,12 @@ export default function Home() {
   ];
   if (user.role === "Admin") nav.push(["Integrations", null, "⇄"]);
   const descriptions: Record<string, string> = {
+    "5S audits":
+      "Audit area organization, cleanliness and sustained standards.",
+    "TPM / CIL":
+      "Machine cleaning, inspection and lubrication checks with evidence.",
+    "Defect reporting":
+      "Capture abnormalities and submit mapped work orders to MaintainX.",
     "Problem solving":
       "Structured 2D, 4D and 8D investigations, actions and effectiveness checks.",
     Downtime:
@@ -626,13 +650,19 @@ export default function Home() {
                 <a
                   className="outline"
                   href={filterUrl(
-                    tab === "Preventive maintenance"
-                      ? "/api/maintenance?format=xlsx"
-                      : tab === "Production results"
-                        ? "/api/external-data?section=Production%20results&format=xlsx"
-                        : tab === "Problem solving"
-                          ? "/api/problems?format=xlsx"
-                          : "/api/export",
+                    tab === "5S audits"
+                      ? "/api/five-s?format=xlsx"
+                      : tab === "Defect reporting"
+                        ? "/api/defects?format=xlsx"
+                        : tab === "TPM / CIL"
+                          ? "/api/maintenance?kind=cil&format=xlsx"
+                          : tab === "Preventive maintenance"
+                            ? "/api/maintenance?format=xlsx"
+                            : tab === "Production results"
+                              ? "/api/external-data?section=Production%20results&format=xlsx"
+                              : tab === "Problem solving"
+                                ? "/api/problems?format=xlsx"
+                                : "/api/export",
                   )}
                 >
                   ↓ Export Excel
@@ -679,6 +709,7 @@ export default function Home() {
                 Loading section data…
               </p>
             )}
+            {tab === "Overview" && <PersonalDashboard go={setTab} />}
             {tab === "Overview" && (
               <Overview
                 data={data}
@@ -757,8 +788,26 @@ export default function Home() {
                 busy={busy}
               />
             )}
+            {tab === "5S audits" && (
+              <FiveS userId={user.id} admin={user.role === "Admin"} />
+            )}
+            {tab === "Defect reporting" && (
+              <Defects userId={user.id} admin={user.role === "Admin"} />
+            )}
+            {tab === "TPM / CIL" && (
+              <Maintenance
+                key="cil"
+                kind="cil"
+                userId={user.id}
+                admin={user.role === "Admin"}
+              />
+            )}
             {tab === "Preventive maintenance" && (
-              <Maintenance userId={user.id} admin={user.role === "Admin"} />
+              <Maintenance
+                key="pm"
+                userId={user.id}
+                admin={user.role === "Admin"}
+              />
             )}
             {tab === "Notifications" && (
               <Reminders admin={user.role === "Admin"} />
@@ -772,6 +821,8 @@ export default function Home() {
                 openWork={() => setTab("Standard work")}
                 openProblem={() => setTab("Problem solving")}
                 openMaintenance={() => setTab("Preventive maintenance")}
+                openCil={() => setTab("TPM / CIL")}
+                openAccounts={() => setTab("Accounts")}
               />
             )}
             {tab === "Leadership dashboard" && (
@@ -795,6 +846,7 @@ export default function Home() {
             )}
             {tab === "Accounts" && sectionReady && (
               <Accounts
+                reload={() => void refresh()}
                 data={data}
                 save={save}
                 busy={busy}

@@ -1,4 +1,5 @@
 "use client";
+import { AccessRequests } from "../access-forms";
 import { LocationsEditor } from "../location-picker";
 import DowntimeAccessEditor from "../downtime-access-editor";
 import { useState, useEffect, useRef } from "react";
@@ -19,12 +20,15 @@ export default function Accounts({
   save,
   busy,
   admin,
+  reload,
 }: {
   data: Data;
   save: Save;
   busy: boolean;
   admin: boolean;
+  reload: () => void;
 }) {
+  const [accountSearch, setAccountSearch] = useState("");
   const [id, setId] = useState(""),
     [username, setUsername] = useState(""),
     [name, setName] = useState(""),
@@ -44,9 +48,17 @@ export default function Accounts({
   }
   return (
     <>
+      {admin && <AccessRequests reload={reload} />}
       {admin && <LocationsEditor data={data} save={save} busy={busy} />}
       <section className="panel">
         <h2>{id ? "Update account" : "Create individual account"}</h2>
+        <Field label="Search accounts">
+          <input
+            value={accountSearch}
+            onChange={(e) => setAccountSearch(e.target.value)}
+            placeholder="Search name or username"
+          />
+        </Field>
         <Field label="Account">
           <select
             aria-label="Account"
@@ -54,11 +66,19 @@ export default function Accounts({
             onChange={(e) => select(e.target.value)}
           >
             <option value="">New account</option>
-            {data.users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name} ({u.username})
-              </option>
-            ))}
+            {data.users
+              .filter(
+                (u) =>
+                  u.id === id ||
+                  `${u.name} ${u.username}`
+                    .toLowerCase()
+                    .includes(accountSearch.toLowerCase()),
+              )
+              .map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name} ({u.username})
+                </option>
+              ))}
           </select>
         </Field>
         <form
@@ -148,6 +168,80 @@ export default function Accounts({
           </Submit>
         </form>
       </section>
+      {admin && id && (
+        <section className="panel">
+          <h2>Account password email and department dashboard</h2>
+          <button
+            onClick={async () => {
+              try {
+                const r = await api("/api/access-requests", {
+                  action: "resend",
+                  userId: id,
+                });
+                alert(
+                  r.emailSent
+                    ? "Password email sent"
+                    : "Email was not sent. Check the account email and SMTP configuration.",
+                );
+              } catch (e) {
+                alert((e as Error).message);
+              }
+            }}
+          >
+            Send password setup/reset email
+          </button>
+          {["Admin", "Manager", "DL/TL"].includes(role) && (
+            <Field label="Assign department dashboard">
+              <select
+                key={
+                  id +
+                  JSON.stringify(
+                    data.users.find((u) => u.id === id)?.dashboardDepartment,
+                  )
+                }
+                defaultValue={
+                  data.users.find((u) => u.id === id)?.dashboardDepartment
+                    ? JSON.stringify(
+                        data.users.find((u) => u.id === id)
+                          ?.dashboardDepartment,
+                      )
+                    : ""
+                }
+                onChange={async (e) => {
+                  try {
+                    await api("/api/personal-dashboard", {
+                      userId: id,
+                      department: e.target.value
+                        ? JSON.parse(e.target.value)
+                        : null,
+                    });
+                  } catch (err) {
+                    alert((err as Error).message);
+                    e.target.value = "";
+                  }
+                }}
+              >
+                <option value="">Disabled</option>
+                {[
+                  ...new Map(
+                    data.equipment.map((e) => [
+                      JSON.stringify({
+                        plant: e.plant,
+                        department: e.department,
+                      }),
+                      e,
+                    ]),
+                  ).entries(),
+                ].map(([key, e]) => (
+                  <option value={key} key={key}>
+                    {e.plant} / {e.department}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+        </section>
+      )}
       {admin && id && data.users.find((u) => u.id === id) && (
         <>
           <DowntimeAccessEditor

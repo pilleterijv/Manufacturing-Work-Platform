@@ -15,12 +15,16 @@ export const capabilities = [
   "dashboard",
   "problems",
   "maintenance",
+  "fiveS",
+  "defects",
 ] as const;
 export type Capability = (typeof capabilities)[number];
 export const roles = ["Admin", "Manager", "DL/TL", "Operator"] as const;
 export const defaults: Record<string, Capability[]> = {
   Admin: [...capabilities],
   Manager: [
+    "fiveS",
+    "defects",
     "maintenance",
     "problems",
     "dashboard",
@@ -36,6 +40,8 @@ export const defaults: Record<string, Capability[]> = {
     "leadership",
   ],
   "DL/TL": [
+    "fiveS",
+    "defects",
     "maintenance",
     "problems",
     "dashboard",
@@ -47,6 +53,8 @@ export const defaults: Record<string, Capability[]> = {
     "ideas",
   ],
   Operator: [
+    "fiveS",
+    "defects",
     "maintenance",
     "problems",
     "dashboard",
@@ -60,6 +68,7 @@ export const stepSchema = z.object({
   id: z.string().min(1).max(80),
   text: z.string().min(1).max(500),
   photo: z.boolean(),
+  fiveSPlanId: z.string().uuid().optional(),
 });
 export const standardSchema = z
   .object({

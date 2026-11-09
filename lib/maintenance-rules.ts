@@ -3,6 +3,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import { stepSchema } from "./rules";
 export const maintenanceSchema = z
   .object({
+    kind: z.enum(["pm", "cil"]).default("pm"),
     title: z.string().trim().min(1).max(150),
     equipmentId: z.string().uuid(),
     assigneeId: z.string().uuid(),

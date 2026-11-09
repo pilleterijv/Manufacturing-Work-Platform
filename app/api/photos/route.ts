@@ -23,7 +23,9 @@ export async function POST(req: Request) {
       !g.includes("maintenance") &&
       !g.includes("training") &&
       !g.includes("problems") &&
-      !g.includes("ideas")
+      !g.includes("ideas") &&
+      !g.includes("fiveS") &&
+      !g.includes("defects")
     )
       throw new HttpError(403, "Photo upload is not permitted");
     await limit(`photo:${u.id}`, 60, 3600);

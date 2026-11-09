@@ -1,4 +1,5 @@
 "use client";
+import PersonSelect from "./person-select";
 import { filterUrl } from "@/lib/client-api";
 import EvidenceInput, { EvidenceView } from "./evidence-input";
 import { departmentKey } from "@/lib/downtime-access-rules";
@@ -612,25 +613,20 @@ export function ImprovementIdeas({
   const [ideaMedia, setIdeaMedia] = useState<
     import("@/lib/evidence-schema").Evidence[]
   >([]);
+  const [participantSearch, setParticipantSearch] = useState("");
   const [equipmentId, setEquipment] = useState(""),
     [participants, setParticipants] = useState<string[]>([]);
   const today = localToday(data.config.timezone);
   function person(label: string, name: string, defaultValue = "") {
     return (
       <Field label={label}>
-        <select
+        <PersonSelect
+          people={data.people}
           aria-label={label}
           name={name}
           required
           defaultValue={defaultValue}
-        >
-          <option value="">Select a person</option>
-          {data.people.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name} ({p.username})
-            </option>
-          ))}
-        </select>
+        />
       </Field>
     );
   }
@@ -742,28 +738,42 @@ export function ImprovementIdeas({
           </div>
           <fieldset className="field participant-fieldset">
             <legend>Participants</legend>
+            <input
+              aria-label="Search participants"
+              placeholder="Search employee name or username"
+              value={participantSearch}
+              onChange={(e) => setParticipantSearch(e.target.value)}
+            />
             <span
               className="participant-picker"
               role="group"
               aria-label="Participants"
             >
-              {data.people.map((p) => (
-                <label key={p.id} className="participant-option">
-                  <input
-                    type="checkbox"
-                    aria-label={`Participant ${p.name}`}
-                    checked={participants.includes(p.id)}
-                    onChange={(e) =>
-                      setParticipants((prev) =>
-                        e.target.checked
-                          ? [...prev, p.id]
-                          : prev.filter((id) => id !== p.id),
-                      )
-                    }
-                  />
-                  {p.name} ({p.username})
-                </label>
-              ))}
+              {data.people
+                .filter(
+                  (p) =>
+                    participants.includes(p.id) ||
+                    `${p.name} ${p.username}`
+                      .toLowerCase()
+                      .includes(participantSearch.toLowerCase()),
+                )
+                .map((p) => (
+                  <label key={p.id} className="participant-option">
+                    <input
+                      type="checkbox"
+                      aria-label={`Participant ${p.name}`}
+                      checked={participants.includes(p.id)}
+                      onChange={(e) =>
+                        setParticipants((prev) =>
+                          e.target.checked
+                            ? [...prev, p.id]
+                            : prev.filter((id) => id !== p.id),
+                        )
+                      }
+                    />
+                    {p.name} ({p.username})
+                  </label>
+                ))}
             </span>
           </fieldset>
           <p className="small muted">
@@ -924,6 +934,8 @@ export function Notifications({
   openWork,
   openProblem,
   openMaintenance,
+  openCil,
+  openAccounts,
 }: {
   data: OperationsData;
   save: Save;
@@ -932,6 +944,8 @@ export function Notifications({
   openWork: () => void;
   openProblem?: () => void;
   openMaintenance?: () => void;
+  openCil?: () => void;
+  openAccounts?: () => void;
 }) {
   return (
     <section className="panel">
@@ -960,22 +974,28 @@ export function Notifications({
             <button
               className="primary"
               onClick={
-                n.kind === "overdue"
-                  ? n.message.startsWith("Overdue pm:")
-                    ? openMaintenance
-                    : n.message.startsWith("Overdue idea:")
-                      ? openIdea
-                      : openProblem
-                  : n.kind === "missed-work"
-                    ? openWork
-                    : openIdea
+                n.kind === "registration"
+                  ? openAccounts
+                  : n.kind === "overdue"
+                    ? n.message.startsWith("Overdue pm: CIL ·")
+                      ? openCil
+                      : n.message.startsWith("Overdue pm:")
+                        ? openMaintenance
+                        : n.message.startsWith("Overdue idea:")
+                          ? openIdea
+                          : openProblem
+                    : n.kind === "missed-work"
+                      ? openWork
+                      : openIdea
               }
             >
-              {n.kind === "overdue"
-                ? "Open overdue work"
-                : n.kind === "missed-work"
-                  ? "Open standard work"
-                  : "Open improvement ideas"}
+              {n.kind === "registration"
+                ? "Review registration requests"
+                : n.kind === "overdue"
+                  ? "Open overdue work"
+                  : n.kind === "missed-work"
+                    ? "Open standard work"
+                    : "Open improvement ideas"}
             </button>
             {!n.readAt && (
               <button

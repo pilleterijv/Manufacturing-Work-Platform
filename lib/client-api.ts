@@ -18,6 +18,8 @@ export function filterUrl(path: string) {
       "/api/dashboard",
       "/api/export",
       "/api/maintenance",
+      "/api/five-s",
+      "/api/defects",
       "/api/shift-schedules",
       "/api/external-data",
       "/api/reminders",

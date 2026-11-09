@@ -1,3 +1,5 @@
+import { localToday } from "@/lib/operations-rules";
+import { assertAreaAccess } from "@/lib/area-access";
 import { readFilters, recordFilters } from "@/lib/filters";
 import { ownEvidence, evidenceSchema } from "@/lib/evidence";
 import { allowedDowntimeEquipment } from "@/lib/downtime-access-rules";
@@ -220,6 +222,7 @@ export async function GET(req: Request) {
                 active: true,
                 mustChange: true,
                 email: true,
+                dashboardDepartment: true,
                 overdueEmail: true,
                 overdueInApp: true,
                 ...(u.role === "Admin"
@@ -461,6 +464,28 @@ export async function POST(req: Request) {
           400,
           "DL/TL tasks require DL/TL or Manager assignees",
         );
+      for (const step of v.steps) {
+        if (!step.fiveSPlanId) continue;
+        if (v.kind !== "audit")
+          throw new HttpError(400, "5S links belong to DL/TL standard work");
+        const plan = await db.fiveSPlan.findUnique({
+          where: { id: step.fiveSPlanId },
+        });
+        if (!plan?.active) throw new HttpError(400, "Choose an active 5S plan");
+        const area = await assertAreaAccess(u, plan.locationId),
+          eq = await db.equipment.findUniqueOrThrow({
+            where: { id: v.equipmentId },
+          });
+        if (
+          area.plant !== eq.plant ||
+          area.department !== eq.department ||
+          area.area !== eq.area
+        )
+          throw new HttpError(
+            400,
+            "The 5S plan must match the standard-work machine's area",
+          );
+      }
       const family = v.family ?? crypto.randomUUID();
       await db.$transaction(
         async (tx) => {
@@ -592,6 +617,7 @@ export async function POST(req: Request) {
                 answer: z.boolean(),
                 photo: z.string().uuid().nullable(),
                 video: z.string().uuid().nullable().optional(),
+                fiveSAuditId: z.string().uuid().optional(),
                 comment: z.string().max(1000),
                 at: z.iso.datetime().optional(),
               }),
@@ -621,6 +647,7 @@ export async function POST(req: Request) {
         id: string;
         text: string;
         photo: boolean;
+        fiveSPlanId?: string;
       }[];
       if (
         v.responses.length !== steps.length ||
@@ -685,6 +712,31 @@ export async function POST(req: Request) {
       };
       await db.$transaction(async (tx) => {
         await assertEquipmentAccess(u, standard.equipmentId, tx);
+        for (const step of steps) {
+          if (!step.fiveSPlanId) continue;
+          const r = v.responses.find((r) => r.stepId === step.id),
+            audit = r?.fiveSAuditId
+              ? await tx.fiveSAudit.findUnique({
+                  where: { id: r.fiveSAuditId },
+                })
+              : null;
+          const zone = (
+            await tx.setting.findUniqueOrThrow({ where: { key: "shifts" } })
+          ).value as any;
+          if (
+            !audit ||
+            audit.planId !== step.fiveSPlanId ||
+            audit.userId !== u.id ||
+            Date.now() - +audit.createdAt > 86400000 ||
+            localToday(zone.timezone, audit.createdAt) !==
+              localToday(zone.timezone)
+          )
+            throw new HttpError(
+              400,
+              "Complete today's linked 5S audit before saving this DL/TL step",
+            );
+          await assertAreaAccess(u, audit.locationId, tx);
+        }
         await tx.record.create({
           data: {
             kind: action,

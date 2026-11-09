@@ -27,12 +27,14 @@ export async function GET(req: Request) {
     const u = await requireUser("maintenance"),
       ids = await equipmentIds(u),
       { person, search } = readFilters(req.url),
-      params = new URL(req.url).searchParams;
+      params = new URL(req.url).searchParams,
+      kind = z.enum(["pm", "cil"]).parse(params.get("kind") || "pm");
     const eq = await db.equipment.findMany({
       where: { id: { in: ids } },
       orderBy: { name: "asc" },
     });
     const where = {
+      kind,
       equipmentId: { in: ids },
       ...(person ? { assigneeId: person } : {}),
       ...(search
@@ -99,7 +101,7 @@ export async function GET(req: Request) {
           for await (const r of paged((cursor) =>
             db.record.findMany({
               where: {
-                kind: "pm",
+                kind,
                 AND: [recordScope(ids), recordFilters(person, search)],
               },
               include: { user: { select: { name: true } } },
@@ -134,7 +136,7 @@ export async function GET(req: Request) {
       }),
       db.record.findMany({
         where: {
-          kind: "pm",
+          kind,
           AND: [recordScope(ids), recordFilters(person, search)],
         },
         include: { user: { select: { name: true } } },
@@ -172,7 +174,7 @@ export async function POST(req: Request) {
         if (id) {
           await tx.$queryRaw`SELECT id FROM "MaintenancePlan" WHERE id=${id} FOR UPDATE`;
           const old = await tx.maintenancePlan.findUnique({ where: { id } });
-          if (!old || old.version !== version)
+          if (!old || old.version !== version || old.kind !== v.kind)
             throw new HttpError(409, "PM changed; reload before saving");
           await assertEquipmentAccess(u, old.equipmentId, tx);
           await assertEquipmentAccess(u, v.equipmentId, tx);
@@ -258,7 +260,7 @@ export async function POST(req: Request) {
         const { history: priorHistory, ...planSnapshot } = p;
         const record = await tx.record.create({
           data: {
-            kind: "pm",
+            kind: p.kind,
             userId: u.id,
             data: {
               planId: p.id,

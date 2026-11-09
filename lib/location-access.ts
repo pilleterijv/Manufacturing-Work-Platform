@@ -117,7 +117,7 @@ export async function notificationScope(
     LEFT JOIN "WorkSchedule" s ON s.id=c."scheduleId"
     LEFT JOIN "Reminder" m ON m.id=n."sourceId" AND n.kind='overdue'
     WHERE n."userId"=${u.id}
-    AND (i."equipmentId"=ANY(${ids}::text[]) OR s."equipmentId"=ANY(${ids}::text[]) OR (m."equipmentId"=ANY(${ids}::text[]) AND m."entityType"=ANY(${types}::text[])))
+    AND ((${u.role === "Admin"} AND n.kind='registration') OR i."equipmentId"=ANY(${ids}::text[]) OR s."equipmentId"=ANY(${ids}::text[]) OR (m."equipmentId"=ANY(${ids}::text[]) AND m."entityType"=ANY(${types}::text[])))
     ORDER BY n."createdAt" DESC,n.id DESC LIMIT 100`);
   return { userId: u.id, id: { in: notices.map((n) => n.id) } };
 }

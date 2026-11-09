@@ -1,4 +1,5 @@
 "use client";
+import PersonSelect from "../person-select";
 import { LocationPicker } from "../location-picker";
 import { useState, useEffect, useRef } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
@@ -22,6 +23,12 @@ export default function Manage({
   save: Save;
   busy: boolean;
 }) {
+  const [fiveS, setFiveS] = useState<any>(null);
+  useEffect(() => {
+    api("/api/five-s")
+      .then(setFiveS)
+      .catch(() => {});
+  }, []);
   const [editing, setEditing] = useState(""),
     [revisions, setRevisions] = useState<Standard[]>([]),
     [moreRevisions, setMoreRevisions] = useState(false),
@@ -215,7 +222,12 @@ export default function Manage({
           </div>
           {kind === "audit" && (
             <Field label="Assigned DL/TLs (optional; no selection means all permitted people in the area)">
-              <select
+              <PersonSelect
+                aria-label="Assigned DL/TLs"
+                people={data.users.filter(
+                  (u) =>
+                    u.active && ["Admin", "Manager", "DL/TL"].includes(u.role),
+                )}
                 multiple
                 value={assignees}
                 onChange={(e) =>
@@ -223,19 +235,7 @@ export default function Manage({
                     Array.from(e.target.selectedOptions, (o) => o.value),
                   )
                 }
-              >
-                {data.users
-                  .filter(
-                    (u) =>
-                      u.active &&
-                      ["DL/TL", "Manager", "Admin"].includes(u.role),
-                  )
-                  .map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-              </select>
+              />
             </Field>
           )}
           {steps.map((step, i) => (
@@ -254,6 +254,35 @@ export default function Manage({
                   }
                 />
               </Field>
+              {kind === "audit" && (
+                <Field label="Linked 5S area audit (optional)">
+                  <select
+                    value={step.fiveSPlanId ?? ""}
+                    onChange={(e) =>
+                      setSteps(
+                        steps.map((s, j) =>
+                          i === j
+                            ? { ...s, fiveSPlanId: e.target.value || undefined }
+                            : s,
+                        ),
+                      )
+                    }
+                  >
+                    <option value="">No linked 5S audit</option>
+                    {fiveS?.plans
+                      .filter((p: any) => p.active)
+                      .map((p: any) => (
+                        <option key={p.id} value={p.id}>
+                          {p.title} ·{" "}
+                          {
+                            fiveS.areas.find((l: any) => l.id === p.locationId)
+                              ?.area
+                          }
+                        </option>
+                      ))}
+                  </select>
+                </Field>
+              )}
               <label className="check">
                 <input
                   type="checkbox"

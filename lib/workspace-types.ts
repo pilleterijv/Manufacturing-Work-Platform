@@ -7,7 +7,12 @@ export type User = {
   mustChange: boolean;
   grants: Capability[];
 };
-export type Step = { id: string; text: string; photo: boolean };
+export type Step = {
+  id: string;
+  text: string;
+  photo: boolean;
+  fiveSPlanId?: string;
+};
 export type Standard = {
   kind: string;
   assigneeIds: string[];

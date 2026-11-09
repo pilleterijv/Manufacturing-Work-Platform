@@ -145,7 +145,7 @@ async function main() {
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "Migration"')).rows[0]
           .n,
-        10,
+        11,
       );
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "Problem"')).rows[0]
@@ -180,7 +180,9 @@ async function main() {
         ).rows[0].grants;
         assert.deepEqual([...grants].sort(), [
           "dashboard",
+          "defects",
           "downtime",
+          "fiveS",
           "ideas",
           "leadership",
           "maintenance",
@@ -194,7 +196,9 @@ async function main() {
         ).rows[0].grants;
         assert.deepEqual([...operator].sort(), [
           "dashboard",
+          "defects",
           "downtime",
+          "fiveS",
           "ideas",
           "maintenance",
           "problems",

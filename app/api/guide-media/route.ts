@@ -22,6 +22,8 @@ export async function POST(req: Request) {
         "work",
         "audits",
         "maintenance",
+        "fiveS",
+        "defects",
         "problems",
         "ideas",
       ].some((cap) => g.includes(cap as any))
