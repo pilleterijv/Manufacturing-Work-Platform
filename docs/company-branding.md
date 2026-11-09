@@ -8,13 +8,13 @@ Palette:
 | --- | --- |
 | Bright brand accent / browser theme | `#E85208` |
 | Action orange with readable white text | `#B83C00` |
-| Orange panels / gradient end | `#CF4605` |
+| Bright panel gradient end | `#E95D08` |
 | White | `#FFFFFF` |
 | Soft white canvas | `#FAF9F7` |
 | Main neutral text | `#29343C` |
 | Muted neutral text | `#65717A` |
 
-White text on `#B83C00` is approximately 5.7:1 contrast; white on `#CF4605` is approximately 4.6:1. Bright `#E85208` is used for accents rather than small white-text controls. This is a focused color check, not a full accessibility certification.
+White text on `#B83C00` is approximately 5.7:1 contrast. Bright orange presentation panels use large white text (approximately 3.7:1 on `#E85208`) and darker backplates for small labels. Small functional controls use the darker orange rather than bright-orange backgrounds. This is a focused color check, not a full accessibility certification.
 
 ## Original logo still required
 

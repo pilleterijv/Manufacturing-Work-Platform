@@ -1775,7 +1775,7 @@ h2 {
 }
 .hero,
 .idea-intro {
-  background: linear-gradient(110deg, #b83c00 0%, #c94404 62%, #cf4605 100%);
+  background: linear-gradient(110deg, #d94805 0%, #e85208 70%, #e95d08 100%);
   border-radius: 5px;
 }
 .hero h2 {
@@ -1797,7 +1797,7 @@ h2 {
 .auth-story {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(145deg, #b83c00 0%, #c94404 62%, #cf4605 100%);
+  background: linear-gradient(145deg, #e85208 0%, #e85208 62%, #e95d08 100%);
   color: white;
   border-left: 12px solid #26323b;
 }
@@ -1868,4 +1868,30 @@ a:focus-visible {
   .page-heading h1 {
     font-size: 29px;
   }
+}
+
+/* Presentation panels use the supplied bright orange; small functional buttons stay darker for contrast. */
+.auth-story .eyebrow,
+.hero .eyebrow,
+.idea-intro .eyebrow {
+  background: #b83c00;
+  color: #fff;
+  padding: 6px 9px;
+  border-radius: 2px;
+  align-self: flex-start;
+  width: fit-content;
+}
+.auth-story p {
+  font-size: 24px;
+  line-height: 1.5;
+}
+.auth-lines {
+  font-size: 19px;
+  font-weight: 700;
+}
+.hero p,
+.idea-intro p {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.5;
 }
