@@ -33,8 +33,19 @@ export async function pollExternalData() {
       if (!credential) throw Error("Missing private connection");
       let rows: { EventSequence: string; Payload: string }[] = [];
       if (c.engine === "postgres") {
+        const url = new URL(credential);
+        if (!["postgres:", "postgresql:"].includes(url.protocol))
+          throw Error("Use a PostgreSQL connection URL");
+        for (const key of [
+          "ssl",
+          "sslmode",
+          "sslcert",
+          "sslkey",
+          "sslrootcert",
+        ])
+          url.searchParams.delete(key);
         const pool = new Pool({
-          connectionString: credential,
+          connectionString: url.toString(),
           max: 1,
           connectionTimeoutMillis: 10000,
           statement_timeout: 10000,

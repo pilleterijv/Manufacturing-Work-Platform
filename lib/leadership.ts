@@ -1,5 +1,6 @@
 import { readFilters } from "./filters";
 import {
+  assignedEquipmentIds,
   equipmentIds,
   equipmentSql,
   visiblePeople,
@@ -39,6 +40,7 @@ export async function leadershipReport(
 ) {
   const ids = await equipmentIds(user);
   const { person, search } = readFilters("http://localhost/?" + params);
+  const assignmentIds = await assignedEquipmentIds(ids, person);
   const permitted = { equipmentId: { in: ids } };
   const problemFilter = {
     ...permitted,
@@ -135,20 +137,25 @@ export async function leadershipReport(
     db.$queryRaw<
       { kind: string; total: number }[]
     >(Prisma.sql`SELECT c.kind,count(*)::int AS total
-      FROM "Content" c LEFT JOIN "Equipment" e ON e.id=c."equipmentId" WHERE c.active AND (c."equipmentId" IS NULL OR ${equipmentSql(ids, Prisma.sql`c."equipmentId"`)})
+      FROM "Content" c LEFT JOIN "Equipment" e ON e.id=c."equipmentId" WHERE c.active AND (c."equipmentId" IS NULL OR ${equipmentSql(assignmentIds, Prisma.sql`c."equipmentId"`)})
       ${department ? Prisma.sql`AND (c."equipmentId" IS NULL OR e.department=${department})` : Prisma.empty} GROUP BY c.kind`),
     db.$queryRaw<
       { total: number }[]
     >(Prisma.sql`SELECT count(*)::int AS total FROM (
       SELECT DISTINCT ON (family) "equipmentId" FROM "Standard" ORDER BY family, revision DESC
     ) s JOIN "Equipment" e ON e.id=s."equipmentId"
-    WHERE ${equipmentSql(ids, Prisma.sql`e.id`)} ${department ? Prisma.sql`AND e.department=${department}` : Prisma.empty}`),
+    WHERE ${equipmentSql(assignmentIds, Prisma.sql`e.id`)} ${department ? Prisma.sql`AND e.department=${department}` : Prisma.empty}`),
     db.equipment.count({
-      where: { id: { in: ids }, ...(department ? { department } : {}) },
+      where: {
+        id: { in: assignmentIds },
+        ...(department ? { department } : {}),
+      },
     }),
     department
       ? Promise.resolve(null)
-      : visiblePeople(user, ids).then((p) => p.length),
+      : visiblePeople(user, ids).then(
+          (p) => p.filter((p) => !person || p.id === person).length,
+        ),
     db.equipment.findMany({
       where: { id: { in: ids } },
       select: { department: true },

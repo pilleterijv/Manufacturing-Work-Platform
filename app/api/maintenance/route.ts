@@ -244,7 +244,7 @@ export async function POST(req: Request) {
             "Complete every PM step and required photo/video evidence",
           );
         const media = v.responses.flatMap((r) => r.media);
-        await ownEvidence(u.id, media);
+        await ownEvidence(u.id, media, [], tx);
         const setting = await tx.setting.findUniqueOrThrow({
             where: { key: "shifts" },
           }),
@@ -255,6 +255,7 @@ export async function POST(req: Request) {
             409,
             "This PM is not due yet. A manager can reschedule it for early service",
           );
+        const { history: priorHistory, ...planSnapshot } = p;
         const record = await tx.record.create({
           data: {
             kind: "pm",
@@ -264,7 +265,7 @@ export async function POST(req: Request) {
               title: p.title,
               equipmentId: p.equipmentId,
               equipmentSnapshot: equipment,
-              planSnapshot: JSON.parse(JSON.stringify(p)),
+              planSnapshot: JSON.parse(JSON.stringify(planSnapshot)),
               scheduledDue: p.nextDue,
               completed: new Date().toISOString(),
               responses: v.responses,

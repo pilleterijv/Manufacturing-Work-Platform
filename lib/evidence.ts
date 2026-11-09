@@ -9,6 +9,7 @@ export async function ownEvidence(
   userId: string,
   media: Evidence[],
   retained: unknown = [],
+  tx: Prisma.TransactionClient = db,
 ) {
   const old = Array.isArray(retained) ? retained : [];
   for (const m of media) {
@@ -20,8 +21,8 @@ export async function ownEvidence(
       continue;
     const found =
       m.kind === "photo"
-        ? await db.photo.findFirst({ where: { id: m.id, userId } })
-        : await db.guideMedia.findFirst({ where: { id: m.id, userId } });
+        ? await tx.photo.findFirst({ where: { id: m.id, userId } })
+        : await tx.guideMedia.findFirst({ where: { id: m.id, userId } });
     if (!found)
       throw new HttpError(
         403,
@@ -58,7 +59,7 @@ export async function canReadEvidence(
       { id: string }[]
     >(Prisma.sql`SELECT r.id FROM "Record" r LEFT JOIN "Standard" s ON s.id=r."standardId"
  WHERE r.kind IN (${Prisma.join(kinds)}) AND COALESCE(s."equipmentId",r.data->>'equipmentId')=ANY(${ids}::text[])
- AND (${g.includes("analytics") || g.includes("audits") || g.includes("maintenance") || u.role === "Admin"} OR r."userId"=${u.id})
+ AND (r."userId"=${u.id} OR ${u.role === "Admin"} OR (r.kind='run' AND ${g.includes("analytics")}) OR (r.kind='audit' AND ${g.includes("audits")}) OR (r.kind='pm' AND ${g.includes("maintenance")}))
  AND ((r.data->'responses') @> ${JSON.stringify([{ [key]: id }])}::jsonb OR (r.data->'media') @> ${part}::jsonb) LIMIT 1`);
     if (rows.length) return true;
   }

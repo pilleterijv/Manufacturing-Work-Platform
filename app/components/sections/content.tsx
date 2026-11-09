@@ -51,10 +51,13 @@ export default function Content({
       return;
     }
     if (mime.startsWith("image/")) {
+      setUploading(true);
       try {
         setPhoto({ src: await readMediaFile(file), index: -1 });
       } catch (e) {
         setError((e as Error).message);
+      } finally {
+        setUploading(false);
       }
       return;
     }
@@ -168,7 +171,9 @@ export default function Content({
                   }, 0);
                 }}
               >
-                Edit guide and media
+                {kind === "video"
+                  ? "Edit training video and media"
+                  : "Edit guide and media"}
               </button>
             )}
             {manage && (
@@ -348,7 +353,11 @@ export default function Content({
               </>
             )}
             <Submit busy={busy || uploading || !!photo}>
-              {editing ? "Save guide changes" : "Add resource"}
+              {editing
+                ? kind === "video"
+                  ? "Save video changes"
+                  : "Save guide changes"
+                : "Add resource"}
             </Submit>
             {editing && (
               <button

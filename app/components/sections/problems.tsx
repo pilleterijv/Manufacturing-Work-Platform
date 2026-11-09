@@ -118,6 +118,7 @@ export default function Problems({
     [caseStatus, setCaseStatus] = useState("Open"),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
+    [caseUploading, setCaseUploading] = useState(false),
     [busy, setBusy] = useState(false),
     [loading, setLoading] = useState(false);
   const generation = useRef(0);
@@ -759,6 +760,7 @@ export default function Problems({
                     ))}
                     <EvidenceInput
                       label="Problem photo or video evidence"
+                      onBusy={setCaseUploading}
                       value={draft.media ?? []}
                       onChange={(media) => patch({ media })}
                     />
@@ -774,7 +776,10 @@ export default function Problems({
                         </select>
                       </Field>
                     )}
-                    <button className="primary" disabled={busy}>
+                    <button
+                      className="primary"
+                      disabled={busy || caseUploading}
+                    >
                       {busy
                         ? "Saving…"
                         : selected

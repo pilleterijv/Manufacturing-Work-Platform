@@ -65,25 +65,6 @@ export default function Work({
       },
     }));
   }
-  async function upload(step: string, file: File) {
-    setUploading(true);
-    setLocalError("");
-    try {
-      if (file.size > 8 * 1024 * 1024) throw Error("Photos must be under 8 MB");
-      const image = await new Promise<string>((res, rej) => {
-        const r = new FileReader();
-        r.onload = () => res(String(r.result));
-        r.onerror = rej;
-        r.readAsDataURL(file);
-      });
-      const p = await api("/api/photos", { image });
-      update(step, { photo: p.id });
-    } catch (e) {
-      setLocalError((e as Error).message);
-    } finally {
-      setUploading(false);
-    }
-  }
   return (
     <>
       <section className="panel">

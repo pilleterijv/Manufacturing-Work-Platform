@@ -1,3 +1,4 @@
+import { grants } from "./security";
 import { Prisma, type User } from "@prisma/client";
 import { db } from "./db";
 import { downtimeEquipmentWhere } from "./downtime-access";
@@ -103,6 +104,12 @@ export async function notificationScope(
   u: ScopedUser,
   ids: string[],
 ): Promise<Prisma.NotificationWhereInput> {
+  const g = await grants(u),
+    types = [
+      ...(g.includes("ideas") ? ["idea"] : []),
+      ...(g.includes("problems") ? ["problem", "action"] : []),
+      ...(g.includes("maintenance") ? ["pm"] : []),
+    ];
   const notices = await db.$queryRaw<{ id: string }[]>(Prisma.sql`
     SELECT n.id FROM "Notification" n
     LEFT JOIN "Idea" i ON i.id=n."ideaId"
@@ -110,7 +117,7 @@ export async function notificationScope(
     LEFT JOIN "WorkSchedule" s ON s.id=c."scheduleId"
     LEFT JOIN "Reminder" m ON m.id=n."sourceId" AND n.kind='overdue'
     WHERE n."userId"=${u.id}
-    AND (i."equipmentId"=ANY(${ids}::text[]) OR s."equipmentId"=ANY(${ids}::text[]) OR m."equipmentId"=ANY(${ids}::text[]))
+    AND (i."equipmentId"=ANY(${ids}::text[]) OR s."equipmentId"=ANY(${ids}::text[]) OR (m."equipmentId"=ANY(${ids}::text[]) AND m."entityType"=ANY(${types}::text[])))
     ORDER BY n."createdAt" DESC,n.id DESC LIMIT 100`);
   return { userId: u.id, id: { in: notices.map((n) => n.id) } };
 }

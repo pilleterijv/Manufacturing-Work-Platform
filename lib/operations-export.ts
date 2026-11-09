@@ -15,6 +15,19 @@ export async function addOperationsSheets(
   filters: { person?: string; search: string } = { search: "" },
 ) {
   const ids = await equipmentIds(user);
+  const matchedEquipment = filters.search
+    ? (
+        await db.equipment.findMany({
+          where: {
+            id: { in: ids },
+            OR: ["name", "plant", "department", "area", "line"].map((k) => ({
+              [k]: { contains: filters.search, mode: "insensitive" as const },
+            })),
+          },
+          select: { id: true },
+        })
+      ).map((e) => e.id)
+    : ids;
   if (grants.includes("downtime")) {
     const events = book.addWorksheet("Downtime events"),
       shifts = book.addWorksheet("Downtime shifts");
@@ -63,10 +76,15 @@ export async function addOperationsSheets(
             ...(filters.search
               ? [
                   {
-                    reasonName: {
-                      contains: filters.search,
-                      mode: "insensitive" as const,
-                    },
+                    OR: [
+                      {
+                        reasonName: {
+                          contains: filters.search,
+                          mode: "insensitive" as const,
+                        },
+                      },
+                      { equipmentId: { in: matchedEquipment } },
+                    ],
                   },
                 ]
               : []),
@@ -163,10 +181,27 @@ export async function addOperationsSheets(
             ...(filters.search
               ? [
                   {
-                    title: {
-                      contains: filters.search,
-                      mode: "insensitive" as const,
-                    },
+                    OR: [
+                      {
+                        title: {
+                          contains: filters.search,
+                          mode: "insensitive" as const,
+                        },
+                      },
+                      {
+                        proposal: {
+                          contains: filters.search,
+                          mode: "insensitive" as const,
+                        },
+                      },
+                      {
+                        currentState: {
+                          contains: filters.search,
+                          mode: "insensitive" as const,
+                        },
+                      },
+                      { equipmentId: { in: matchedEquipment } },
+                    ],
                   },
                 ]
               : []),

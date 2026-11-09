@@ -62,6 +62,11 @@ export async function POST(req: Request) {
         "PersonID",
       ],
       headers = sheet.getRow(1).values as any[];
+    if (
+      new Set(headers.filter((v) => v != null)).size !==
+      headers.filter((v) => v != null).length
+    )
+      throw new HttpError(400, "Workbook headers must be unique");
     if (names.slice(0, 6).some((n) => !headers.includes(n)))
       throw new HttpError(
         400,
@@ -82,6 +87,14 @@ export async function POST(req: Request) {
           );
         values[n] = v;
       }
+      if (
+        typeof values.ExternalID === "number" &&
+        !Number.isSafeInteger(values.ExternalID)
+      )
+        throw new HttpError(
+          400,
+          `Row ${i}: store long ExternalID values as text to preserve precision`,
+        );
       const date =
         values.Date instanceof Date
           ? values.Date.toISOString()

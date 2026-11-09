@@ -21,14 +21,49 @@ export function recordFilters(
   person: string | undefined,
   search: string,
 ): Prisma.RecordWhereInput {
+  const fields = ["name", "plant", "department", "area", "line"];
   return {
     ...(person ? { userId: person } : {}),
     ...(search
       ? {
           OR: [
-            { user: { name: { contains: search, mode: "insensitive" } } },
+            {
+              user: {
+                OR: [
+                  { name: { contains: search, mode: "insensitive" } },
+                  { username: { contains: search, mode: "insensitive" } },
+                ],
+              },
+            },
             { standard: { title: { contains: search, mode: "insensitive" } } },
-            { data: { path: ["title"], string_contains: search } },
+            {
+              standard: {
+                equipment: {
+                  OR: fields.map((k) => ({
+                    [k]: { contains: search, mode: "insensitive" as const },
+                  })),
+                },
+              },
+            },
+            {
+              data: {
+                path: ["title"],
+                string_contains: search,
+                mode: "insensitive",
+              },
+            },
+            ...fields.flatMap((k) =>
+              [
+                ["equipmentSnapshot", k],
+                ["snapshot", "equipment", k],
+              ].map((path) => ({
+                data: {
+                  path,
+                  string_contains: search,
+                  mode: "insensitive" as const,
+                },
+              })),
+            ),
           ],
         }
       : {}),

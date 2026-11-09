@@ -1,3 +1,4 @@
+import { inflateRawSync, crc32 } from "node:zlib";
 import { z } from "zod";
 export const feedSections = [
   "Overview",
@@ -71,7 +72,8 @@ export function validateWorkbookZip(bytes: Buffer) {
   )
     throw Error("Unsupported workbook archive");
   let at = offset,
-    total = 0;
+    total = 0,
+    actualTotal = 0;
   for (let i = 0; i < count; i++) {
     if (at + 46 > bytes.length || bytes.readUInt32LE(at) !== 0x02014b50)
       throw Error("Invalid workbook archive");
@@ -87,6 +89,50 @@ export function validateWorkbookZip(bytes: Buffer) {
     const name = bytes.toString("utf8", at + 46, at + 46 + n);
     if (/vbaProject|externalLinks|\.bin$/i.test(name))
       throw Error("Macros and external links are not accepted");
+    const method = bytes.readUInt16LE(at + 10),
+      flags = bytes.readUInt16LE(at + 8),
+      compressedSize = bytes.readUInt32LE(at + 20),
+      local = bytes.readUInt32LE(at + 42);
+    if (
+      flags & 1 ||
+      ![0, 8].includes(method) ||
+      local + 30 > offset ||
+      bytes.readUInt32LE(local) !== 0x04034b50
+    )
+      throw Error("Unsupported workbook entry");
+    const localName = bytes.readUInt16LE(local + 26),
+      localExtra = bytes.readUInt16LE(local + 28),
+      start = local + 30 + localName + localExtra;
+    if (
+      start + compressedSize > offset ||
+      bytes.toString("utf8", local + 30, local + 30 + localName) !== name
+    )
+      throw Error("Invalid workbook entry");
+    if (
+      name.split("/").includes("..") ||
+      name.includes("\\") ||
+      name.includes("\0")
+    )
+      throw Error("Invalid workbook path");
+    const packed = bytes.subarray(start, start + compressedSize);
+    let expanded: Buffer;
+    try {
+      expanded =
+        method === 0
+          ? packed
+          : inflateRawSync(packed, {
+              maxOutputLength: Math.max(1, 32 * 1024 * 1024 - actualTotal),
+            });
+    } catch {
+      throw Error("Workbook data is invalid or expands beyond 32 MB");
+    }
+    actualTotal += expanded.length;
+    if (
+      expanded.length !== size ||
+      actualTotal > 32 * 1024 * 1024 ||
+      crc32(expanded) !== bytes.readUInt32LE(at + 16)
+    )
+      throw Error("Workbook size or checksum is invalid");
     at += 46 + n + extra + comment;
   }
   if (!count) throw Error("Empty workbook archive");

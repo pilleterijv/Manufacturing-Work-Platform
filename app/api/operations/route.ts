@@ -60,6 +60,8 @@ export async function GET(req: Request) {
               id: { in: ids },
               OR: [
                 { name: { contains: search, mode: "insensitive" } },
+                { plant: { contains: search, mode: "insensitive" } },
+                { line: { contains: search, mode: "insensitive" } },
                 { department: { contains: search, mode: "insensitive" } },
                 { area: { contains: search, mode: "insensitive" } },
               ],

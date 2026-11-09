@@ -1,3 +1,4 @@
+import { grants } from "./security";
 import { db } from "./db";
 import { allowedDowntimeEquipment } from "./downtime-access-rules";
 import { equipmentIds, type ScopedUser } from "./location-access";
@@ -99,6 +100,10 @@ export async function queueOverdueReminders(
       where: ids ? { id: { in: ids } } : {},
     }),
     people = await db.user.findMany({ where: { active: true } });
+  const policies = await db.policy.findMany();
+  const capFor = (type: string) =>
+    type === "idea" ? "ideas" : type === "pm" ? "maintenance" : "problems";
+  const actorGrants = actor ? await grants(actor) : null;
   const candidates: { type: string; id: string }[] = [];
   // Fetch bounded pages for each source so no overdue rows are silently omitted.
   async function scan(
@@ -153,14 +158,34 @@ export async function queueOverdueReminders(
       ...(c ? { cursor: { id: c }, skip: 1 } : {}),
     }),
   );
+  const existing = new Set(
+    (
+      await db.reminder.findMany({
+        where: {
+          createdAt: { gte: new Date(+now - 48 * 3600000) },
+          ...(ids ? { equipmentId: { in: ids } } : {}),
+        },
+        select: { dedupeKey: true },
+      })
+    ).map((r) => r.dedupeKey),
+  );
   let queued = 0;
   for (const c of candidates) {
+    if (actorGrants && !actorGrants.includes(capFor(c.type))) continue;
     const e = await overdueEntity(c.type, c.id, today);
     if (!e) continue;
     const eq = equipment.find((q) => q.id === e.equipmentId);
     if (!eq) continue;
     for (const p of people) {
       if (personalOnly && p.id !== personalOnly) continue;
+      if (
+        p.role !== "Admin" &&
+        !(
+          (policies.find((q) => q.role === p.role)?.grants as
+            string[] | undefined) ?? []
+        ).includes(capFor(e.type))
+      )
+        continue;
       if (!allowedDowntimeEquipment(p.role, p.workspaceAccess, eq)) continue;
       if (!e.personal.includes(p.id) && p.role !== "Manager") continue;
       const inApp = config.inApp && p.overdueInApp,
@@ -168,6 +193,7 @@ export async function queueOverdueReminders(
       if (!inApp && !email) continue;
       const dedupeKey = [e.type, e.id, e.due, today, p.id].join(":"),
         message = `Overdue ${e.type}: ${e.title}. Due ${e.due}. ${[eq.plant, eq.department, eq.area, eq.name].join(" / ")}. Open the relevant section to review and update the work.`;
+      if (existing.has(dedupeKey)) continue;
       try {
         await db.$transaction(async (tx) => {
           const r = await tx.reminder.create({
@@ -195,6 +221,7 @@ export async function queueOverdueReminders(
             });
         });
         queued++;
+        existing.add(dedupeKey);
       } catch (error) {
         if (!(
           error &&
@@ -244,7 +271,15 @@ export async function deliverReminderEmails(
       overdueEntity(r.entityType, r.entityId, today),
       db.equipment.findUnique({ where: { id: r.equipmentId } }),
     ]);
+    const permission = p ? await grants(p) : [];
     if (
+      !permission.includes(
+        r.entityType === "idea"
+          ? "ideas"
+          : r.entityType === "pm"
+            ? "maintenance"
+            : "problems",
+      ) ||
       !config.email ||
       !p?.active ||
       !p.overdueEmail ||

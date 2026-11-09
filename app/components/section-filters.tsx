@@ -32,7 +32,7 @@ export default function SectionFiltersBar({
           <span>Search this section</span>
           <input
             maxLength={150}
-            placeholder="Names, equipment, tasks or descriptions"
+            placeholder="Equipment, tasks or descriptions"
             value={draft.search}
             onChange={(e) =>
               setDraft((d) => ({ ...d, search: e.target.value }))
@@ -51,6 +51,7 @@ export default function SectionFiltersBar({
         <label className="field">
           <span>Filter by person</span>
           <select
+            aria-label="Filter by person"
             value={draft.person}
             onChange={(e) =>
               setDraft((d) => ({ ...d, person: e.target.value }))

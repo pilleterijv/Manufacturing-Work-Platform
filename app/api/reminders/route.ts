@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import {
+  grants,
   requireUser,
   jsonBody,
   failure,
@@ -15,9 +16,16 @@ export async function GET(req: Request) {
     const u = await requireUser(),
       ids = await equipmentIds(u),
       { person, search } = readFilters(req.url);
+    const g = await grants(u);
+    const types = [
+      ...(g.includes("ideas") ? ["idea"] : []),
+      ...(g.includes("problems") ? ["problem", "action"] : []),
+      ...(g.includes("maintenance") ? ["pm"] : []),
+    ];
     const rows = await db.reminder.findMany({
       where: {
         equipmentId: { in: ids },
+        entityType: { in: types },
         ...(["Admin", "Manager", "DL/TL"].includes(u.role)
           ? person
             ? { userId: person }

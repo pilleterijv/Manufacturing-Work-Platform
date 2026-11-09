@@ -16,7 +16,10 @@ export default function Maintenance({
     [draft, setDraft] = useState<any>(null),
     [selected, setSelected] = useState<any>(null),
     [responses, setResponses] = useState<
-      Record<string, { answer: boolean; comment: string; media: Evidence[] }>
+      Record<
+        string,
+        { answer: boolean | null; comment: string; media: Evidence[] }
+      >
     >({}),
     [busy, setBusy] = useState(false),
     [uploading, setUploading] = useState(false),
@@ -309,6 +312,7 @@ export default function Maintenance({
                 selected.steps.some(
                   (s: any) =>
                     !responses[s.id] ||
+                    responses[s.id].answer == null ||
                     (s.photo && !responses[s.id].media.length),
                 )
               ) {
@@ -361,7 +365,7 @@ export default function Maintenance({
                       setResponses((r) => ({
                         ...r,
                         [s.id]: {
-                          ...(r[s.id] ?? { answer: false, media: [] }),
+                          ...(r[s.id] ?? { answer: null, media: [] }),
                           comment: e.target.value,
                         },
                       }))
@@ -386,7 +390,7 @@ export default function Maintenance({
                     setResponses((r) => ({
                       ...r,
                       [s.id]: {
-                        ...(r[s.id] ?? { answer: false, comment: "" }),
+                        ...(r[s.id] ?? { answer: null, comment: "" }),
                         media,
                       },
                     }))

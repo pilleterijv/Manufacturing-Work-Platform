@@ -7,6 +7,7 @@ import type { Capability } from "@/lib/rules";
 import {
   api,
   filterUrl,
+  getSectionFilters,
   setSectionFilters,
   type SectionFilters,
 } from "@/lib/client-api";
@@ -112,8 +113,15 @@ export default function Home() {
     [opsDepartment, setOpsDepartment] = useState(""),
     [opsLoading, setOpsLoading] = useState(false),
     [loadingMore, setLoadingMore] = useState(false);
+  const refreshEpoch = useRef(0),
+    currentView = useRef(tab);
+  currentView.current = tab;
   async function refresh() {
+    const epoch = ++refreshEpoch.current,
+      requestedTab = tab,
+      filterKey = JSON.stringify(getSectionFilters());
     const account = await api("/api/account");
+    if (epoch !== refreshEpoch.current) return;
     setUser(account.user);
     if (account.user && !account.user.mustChange) {
       const [platform, ops] = await Promise.all([
@@ -126,6 +134,14 @@ export default function Home() {
             }),
         ),
       ]);
+      if (
+        epoch !== refreshEpoch.current ||
+        requestedTab !== currentView.current ||
+        filterKey !== JSON.stringify(getSectionFilters())
+      ) {
+        setLoaded(true);
+        return;
+      }
       setData(platform);
       setPlatformTab(tab);
       setPlatformReady(true);
@@ -161,10 +177,14 @@ export default function Home() {
       setBusy(false);
     }
   }
-  const opsGeneration = useRef(0);
+  const opsGeneration = useRef(0),
+    historyGeneration = useRef(0);
   useEffect(() => {
     opsGeneration.current++;
-  }, [tab, opsDepartment]);
+    historyGeneration.current++;
+    setOpsLoading(false);
+    setLoadingMore(false);
+  }, [tab, opsDepartment, filters]);
   async function loadMoreOperations() {
     const generation = opsGeneration.current;
     const page =
@@ -203,6 +223,7 @@ export default function Home() {
     }
   }
   async function loadMore() {
+    const generation = historyGeneration.current;
     if (!data.page?.hasMore || loadingMore) return;
     setLoadingMore(true);
     try {
@@ -212,6 +233,7 @@ export default function Home() {
           "&cursor=" +
           encodeURIComponent(data.page.cursor ?? ""),
       );
+      if (generation !== historyGeneration.current) return;
       setData((prev) => ({
         ...prev,
         records: [
@@ -224,7 +246,7 @@ export default function Home() {
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setLoadingMore(false);
+      if (generation === historyGeneration.current) setLoadingMore(false);
     }
   }
   async function account(body: unknown) {
@@ -232,6 +254,8 @@ export default function Home() {
     setError("");
     try {
       await api("/api/account", body);
+      setSectionFilters({ person: "", search: "" });
+      setFilters({ person: "", search: "" });
       await refresh();
       setNotice("");
     } catch (e) {
@@ -296,7 +320,7 @@ export default function Home() {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", visible);
     };
-  }, [loaded, user?.id, user?.mustChange, tab, opsDepartment]);
+  }, [loaded, user?.id, user?.mustChange, tab, opsDepartment, filters]);
   useEffect(() => {
     if (!loaded || !user || user.mustChange) return;
     const controller = new AbortController();
@@ -322,7 +346,7 @@ export default function Home() {
         });
     }
     return () => controller.abort();
-  }, [loaded, tab, user?.id, user?.mustChange, opsDepartment]);
+  }, [loaded, tab, user?.id, user?.mustChange, opsDepartment, filters]);
   useEffect(() => {
     if (
       !loaded ||
@@ -346,7 +370,15 @@ export default function Home() {
         if (!controller.signal.aborted) setError(e.message);
       });
     return () => controller.abort();
-  }, [loaded, tab, user?.id, user?.mustChange, platformReady, platformTab]);
+  }, [
+    loaded,
+    tab,
+    user?.id,
+    user?.mustChange,
+    platformReady,
+    platformTab,
+    filters,
+  ]);
   const sectionReady = platformReady && platformTab === tab;
   if (!loaded) return <main className="loading">Opening Floorwork…</main>;
   if (!user || user.mustChange)
@@ -591,7 +623,18 @@ export default function Home() {
                 <p className="muted">{descriptions[tab]}</p>
               </div>
               {g.includes("export") && (
-                <a className="outline" href={filterUrl("/api/export")}>
+                <a
+                  className="outline"
+                  href={filterUrl(
+                    tab === "Preventive maintenance"
+                      ? "/api/maintenance?format=xlsx"
+                      : tab === "Production results"
+                        ? "/api/external-data?section=Production%20results&format=xlsx"
+                        : tab === "Problem solving"
+                          ? "/api/problems?format=xlsx"
+                          : "/api/export",
+                  )}
+                >
                   ↓ Export Excel
                 </a>
               )}
@@ -599,9 +642,16 @@ export default function Home() {
             <SectionFiltersBar
               value={filters}
               onApply={(value) => {
+                opsGeneration.current++;
+                historyGeneration.current++;
+                refreshEpoch.current++;
                 setSectionFilters(value);
                 setFilters(value);
-                void refresh().catch((e) => setError(e.message));
+                setPlatformReady(false);
+                setPlatformTab("");
+                setData(empty);
+                setOperationsReady(false);
+                setOperations(emptyOperations);
               }}
             />
             {error && (
@@ -771,6 +821,7 @@ export default function Home() {
                 section={tab}
                 admin={user.role === "Admin"}
                 canImport={g.includes("manage")}
+                canExport={g.includes("export")}
               />
             )}
             {tab === "My account" && (

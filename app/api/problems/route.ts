@@ -200,7 +200,11 @@ export async function GET(req: Request) {
     const cursor = idSchema.optional().parse(p.get("cursor") ?? undefined);
     if (p.get("view") === "queue") {
       const rows = await db.problemAction.findMany({
-        where: { status: { not: "Completed" }, problem: scope },
+        where: {
+          status: { not: "Completed" },
+          problem: scope,
+          ...(person ? { ownerId: person } : {}),
+        },
         orderBy: { id: "asc" },
         take: 101,
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
@@ -408,7 +412,7 @@ export async function POST(req: Request) {
         if (input.type === "Checkpoint" && r.method === "2D")
           throw new HttpError(400, "Checkpoints apply to 4D and 8D");
         if (body.media === undefined) input.media = old.media as any;
-        await ownEvidence(u.id, input.media, old.media);
+        await ownEvidence(u.id, input.media, old.media, tx);
         await eligiblePeople(r.equipmentId, [input.ownerId], tx);
         await tx.problemAction.update({
           where: { id: aid },
@@ -458,7 +462,7 @@ export async function POST(req: Request) {
           comment = z.string().trim().min(1).max(2000).parse(body.comment);
         const media =
           body.media === undefined ? a.media : evidenceSchema.parse(body.media);
-        await ownEvidence(u.id, media as any, a.media);
+        await ownEvidence(u.id, media as any, a.media, tx);
         return tx.problemAction.update({
           where: { id: aid },
           data: {
@@ -490,7 +494,7 @@ export async function POST(req: Request) {
         if (r.actions.length >= 100)
           throw new HttpError(400, "Maximum 100 actions per record");
         const input = actionSchema.parse(body);
-        await ownEvidence(u.id, input.media);
+        await ownEvidence(u.id, input.media, [], tx);
         await eligiblePeople(r.equipmentId, [input.ownerId], tx);
         if (
           !(await tx.user.findFirst({
@@ -522,7 +526,7 @@ export async function POST(req: Request) {
       const input = problemSchema.parse(body),
         status = z.enum(problemStatuses).parse(body.status);
       if (body.media === undefined) input.media = r.media as any;
-      await ownEvidence(u.id, input.media, r.media);
+      await ownEvidence(u.id, input.media, r.media, tx);
       if (
         input.method !== r.method ||
         input.equipmentId !== r.equipmentId ||

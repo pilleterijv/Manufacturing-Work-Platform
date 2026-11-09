@@ -1,14 +1,16 @@
 "use client";
 import { useState, useEffect } from "react";
-import { api } from "@/lib/client-api";
+import { api, filterUrl } from "@/lib/client-api";
 export default function ExternalData({
   section,
   admin,
   canImport,
+  canExport,
 }: {
   section: string;
   admin: boolean;
   canImport: boolean;
+  canExport: boolean;
 }) {
   const [data, setData] = useState<any>(null),
     [error, setError] = useState(""),
@@ -33,6 +35,17 @@ export default function ExternalData({
   return (
     <section className="panel">
       <h2>Connected data · {section}</h2>
+      {canExport && (
+        <a
+          className="outline"
+          href={filterUrl(
+            "/api/external-data?" +
+              new URLSearchParams({ section, format: "xlsx" }),
+          )}
+        >
+          Export connected results
+        </a>
+      )}
       <p className="small muted">
         Read-only source records, scoped to your departments and areas.
         Importing does not overwrite app checklists, actions or completion

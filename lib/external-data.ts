@@ -26,7 +26,6 @@ export async function ingestExternalRows(
           BigInt(sequence) > 9223372036854775807n
         )
           throw new HttpError(400, "Invalid committed event sequence");
-        if (BigInt(sequence) <= BigInt(feed.cursor)) return { imported: 0 };
       }
       await tx.$queryRaw`SELECT id FROM "IntegrationSource" WHERE id=${feed.sourceId} FOR SHARE`;
       const source = await tx.integrationSource.findUnique({
@@ -34,6 +33,8 @@ export async function ingestExternalRows(
       });
       if (!source?.active || (sourceHash && source.tokenHash !== sourceHash))
         throw new HttpError(401, "Source disabled or key changed");
+      if (sequence && BigInt(sequence) <= BigInt(feed.cursor))
+        return { imported: 0 };
       for (const r of parsed) {
         if (allowedIds && !allowedIds.includes(r.equipmentId))
           throw new HttpError(
@@ -56,6 +57,11 @@ export async function ingestExternalRows(
         const old = await tx.externalRow.findUnique({
           where: { feedId_externalId: { feedId, externalId: r.externalId } },
         });
+        if (old && allowedIds && !allowedIds.includes(old.equipmentId))
+          throw new HttpError(
+            403,
+            "This external ID belongs to equipment outside your assignments",
+          );
         const snapshot = {
           ...r,
           occurredAt: new Date(r.occurredAt).toISOString(),

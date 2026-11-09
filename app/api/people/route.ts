@@ -22,6 +22,7 @@ export async function GET() {
       people: people
         .filter(
           (p) =>
+            u.role === "Admin" ||
             p.id === u.id ||
             eq.some((e) =>
               allowedDowntimeEquipment(p.role, p.workspaceAccess, e),

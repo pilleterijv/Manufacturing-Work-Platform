@@ -142,7 +142,7 @@ async function main() {
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "Migration"')).rows[0]
           .n,
-        9,
+        10,
       );
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "Problem"')).rows[0]
@@ -180,6 +180,7 @@ async function main() {
           "downtime",
           "ideas",
           "leadership",
+          "maintenance",
           "problems",
           "work",
         ]);
@@ -192,6 +193,7 @@ async function main() {
           "dashboard",
           "downtime",
           "ideas",
+          "maintenance",
           "problems",
           "studies",
         ]);

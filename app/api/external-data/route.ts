@@ -1,3 +1,5 @@
+import { Prisma } from "@prisma/client";
+import { streamWorkbook, paged } from "@/lib/excel-stream";
 import { db } from "@/lib/db";
 import { requireUser, jsonBody, failure, HttpError } from "@/lib/security";
 import { equipmentIds } from "@/lib/location-access";
@@ -13,6 +15,27 @@ export async function GET(req: Request) {
       section = z.enum(feedSections).parse(p.get("section") ?? "Overview");
     if (feedCapabilities[section])
       await requireUser(feedCapabilities[section] as any);
+    const equipment = await db.equipment.findMany({
+      where: { id: { in: ids } },
+      select: {
+        id: true,
+        name: true,
+        plant: true,
+        department: true,
+        area: true,
+        line: true,
+      },
+    });
+    const matched = search
+      ? equipment
+          .filter((e) =>
+            [e.name, e.plant, e.department, e.area, e.line]
+              .join(" ")
+              .toLowerCase()
+              .includes(search.toLowerCase()),
+          )
+          .map((e) => e.id)
+      : ids;
     const feeds = await db.externalFeed.findMany({
       where: { section, active: true },
       select: {
@@ -31,31 +54,91 @@ export async function GET(req: Request) {
     const enabled = feeds.filter((f) =>
       sources.some((s) => s.id === f.sourceId),
     );
+    const scope: Prisma.ExternalRowWhereInput = {
+      feedId: { in: enabled.map((f) => f.id) },
+      equipmentId: { in: ids },
+      ...(person ? { personId: person } : {}),
+      ...(search
+        ? {
+            OR: [
+              { title: { contains: search, mode: "insensitive" } },
+              { details: { contains: search, mode: "insensitive" } },
+              { equipmentId: { in: matched } },
+            ],
+          }
+        : {}),
+    };
+    if (p.get("format") === "xlsx") {
+      await requireUser("export");
+      return await streamWorkbook(
+        "floorwork-connected-results.xlsx",
+        async (book) => {
+          const sheet = book.addWorksheet("Connected results");
+          await sheet.addRow([
+            "Source",
+            "External ID",
+            "Equipment ID",
+            "Plant",
+            "Department",
+            "Area",
+            "Line",
+            "Machine",
+            "Person ID",
+            "Title",
+            "Occurred UTC",
+            "Produced",
+            "Good",
+            "Rejects",
+            "Details",
+            "Values JSON",
+          ]);
+          for await (const row of paged((cursor) =>
+            db.externalRow.findMany({
+              where: scope,
+              orderBy: { id: "asc" },
+              take: 100,
+              ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+            }),
+          )) {
+            const e = equipment.find((e) => e.id === row.equipmentId),
+              v = row.values as any;
+            await sheet.addRow([
+              enabled.find((f) => f.id === row.feedId)?.name,
+              row.externalId,
+              row.equipmentId,
+              e?.plant,
+              e?.department,
+              e?.area,
+              e?.line,
+              e?.name,
+              row.personId,
+              row.title,
+              row.occurredAt,
+              v.produced,
+              v.good,
+              v.rejects,
+              row.details,
+              JSON.stringify(row.values),
+            ]);
+          }
+        },
+        req.signal,
+      );
+    }
     const cursor = z
       .string()
       .uuid()
       .optional()
       .parse(p.get("cursor") || undefined);
     const rows = await db.externalRow.findMany({
-      where: {
-        feedId: { in: enabled.map((f) => f.id) },
-        equipmentId: { in: ids },
-        ...(person ? { personId: person } : {}),
-        ...(search
-          ? {
-              OR: [
-                { title: { contains: search, mode: "insensitive" } },
-                { details: { contains: search, mode: "insensitive" } },
-              ],
-            }
-          : {}),
-      },
+      where: scope,
       orderBy: { id: "asc" },
       take: 101,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     });
     return Response.json({
       feeds: enabled,
+      equipment,
       items: rows.slice(0, 100),
       cursor: rows[99]?.id ?? null,
       hasMore: rows.length > 100,

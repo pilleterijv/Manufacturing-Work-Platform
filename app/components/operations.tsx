@@ -608,6 +608,7 @@ export function ImprovementIdeas({
   save: Save;
   busy: boolean;
 }) {
+  const [ideaUploading, setIdeaUploading] = useState(false);
   const [ideaMedia, setIdeaMedia] = useState<
     import("@/lib/evidence-schema").Evidence[]
   >([]);
@@ -772,10 +773,11 @@ export function ImprovementIdeas({
           </p>
           <EvidenceInput
             label="Improvement photo or video evidence"
+            onBusy={setIdeaUploading}
             value={ideaMedia}
             onChange={setIdeaMedia}
           />
-          <button className="primary" disabled={busy}>
+          <button className="primary" disabled={busy || ideaUploading}>
             {busy ? "Saving…" : "Submit idea & notify pilot"}
           </button>
         </form>
