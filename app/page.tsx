@@ -818,6 +818,7 @@ export default function Home() {
               "Shift requirements",
             ].includes(tab) && (
               <ExternalData
+                key={tab}
                 section={tab}
                 admin={user.role === "Admin"}
                 canImport={g.includes("manage")}

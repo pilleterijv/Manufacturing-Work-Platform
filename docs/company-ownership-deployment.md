@@ -27,7 +27,7 @@ flowchart LR
 ```
 
 - Set `APP_ORIGIN` to an existing company subdomain with a trusted HTTPS certificate, for example `https://floorwork.example.com`. IT configures DNS, reverse proxy/firewall rules, and private database connectivity. A new public domain is optional.
-- `DATABASE_URL` is the app's PostgreSQL database, not the company's Microsoft SQL Server. Use a private database/network and least-privileged runtime credentials; keep migration credentials separate where needed.
+- `DATABASE_URL` is the app's PostgreSQL database, not the company's Microsoft SQL Server. Use a private database/network and least-privileged runtime credentials; keep migration credentials separate where needed. `DATABASE_SETUP_URL` may use different credentials but must name the same host, port and database as `DATABASE_URL`; setup refuses mismatched targets.
 - Keep `.env`, connection secrets, uploaded media and database backups out of Git. Use the company's secret manager/environment configuration. Default media lives in `uploads`; private Azure Blob is also supported. Back up database and media together and test restoration.
 - Supervise the app and the background worker. `npm start` starts both unless `FLOORWORK_WORKER_MODE=external`; external mode requires a separately supervised worker. SQL feeds, overdue checks and queued mail continue without a browser only while that worker runs.
 - Configure an approved TLS SMTP relay using the private `SMTP_*` settings. No real company SMTP, SQL or TrakSYS connection was made during development. Do not put passwords into chat or screenshots.

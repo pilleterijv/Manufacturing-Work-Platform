@@ -26,7 +26,7 @@ async function main() {
           role,
           password: hash,
           mustChange: false,
-          workspaceAccess:{mode:"all",locations:[],equipmentIds:[]},
+          workspaceAccess: { mode: "all", locations: [], equipmentIds: [] },
         },
       }),
     );
@@ -261,6 +261,7 @@ async function main() {
     .getByLabel("Leadership department", { exact: true })
     .selectOption(equipment[0].department);
   await page
+    .locator("form.leadership-filters")
     .getByRole("button", { name: "Apply filters", exact: true })
     .click();
   await page

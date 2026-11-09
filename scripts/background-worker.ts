@@ -1,6 +1,6 @@
+import "dotenv/config";
 import { pollExternalData } from "../lib/external-poller";
 import { queueOverdueReminders } from "../lib/reminders";
-import "dotenv/config";
 import { db } from "../lib/db";
 import { checkShiftWork } from "../lib/shift-monitor";
 import { deliverShiftEmails } from "../lib/email-delivery";

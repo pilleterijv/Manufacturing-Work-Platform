@@ -83,3 +83,26 @@ test("workbook inflation is bounded even when ZIP metadata lies about expanded s
     /32 MB/,
   );
 });
+
+import { validateDatabaseTargets } from "../lib/database-target";
+test("migration credentials cannot accidentally target another database or server", () => {
+  assert.doesNotThrow(() =>
+    validateDatabaseTargets(
+      "postgresql://app:runtime@localhost/work",
+      "postgres://migration:private@localhost:5432/work",
+    ),
+  );
+  assert.throws(() => validateDatabaseTargets(undefined));
+  assert.throws(() =>
+    validateDatabaseTargets(
+      "postgres://app@localhost/work",
+      "postgres://migration@localhost/another_database",
+    ),
+  );
+  assert.throws(() =>
+    validateDatabaseTargets(
+      "postgres://app@localhost/work",
+      "postgres://migration@another-host/work",
+    ),
+  );
+});

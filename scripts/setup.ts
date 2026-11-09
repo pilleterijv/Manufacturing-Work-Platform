@@ -1,3 +1,4 @@
+import { validateDatabaseTargets } from "../lib/database-target";
 import "dotenv/config";
 import { Pool } from "pg";
 import { readFile, readdir } from "node:fs/promises";
@@ -5,6 +6,10 @@ import { createHash } from "node:crypto";
 import { db } from "../lib/db";
 import { defaults } from "../lib/rules";
 async function main() {
+  validateDatabaseTargets(
+    process.env.DATABASE_URL,
+    process.env.DATABASE_SETUP_URL,
+  );
   const pool = new Pool({
     connectionString:
       process.env.DATABASE_SETUP_URL || process.env.DATABASE_URL,

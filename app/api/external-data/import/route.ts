@@ -118,7 +118,7 @@ export async function POST(req: Request) {
         title: "Production results · " + date.slice(0, 10),
         details: `Produced ${produced}; good ${good}; rejects ${rejects}`,
         occurredAt,
-        values: { produced, good, rejects },
+        values: { productionDate: date.slice(0, 10), produced, good, rejects },
       });
     }
     return Response.json(

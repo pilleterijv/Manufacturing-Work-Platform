@@ -98,6 +98,7 @@ async function main() {
   async function login(u) {
     const c = await browser.newContext({
       viewport: { width: 1440, height: 1000 },
+      timezoneId: "America/Chicago",
       serviceWorkers: "block",
     });
     await read(
@@ -716,10 +717,62 @@ async function main() {
     .filter({ hasText: "lot-001" })
     .locator("summary")
     .click();
+  assert(
+    (
+      await page
+        .locator("details")
+        .filter({ hasText: "lot-001" })
+        .locator("summary")
+        .textContent()
+    ).includes(equipment[0].name),
+  );
+  assert.equal(
+    await page
+      .locator("details")
+      .filter({ hasText: "lot-001" })
+      .locator("time")
+      .textContent(),
+    today,
+    "Excel calendar dates must not shift backward in US timezones",
+  );
   await page.screenshot({
     path: "docs/screenshots/maintenance-data/excel-results.png",
     fullPage: true,
   });
+  await page.route("**/api/external-data?section=Analytics*", async (route) => {
+    await new Promise((r) => setTimeout(r, 400));
+    await route.continue();
+  });
+  const delayed = page.waitForResponse((r) =>
+    r.url().includes("/api/external-data?section=Analytics"),
+  );
+  await Promise.all([
+    page.waitForRequest((r) =>
+      r.url().includes("/api/external-data?section=Analytics"),
+    ),
+    page
+      .locator("nav")
+      .getByRole("button", { name: "▥ Analytics", exact: true })
+      .click(),
+  ]);
+  await page
+    .locator("nav")
+    .getByRole("button", { name: "▥ Production results", exact: true })
+    .click();
+  await page
+    .locator("details")
+    .filter({ hasText: "lot-001" })
+    .waitFor({ state: "attached" });
+  await (await delayed).finished();
+  await page.waitForTimeout(100);
+  assert.equal(
+    await page
+      .locator("details")
+      .filter({ hasText: "Database result" })
+      .count(),
+    0,
+    "Late source response must not replace the newly selected section",
+  );
   await page
     .getByRole("button", { name: /Notifications/ })
     .first()

@@ -170,12 +170,37 @@ export default function ExternalData({
       {data?.items.map((r: any) => (
         <details key={r.id}>
           <summary>
-            {r.title} · {new Date(r.occurredAt).toLocaleDateString()}
+            {r.title} ·{" "}
+            {data.equipment?.find((e: any) => e.id === r.equipmentId)?.name ??
+              r.equipmentId}{" "}
+            ·{" "}
+            <time
+              dateTime={
+                typeof r.values.productionDate === "string"
+                  ? r.values.productionDate
+                  : r.occurredAt
+              }
+            >
+              {typeof r.values.productionDate === "string"
+                ? r.values.productionDate
+                : new Date(r.occurredAt).toLocaleDateString()}
+            </time>
           </summary>
           <p>{r.details}</p>
           <p className="small">
             {data.feeds.find((f: any) => f.id === r.feedId)?.name} · external ID{" "}
-            {r.externalId} · machine ID {r.equipmentId}
+            {r.externalId} ·{" "}
+            {(() => {
+              const e = data.equipment?.find(
+                (e: any) => e.id === r.equipmentId,
+              );
+              return e
+                ? [e.plant, e.department, e.area, e.line]
+                    .filter(Boolean)
+                    .join(" / ")
+                : "";
+            })()}{" "}
+            · machine ID {r.equipmentId}
           </p>
           <dl>
             {Object.entries(r.values).map(([k, v]) => (

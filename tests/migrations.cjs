@@ -15,7 +15,10 @@ function setup(url) {
   const result = spawnSync(
     process.execPath,
     ["node_modules/tsx/dist/cli.mjs", "scripts/setup.ts"],
-    { env: { ...process.env, DATABASE_URL: url }, encoding: "utf8" },
+    {
+      env: { ...process.env, DATABASE_URL: url, DATABASE_SETUP_URL: url },
+      encoding: "utf8",
+    },
   );
   assert.equal(
     result.status,

@@ -1,4 +1,4 @@
-import { grants } from "./security";
+import { grants } from "./capabilities";
 import { db } from "./db";
 import { allowedDowntimeEquipment } from "./downtime-access-rules";
 import { equipmentIds, type ScopedUser } from "./location-access";

@@ -1,4 +1,4 @@
-import { grants } from "./security";
+import { grants } from "./capabilities";
 import { Prisma, type User } from "@prisma/client";
 import { db } from "./db";
 import { downtimeEquipmentWhere } from "./downtime-access";
