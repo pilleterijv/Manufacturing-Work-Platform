@@ -1,5 +1,7 @@
 # Company ownership, hosting and systems integration
 
+Start with the [ordered company rollout checklist](company-rollout-step-by-step.md) for a step-by-step Windows/server and business-systems handover.
+
 ## Make it a company-controlled product
 
 1. Have company IT/legal confirm ownership of the custom code, employee/contractor IP assignments, and permitted use of generated code. Apply a company-approved proprietary license and copyright notice to company-owned code after that review. Repository ownership alone is not a legal IP assignment.

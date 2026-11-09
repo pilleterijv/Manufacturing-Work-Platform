@@ -3,6 +3,7 @@ import {
   PublicAccessForms,
   ResetPasswordForm,
 } from "./components/access-forms";
+import CompanyBrand from "./components/company-brand";
 import SectionFiltersBar from "./components/section-filters";
 import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
@@ -399,12 +400,6 @@ export default function Home() {
     return (
       <main className="auth">
         <section className="auth-story">
-          <div className="brand">
-            ▦{" "}
-            <span>
-              floorwork<span className="brand-dot">.</span>
-            </span>
-          </div>
           <span className="eyebrow">A BETTER DAY ON THE FLOOR</span>
           <h1>
             Good work.
@@ -423,6 +418,7 @@ export default function Home() {
           </div>
         </section>
         <section className="auth-form">
+          <CompanyBrand />
           <span className="eyebrow">YOUR MANUFACTURING WORKSPACE</span>
           <h2>{user ? "Set your own password" : "Welcome back"}</h2>
           <p className="muted">
@@ -493,7 +489,7 @@ export default function Home() {
           <p className="small muted">
             {user
               ? "All existing sessions will be signed out."
-              : "Need access? Ask your administrator to create an account."}
+              : "Request an account below or contact your administrator."}
           </p>
         </section>
       </main>
@@ -567,12 +563,7 @@ export default function Home() {
     >
       <div className="shell">
         <aside className="sidebar">
-          <div className="brand">
-            ▦{" "}
-            <span>
-              floorwork<span className="brand-dot">.</span>
-            </span>
-          </div>
+          <CompanyBrand />
           <div className="workspace">
             <i /> Manufacturing workspace<span>OPERATIONS PLATFORM</span>
           </div>
@@ -638,7 +629,7 @@ export default function Home() {
           <div className="page" key={filters.person + ":" + filters.search}>
             <div className="page-heading">
               <div>
-                <span className="eyebrow">FLOORWORK / OPERATIONS</span>
+                <span className="eyebrow">MANUFACTURING / OPERATIONS</span>
                 <h1>
                   {tab === "Overview"
                     ? `Welcome, ${user.name.split(" ")[0]}.`
@@ -924,7 +915,8 @@ export default function Home() {
               </section>
             )}
             <footer>
-              FLOORWORK <span>Built for the people behind the process.</span>
+              MANUFACTURING WORK PLATFORM{" "}
+              <span>Built for the people behind the process.</span>
             </footer>
           </div>
         </main>

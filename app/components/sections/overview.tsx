@@ -42,18 +42,6 @@ export default function Overview({
             </button>
           )}
         </div>
-        <div className="hero-art" aria-hidden="true">
-          <div className="orbit" />
-          <div className="art-card">
-            <span>PROCESS CHECK</span>
-            <b>✓</b>
-            <div>Ready for the next step</div>
-            <i />
-            <i />
-            <i />
-          </div>
-          <div className="art-label">SMALL STEPS. BETTER SYSTEMS.</div>
-        </div>
       </div>
       <section aria-labelledby="workspace-sections">
         <div className="section-title">

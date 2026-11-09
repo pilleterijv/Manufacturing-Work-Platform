@@ -682,7 +682,8 @@ async function main() {
     }
   }
   // Actual desktop/tablet UI, directory search and screenshots.
-  const shots = "docs/screenshots/five-s-tpm";
+  const shots =
+    process.env.FLOORWORK_SCREENSHOTS_DIR || "docs/screenshots/five-s-tpm";
   await fs.mkdir(shots, { recursive: true });
   const page = await manager.newPage();
   await page.goto(origin);
@@ -690,6 +691,11 @@ async function main() {
     .getByRole("heading", { name: "My assignments", exact: true })
     .waitFor();
   await page.getByText(otherIdea.title, { exact: true }).waitFor();
+  if (process.env.FLOORWORK_SCREENSHOTS_DIR)
+    await page.screenshot({
+      path: shots + "/desktop-workspace.png",
+      fullPage: true,
+    });
   await page
     .locator(".personal-dashboard")
     .screenshot({ path: shots + "/personal-dashboard.png" });
@@ -773,6 +779,15 @@ async function main() {
   ).newPage();
   contexts.push(publicPage.context());
   await publicPage.goto(origin);
+  if (process.env.FLOORWORK_SCREENSHOTS_DIR) {
+    await publicPage
+      .getByRole("heading", { name: "Welcome back", exact: true })
+      .waitFor();
+    await publicPage.screenshot({
+      path: shots + "/tablet-login.png",
+      fullPage: true,
+    });
+  }
   await publicPage
     .getByRole("button", { name: "Request an account", exact: true })
     .click();

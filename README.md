@@ -4,6 +4,14 @@ A browser application for standard work, photographic evidence, time studies, DL
 
 This update adds area-based **5S audits**, machine **TPM/CIL**, **defect reporting with optional MaintainX work-order submission**, personal/assigned-department dashboards, registration approval, password-recovery emails and searchable account pickers. See [setup and limits](docs/five-s-tpm-access.md) and [screenshots](docs/screenshots/five-s-tpm). Migration 011 preserves existing work. Live MaintainX/SMTP require private IT setup; no company work orders or emails have been sent by development tests.
 
+## Orange / white company styling
+
+The interface now uses an orange/white company theme. [Screenshots and preview](docs/screenshots/orange-white) and [brand asset handover](docs/company-branding.md). The exact original logo is pending; a temporary company wordmark occupies its place until the approved SVG/PNG is supplied.
+
+## Company hosting, Windows and ownership
+
+Command Prompt can launch the app but does not replace Node.js. For employees to use it without installing Node or Docker, host it once on a company server and distribute its HTTPS/PWA shortcut. Docker is optional; the server still needs a Node runtime and PostgreSQL (native or managed). A signed Windows installer with a bundled runtime is a separate packaging task. Follow the [step-by-step company rollout guide](docs/company-rollout-step-by-step.md) for ownership, private repositories, staging, Windows/server deployment, TrakSYS/SQL/Excel/MaintainX connections, identity, backups and pilot acceptance.
+
 ## PMs, people filters, overdue reminders and connected data
 
 See [feature setup and validation](docs/maintenance-data-validation.md) and the [company ownership/server integration handover](docs/company-ownership-deployment.md). This update adds machine PMs, scoped people/text filters, overdue in-app/email reminders, device video evidence and Excel production-results imports, with read-only SQL Server/PostgreSQL feeds for operational sections. Migration 010 is additive. Email, company databases and TrakSYS still require private IT configuration and live validation.
