@@ -1,3 +1,5 @@
+import { readFilters } from "@/lib/filters";
+import { evidenceSchema, ownEvidence } from "@/lib/evidence";
 import {
   equipmentIds,
   assertEquipmentAccess,
@@ -33,6 +35,7 @@ export async function GET(req: Request) {
     const u = await requireUser();
     const g = await grants(u);
     const ids = await equipmentIds(u);
+    const { person, search } = readFilters(req.url);
     const notices = await notificationScope(u, ids);
     const view = z
       .enum(["full", "summary", "live", "downtime", "ideas"])
@@ -50,7 +53,42 @@ export async function GET(req: Request) {
             orderBy: { name: "asc" },
           })
         : [];
+    const matchedEquipment = search
+      ? (
+          await db.equipment.findMany({
+            where: {
+              id: { in: ids },
+              OR: [
+                { name: { contains: search, mode: "insensitive" } },
+                { department: { contains: search, mode: "insensitive" } },
+                { area: { contains: search, mode: "insensitive" } },
+              ],
+            },
+            select: { id: true },
+          })
+        ).map((e) => e.id)
+      : ids;
     const downtimeScope = {
+      AND: [
+        ...(person
+          ? [{ OR: [{ startedBy: person }, { stoppedBy: person }] }]
+          : []),
+        ...(search
+          ? [
+              {
+                OR: [
+                  {
+                    reasonName: {
+                      contains: search,
+                      mode: "insensitive" as const,
+                    },
+                  },
+                  { equipmentId: { in: matchedEquipment } },
+                ],
+              },
+            ]
+          : []),
+      ],
       equipmentId: { in: permittedEquipment.map((e) => e.id) },
     };
     const location = department
@@ -124,6 +162,48 @@ export async function GET(req: Request) {
               where: {
                 ...location,
                 equipmentId: { in: ids },
+                AND: [
+                  ...(person
+                    ? [
+                        {
+                          OR: [
+                            { pilotId: person },
+                            { validatorId: person },
+                            { submitterId: person },
+                            { createdBy: person },
+                            { participants: { some: { userId: person } } },
+                          ],
+                        },
+                      ]
+                    : []),
+                  ...(search
+                    ? [
+                        {
+                          OR: [
+                            {
+                              title: {
+                                contains: search,
+                                mode: "insensitive" as const,
+                              },
+                            },
+                            {
+                              proposal: {
+                                contains: search,
+                                mode: "insensitive" as const,
+                              },
+                            },
+                            {
+                              currentState: {
+                                contains: search,
+                                mode: "insensitive" as const,
+                              },
+                            },
+                            { equipmentId: { in: matchedEquipment } },
+                          ],
+                        },
+                      ]
+                    : []),
+                ],
                 ...(cursor
                   ? {
                       OR: [
@@ -325,6 +405,8 @@ export async function POST(req: Request) {
     if (action === "idea") {
       await limit(`idea:${u.id}`, 30, 3600);
       const v = ideaSchema.parse(b);
+      const media = evidenceSchema.parse(b.media ?? []);
+      await ownEvidence(u.id, media);
       await db.$transaction(async (tx) => {
         const equipment = await tx.equipment.findUnique({
           where: { id: v.equipmentId },
@@ -354,6 +436,7 @@ export async function POST(req: Request) {
         const idea = await tx.idea.create({
           data: {
             ...fields,
+            media,
             equipmentSnapshot: equipment,
             createdBy: u.id,
             participants: {

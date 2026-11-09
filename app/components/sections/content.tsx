@@ -1,4 +1,5 @@
 "use client";
+import { mediaMime, readMediaFile } from "@/lib/client-media";
 import PhotoEditor from "../photo-editor";
 import { useState, useEffect, useRef } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
@@ -42,26 +43,26 @@ export default function Content({
       setError("Maximum 20 attachments");
       return;
     }
-    if (file.type.startsWith("image/")) {
-      if (file.size > 8 * 1024 * 1024) {
-        setError("Photo must be under 8 MB");
-        return;
+    let mime: string;
+    try {
+      mime = mediaMime(file);
+    } catch (e) {
+      setError((e as Error).message);
+      return;
+    }
+    if (mime.startsWith("image/")) {
+      try {
+        setPhoto({ src: await readMediaFile(file), index: -1 });
+      } catch (e) {
+        setError((e as Error).message);
       }
-      const reader = new FileReader();
-      reader.onload = () => setPhoto({ src: String(reader.result), index: -1 });
-      reader.readAsDataURL(file);
       return;
     }
     setUploading(true);
     try {
       if (file.size > 32 * 1024 * 1024)
         throw Error("Video must be under 32 MB");
-      const value = await new Promise<string>((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(String(r.result));
-        r.onerror = reject;
-        r.readAsDataURL(file);
-      });
+      const value = await readMediaFile(file);
       const r = await api("/api/guide-media", { video: value });
       setMedia((m) => [...m, { id: r.id, kind: "video", caption: "" }]);
     } catch (e) {
@@ -96,6 +97,7 @@ export default function Content({
         {items.map((c) => (
           <article className="panel resource" key={c.id}>
             {kind === "video" &&
+              c.body &&
               (playing === c.id ? (
                 <iframe
                   title={c.title}
@@ -119,7 +121,7 @@ export default function Content({
                 "ALL EQUIPMENT"}
             </span>
             <h2>{c.title}</h2>
-            {kind === "guide" && (
+            {(kind === "guide" || kind === "video") && (
               <>
                 <p className="guide-body">{c.body}</p>
                 {c.media?.map((m) => (
@@ -144,7 +146,7 @@ export default function Content({
                 ))}
               </>
             )}
-            {manage && kind === "guide" && (
+            {manage && (
               <button
                 className="outline"
                 onClick={() => {
@@ -152,7 +154,8 @@ export default function Content({
                   setMedia(c.media ?? []);
                   setPhoto(null);
                   setTimeout(() => {
-                    const f = formRef.current!;
+                    const f = formRef.current;
+                    if (!f) return;
                     (f.elements.namedItem("title") as HTMLInputElement).value =
                       c.title;
                     (
@@ -245,8 +248,7 @@ export default function Content({
                 <input
                   name="body"
                   type="url"
-                  required
-                  placeholder="https://www.youtube.com/watch?v=…"
+                  placeholder="Optional when uploading a video"
                 />
               ) : (
                 <textarea name="body" rows={6} maxLength={10000} required />
@@ -257,7 +259,7 @@ export default function Content({
                 ? "Videos play from the original provider. Use content your organization is permitted to share."
                 : "Use approved site procedures and include escalation guidance."}
             </p>
-            {kind === "guide" && (
+            {(kind === "guide" || kind === "video") && (
               <>
                 <Field label="Attach photos or videos from your device">
                   <input

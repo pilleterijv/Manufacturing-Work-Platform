@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { storeVideo } from "@/lib/storage";
 import {
   requireUser,
+  grants,
   jsonBody,
   limit,
   HttpError,
@@ -12,7 +13,20 @@ let processing = 0;
 export async function POST(req: Request) {
   let slot = false;
   try {
-    const u = await requireUser("manage");
+    const u = await requireUser();
+    const g = await grants(u);
+    if (
+      ![
+        "manage",
+        "training",
+        "work",
+        "audits",
+        "maintenance",
+        "problems",
+        "ideas",
+      ].some((cap) => g.includes(cap as any))
+    )
+      throw new HttpError(403, "Media upload not permitted");
     await limit(`guide-video:${u.id}`, 20, 3600);
     await limit("guide-video:global", 100, 3600);
     if (processing >= 2)

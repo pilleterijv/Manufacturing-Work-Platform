@@ -11,7 +11,8 @@ export const metadata = {
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "Floorwork", statusBarStyle: "default" },
   icons: { apple: "/apple-touch-icon.png" },
-  description: "Standard work, process timing, training, and DL/TL Standard Work",
+  description:
+    "Standard work, process timing, training, and DL/TL Standard Work",
 };
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (

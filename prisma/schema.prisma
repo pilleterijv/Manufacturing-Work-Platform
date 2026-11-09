@@ -8,6 +8,8 @@ datasource db {
 }
 model User {
  id String @id @default(uuid())
+ overdueInApp Boolean @default(true)
+ overdueEmail Boolean @default(true)
  email String?
  username String @unique
  name String
@@ -84,6 +86,8 @@ model Record {
  standard Standard? @relation(fields:[standardId],references:[id])
 }
 model Content {
+ createdBy String?
+ createdAt DateTime @default(now())
  id String @id @default(uuid())
  kind String
  title String
@@ -137,6 +141,7 @@ model Setting {
  value Json
 }
 model Idea {
+ media Json @default("[]")
  id String @id @default(uuid())
  title String
  equipmentId String
@@ -184,6 +189,7 @@ model Notification {
 }
 
 model Problem {
+ media Json @default("[]")
  id String @id @default(uuid())
  reference String @unique
  method String
@@ -211,6 +217,7 @@ model Problem {
  @@index([status,dueDate])
 }
 model ProblemAction {
+ media Json @default("[]")
  required Boolean @default(true)
  id String @id @default(uuid())
  problemId String
@@ -317,4 +324,69 @@ model GuideMedia {
  mime String
  bytes Int
  created DateTime @default(now())
+}
+
+model MaintenancePlan {
+ id String @id @default(uuid())
+ equipmentId String
+ title String
+ steps Json
+ assigneeId String
+ intervalDays Int
+ nextDue String
+ active Boolean @default(true)
+ version Int @default(1)
+ createdBy String
+ history Json
+}
+model Reminder {
+ id String @id @default(uuid())
+ dedupeKey String @unique
+ entityType String
+ entityId String
+ equipmentId String
+ userId String
+ subject String
+ message String
+ email Boolean
+ status String @default("Pending")
+ attempts Int @default(0)
+ nextAttemptAt DateTime @default(now())
+ claimedUntil DateTime?
+ sentAt DateTime?
+ createdAt DateTime @default(now())
+ lastError String?
+ @@index([status,nextAttemptAt])
+}
+model ExternalFeed {
+ mode String @default("api")
+ id String @id @default(uuid())
+ sourceId String
+ name String
+ section String
+ active Boolean @default(true)
+ cursor String @default("0")
+ lastImportedAt DateTime?
+ lastError String?
+}
+model ExternalRow {
+ id String @id @default(uuid())
+ feedId String
+ externalId String
+ equipmentId String
+ personId String?
+ title String
+ details String
+ occurredAt DateTime
+ values Json
+ updatedAt DateTime @updatedAt
+ @@unique([feedId,externalId])
+ @@index([equipmentId,occurredAt])
+}
+
+model ExternalRevision {
+ id String @id @default(uuid())
+ rowId String
+ snapshot Json
+ importedAt DateTime @default(now())
 }

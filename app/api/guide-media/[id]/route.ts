@@ -1,3 +1,4 @@
+import { canReadEvidence } from "@/lib/evidence";
 import { db } from "@/lib/db";
 import { readVideo } from "@/lib/storage";
 import { linkedGuideMedia } from "@/lib/guide-media";
@@ -13,15 +14,7 @@ export async function GET(
       throw new HttpError(404, "Video not found");
     const media = await db.guideMedia.findUnique({ where: { id } });
     if (!media) throw new HttpError(404, "Video not found");
-    const linked = await linkedGuideMedia(u, id, "video");
-    const anyLink =
-      media.userId === u.id
-        ? await db.content.findFirst({
-            where: { media: { array_contains: [{ id, kind: "video" }] } },
-            select: { id: true },
-          })
-        : null;
-    if (!linked && (media.userId !== u.id || anyLink))
+    if (!(await canReadEvidence(u, id, "video", media.userId)))
       throw new HttpError(403, "Video access denied");
     const data = await readVideo(id),
       headers: Record<string, string> = {
@@ -46,7 +39,13 @@ export async function GET(
         m[1] && m[2]
           ? Math.min(data.length - 1, Number(m[2]))
           : data.length - 1;
-      if (start >= data.length || start > end)
+      if (
+        !Number.isSafeInteger(start) ||
+        !Number.isSafeInteger(end) ||
+        (!m[1] && Number(m[2]) === 0) ||
+        start >= data.length ||
+        start > end
+      )
         return new Response(null, {
           status: 416,
           headers: { "Content-Range": `bytes */${data.length}` },

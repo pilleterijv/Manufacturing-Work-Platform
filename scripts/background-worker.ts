@@ -1,3 +1,5 @@
+import { pollExternalData } from "../lib/external-poller";
+import { queueOverdueReminders } from "../lib/reminders";
 import "dotenv/config";
 import { db } from "../lib/db";
 import { checkShiftWork } from "../lib/shift-monitor";
@@ -13,8 +15,10 @@ process.on("SIGINT", () => {
   stopping = true;
 });
 const jobs = [
+  { name: "external-data", interval: 30000, run: pollExternalData },
   { name: "sql", interval: 10000, run: pollCompanySql },
   { name: "shifts", interval: 60000, run: checkShiftWork },
+  { name: "overdue", interval: 60000, run: () => queueOverdueReminders() },
   { name: "email", interval: 10000, run: deliverShiftEmails },
 ];
 async function runJob(job: (typeof jobs)[number]) {

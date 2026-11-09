@@ -1,3 +1,4 @@
+import { readFilters } from "./filters";
 import {
   equipmentIds,
   equipmentSql,
@@ -37,7 +38,27 @@ export async function leadershipReport(
   user: ScopedUser,
 ) {
   const ids = await equipmentIds(user);
+  const { person, search } = readFilters("http://localhost/?" + params);
   const permitted = { equipmentId: { in: ids } };
+  const problemFilter = {
+    ...permitted,
+    AND: [
+      ...(person
+        ? [
+            {
+              OR: [
+                { ownerId: person },
+                { reviewerId: person },
+                { actions: { some: { ownerId: person } } },
+              ],
+            },
+          ]
+        : []),
+      ...(search
+        ? [{ title: { contains: search, mode: "insensitive" as const } }]
+        : []),
+    ],
+  };
   const setting = await db.setting.findUniqueOrThrow({
     where: { key: "shifts" },
   });
@@ -70,9 +91,11 @@ export async function leadershipReport(
     ON e.id = COALESCE(r.data->>'equipmentId', r.data->'snapshot'->>'equipmentId')
     WHERE r.created >= ${start} AND r.created < ${end}
     AND ${equipmentSql(ids, Prisma.sql`e.id`)}
+    ${person ? Prisma.sql`AND r."userId"=${person}` : Prisma.empty}
+    ${search ? Prisma.sql`AND (r.data::text ILIKE ${"%" + search + "%"} OR e.name ILIKE ${"%" + search + "%"})` : Prisma.empty}
     ${department ? Prisma.sql`AND COALESCE(r.data->'equipmentSnapshot'->>'department', r.data->'snapshot'->'equipment'->>'department', e.department) = ${department}` : Prisma.empty}`;
   const base = Prisma.sql`WITH scoped AS (SELECT r.kind, r.data ${recordScope})`;
-  const ideaScope = Prisma.sql`WHERE ${equipmentSql(ids, Prisma.sql`"equipmentId"`)} ${department ? Prisma.sql`AND "equipmentSnapshot"->>'department'=${department}` : Prisma.empty}`;
+  const ideaScope = Prisma.sql`WHERE ${equipmentSql(ids, Prisma.sql`"equipmentId"`)} ${person ? Prisma.sql`AND ("pilotId"=${person} OR "validatorId"=${person} OR "submitterId"=${person} OR "createdBy"=${person} OR id IN (SELECT "ideaId" FROM "IdeaParticipant" WHERE "userId"=${person}))` : Prisma.empty} ${search ? Prisma.sql`AND title ILIKE ${"%" + search + "%"}` : Prisma.empty} ${department ? Prisma.sql`AND "equipmentSnapshot"->>'department'=${department}` : Prisma.empty}`;
   const [
     countRows,
     responseRows,
@@ -134,7 +157,7 @@ export async function leadershipReport(
     db.problem.groupBy({
       by: ["method", "status"],
       where: {
-        ...permitted,
+        ...problemFilter,
         ...(department
           ? { equipmentSnapshot: { path: ["department"], equals: department } }
           : {}),
@@ -145,7 +168,7 @@ export async function leadershipReport(
       where: {
         status: { not: "Completed" },
         problem: {
-          ...permitted,
+          ...problemFilter,
           ...(department
             ? {
                 equipmentSnapshot: { path: ["department"], equals: department },
@@ -169,6 +192,21 @@ export async function leadershipReport(
     db.downtime.findMany({
       where: {
         ...permitted,
+        AND: [
+          ...(person
+            ? [{ OR: [{ startedBy: person }, { stoppedBy: person }] }]
+            : []),
+          ...(search
+            ? [
+                {
+                  reasonName: {
+                    contains: search,
+                    mode: "insensitive" as const,
+                  },
+                },
+              ]
+            : []),
+        ],
         startedAt: { lt: end },
         OR: [{ endedAt: null }, { endedAt: { gt: start } }],
         ...(department

@@ -1,6 +1,7 @@
 "use client";
+import EvidenceInput from "../evidence-input";
 import { useEffect, useState, useRef } from "react";
-import { api } from "@/lib/client-api";
+import { api, filterUrl } from "@/lib/client-api";
 import {
   methods,
   defaultRequirements,
@@ -24,6 +25,7 @@ type Equipment = {
 };
 type Action = {
   required: boolean;
+  media?: import("@/lib/evidence-schema").Evidence[];
   id: string;
   type: string;
   checkpoint: string;
@@ -77,6 +79,7 @@ type List = {
   };
 };
 const empty: ProblemInput = {
+  media: [],
   title: "",
   method: "2D",
   equipmentId: "",
@@ -392,7 +395,7 @@ export default function Problems({
             {canExport && (
               <a
                 className="outline"
-                href={"/api/problems?" + params() + "&format=xlsx"}
+                href={filterUrl("/api/problems?" + params() + "&format=xlsx")}
               >
                 ↓ Export problem solving
               </a>
@@ -440,7 +443,7 @@ export default function Problems({
                   <ActionUpdate
                     a={a}
                     busy={busy}
-                    save={(s, c) =>
+                    save={(s, c, media) =>
                       post({
                         action: "updateAction",
                         id: a.problem.id,
@@ -448,6 +451,7 @@ export default function Problems({
                         version: a.version,
                         status: s,
                         comment: c,
+                        media,
                       })
                     }
                   />
@@ -753,6 +757,11 @@ export default function Problems({
                         </div>
                       </fieldset>
                     ))}
+                    <EvidenceInput
+                      label="Problem photo or video evidence"
+                      value={draft.media ?? []}
+                      onChange={(media) => patch({ media })}
+                    />
                     {selected && (
                       <Field label="Problem status">
                         <select
@@ -1096,8 +1105,14 @@ function ActionUpdate({
 }: {
   a: Action;
   busy: boolean;
-  save: (status: string, comment: string) => Promise<unknown>;
+  save: (
+    status: string,
+    comment: string,
+    media: import("@/lib/evidence-schema").Evidence[],
+  ) => Promise<unknown>;
 }) {
+  const [media, setMedia] = useState(a.media ?? []),
+    [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState(a.status),
     [comment, setComment] = useState("");
   return (
@@ -1105,7 +1120,7 @@ function ActionUpdate({
       className="problem-action-update"
       onSubmit={async (e) => {
         e.preventDefault();
-        if (await save(status, comment)) setComment("");
+        if (await save(status, comment, media)) setComment("");
       }}
     >
       <Field label="New action status">
@@ -1124,7 +1139,13 @@ function ActionUpdate({
           placeholder="What changed? What was verified?"
         />
       </Field>
-      <button className="outline" disabled={busy}>
+      <EvidenceInput
+        label="Action photo or video evidence"
+        value={media}
+        onChange={setMedia}
+        onBusy={setUploading}
+      />
+      <button className="outline" disabled={busy || uploading}>
         Submit action update
       </button>
     </form>

@@ -62,7 +62,10 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
         <div className="empty">
           <span>◇</span>
           <h3>Your first observation starts here</h3>
-          <p>Completed work, time studies, and DL/TL Standard Work will appear here.</p>
+          <p>
+            Completed work, time studies, and DL/TL Standard Work will appear
+            here.
+          </p>
         </div>
       ) : (
         <div className="table-wrap">
@@ -90,7 +93,7 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
                           )?.name}
                     </small>
                   </td>
-                  <td>{r.kind==="audit"?"DL/TL Standard Work":r.kind}</td>
+                  <td>{r.kind === "audit" ? "DL/TL Standard Work" : r.kind}</td>
                   <td>{r.user.name}</td>
                   <td>{new Date(r.created).toLocaleString()}</td>
                   <td>
@@ -119,6 +122,15 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
                             )?.text
                           }
                           <p>{a.comment}</p>
+                          {a.video && (
+                            <video
+                              controls
+                              playsInline
+                              preload="metadata"
+                              style={{ maxWidth: "100%", maxHeight: 320 }}
+                              src={`/api/guide-media/${a.video}`}
+                            />
+                          )}
                           {a.photo && (
                             <a
                               href={`/api/photos/${a.photo}`}
@@ -184,7 +196,9 @@ export function EquipmentSelect({
       <option value="">Select equipment</option>
       {data.equipment.map((e) => (
         <option key={e.id} value={e.id}>
-          {[e.plant,e.department,e.area,e.line,e.name].filter(Boolean).join(" / ")}
+          {[e.plant, e.department, e.area, e.line, e.name]
+            .filter(Boolean)
+            .join(" / ")}
         </option>
       ))}
     </select>

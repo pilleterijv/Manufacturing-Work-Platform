@@ -69,6 +69,15 @@ export async function visiblePeople(u: ScopedUser, ids: string[]) {
   const equipment = await db.equipment.findMany({ where: { id: { in: ids } } });
   const people = await db.user.findMany({
     where: { active: true },
+    select: {
+      id: true,
+      name: true,
+      username: true,
+      role: true,
+      active: true,
+      email: true,
+      workspaceAccess: true,
+    },
     orderBy: { name: "asc" },
   });
   return people
@@ -99,8 +108,21 @@ export async function notificationScope(
     LEFT JOIN "Idea" i ON i.id=n."ideaId"
     LEFT JOIN "ShiftCheck" c ON c.id=n."sourceId" AND n.kind='missed-work'
     LEFT JOIN "WorkSchedule" s ON s.id=c."scheduleId"
+    LEFT JOIN "Reminder" m ON m.id=n."sourceId" AND n.kind='overdue'
     WHERE n."userId"=${u.id}
-    AND (i."equipmentId"=ANY(${ids}::text[]) OR s."equipmentId"=ANY(${ids}::text[]))
+    AND (i."equipmentId"=ANY(${ids}::text[]) OR s."equipmentId"=ANY(${ids}::text[]) OR m."equipmentId"=ANY(${ids}::text[]))
     ORDER BY n."createdAt" DESC,n.id DESC LIMIT 100`);
   return { userId: u.id, id: { in: notices.map((n) => n.id) } };
+}
+
+export async function assignedEquipmentIds(ids: string[], person?: string) {
+  if (!person) return ids;
+  const p = await db.user.findUnique({
+    where: { id: person },
+    select: { role: true, workspaceAccess: true },
+  });
+  if (!p) return [];
+  return (await db.equipment.findMany({ where: { id: { in: ids } } }))
+    .filter((e) => allowedDowntimeEquipment(p.role, p.workspaceAccess, e))
+    .map((e) => e.id);
 }

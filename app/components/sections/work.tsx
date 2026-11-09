@@ -1,4 +1,5 @@
 "use client";
+import EvidenceInput from "../evidence-input";
 import { useState, useEffect, useRef } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
 import type { Data, Step, Cycle, Standard } from "@/lib/workspace-types";
@@ -24,6 +25,7 @@ export default function Work({
   busy: boolean;
   audit: boolean;
 }) {
+  const uploads = useRef(0);
   const latest = data.standards.filter(
     (s) => s.kind === (audit ? "audit" : "run"),
   );
@@ -34,6 +36,7 @@ export default function Work({
         {
           answer: boolean | null;
           photo: string | null;
+          video?: string | null;
           comment: string;
           at?: string;
         }
@@ -127,11 +130,13 @@ export default function Work({
                 s.steps.some(
                   (step) =>
                     responses[step.id]?.answer == null ||
-                    (step.photo && !responses[step.id]?.photo),
+                    (step.photo &&
+                      !responses[step.id]?.photo &&
+                      !responses[step.id]?.video),
                 )
               ) {
                 setLocalError(
-                  "Answer every step and attach each required photo",
+                  "Answer every step and attach each required photo or video",
                 );
                 return;
               }
@@ -182,7 +187,7 @@ export default function Work({
                         <h3>{step.text}</h3>
                         <p className="small muted">
                           {step.photo
-                            ? "Photo evidence required"
+                            ? "Photo or video evidence required"
                             : "Verify against the approved standard"}
                         </p>
                       </div>
@@ -206,31 +211,49 @@ export default function Work({
                         </button>
                       ))}
                     </div>
-                    <Field
+                    <EvidenceInput
+                      singleKinds
                       label={
                         step.photo
-                          ? "Evidence photo · required"
-                          : "Evidence photo · optional"
+                          ? "Evidence photo or video · required"
+                          : "Evidence photo or video · optional"
                       }
-                    >
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        capture="environment"
-                        disabled={uploading}
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) void upload(step.id, f);
-                        }}
-                      />
-                    </Field>
-                    {responses[step.id]?.photo && (
-                      <img
-                        className="photo-preview"
-                        src={`/api/photos/${responses[step.id].photo}`}
-                        alt={`Evidence for step ${i + 1}`}
-                      />
-                    )}
+                      value={[
+                        ...(responses[step.id]?.photo
+                          ? [
+                              {
+                                id: responses[step.id].photo!,
+                                kind: "photo" as const,
+                                caption: "",
+                              },
+                            ]
+                          : []),
+                        ...(responses[step.id]?.video
+                          ? [
+                              {
+                                id: responses[step.id].video!,
+                                kind: "video" as const,
+                                caption: "",
+                              },
+                            ]
+                          : []),
+                      ]}
+                      onBusy={(b) => {
+                        uploads.current = Math.max(
+                          0,
+                          uploads.current + (b ? 1 : -1),
+                        );
+                        setUploading(uploads.current > 0);
+                      }}
+                      onChange={(items) =>
+                        update(step.id, {
+                          photo:
+                            items.find((m) => m.kind === "photo")?.id ?? null,
+                          video:
+                            items.find((m) => m.kind === "video")?.id ?? null,
+                        })
+                      }
+                    />
                     <Field label="Comment">
                       <textarea
                         maxLength={1000}

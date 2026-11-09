@@ -1,5 +1,8 @@
+import { readFilters, recordFilters } from "@/lib/filters";
+import { ownEvidence, evidenceSchema } from "@/lib/evidence";
 import { allowedDowntimeEquipment } from "@/lib/downtime-access-rules";
 import {
+  assignedEquipmentIds,
   equipmentScope,
   equipmentIds,
   recordScope,
@@ -31,6 +34,8 @@ export async function GET(req: Request) {
     const u = await requireUser();
     const g = await grants(u);
     const ids = await equipmentIds(u);
+    const { person, search } = readFilters(req.url);
+    const assignmentIds = await assignedEquipmentIds(ids, person);
     const params = new URL(req.url).searchParams;
     const cursor = z
       .string()
@@ -98,7 +103,7 @@ export async function GET(req: Request) {
     const requestedKind = params.get("kind");
     const historyKind = view === "records" ? requestedKind : view;
     const scope = {
-      AND: [recordScope(ids)],
+      AND: [recordScope(ids), recordFilters(person, search)],
       ...(g.includes("analytics") ? {} : { userId: u.id }),
       kind: {
         in:
@@ -144,7 +149,7 @@ export async function GET(req: Request) {
     const [equipment, standards, records, content, users, policies] =
       await Promise.all([
         db.equipment.findMany({
-          where: equipmentScope(u),
+          where: { id: { in: assignmentIds } },
           orderBy: { name: "asc" },
         }),
         standardsNeeded
@@ -152,9 +157,11 @@ export async function GET(req: Request) {
           SELECT s.* FROM "Standard" s JOIN (
             SELECT family, max(revision) AS revision FROM "Standard" GROUP BY family
           ) latest ON s.family=latest.family AND s.revision=latest.revision
-          WHERE s."equipmentId" = ANY(${ids}::text[])
+          WHERE s."equipmentId" = ANY(${assignmentIds}::text[])
           AND (${view} NOT IN ('work','audits') OR s.kind=CASE WHEN ${view}='audits' THEN 'audit' ELSE 'run' END)
           AND (${view}<>'audits' OR ${u.role}='Admin' OR s."assigneeIds"='[]'::jsonb OR s."assigneeIds" @> ${JSON.stringify([u.id])}::jsonb)
+          AND (${person ?? ""}='' OR s."assigneeIds"='[]'::jsonb OR s."assigneeIds" @> ${JSON.stringify(person ? [person] : [])}::jsonb)
+          AND (${search}='' OR s.title ILIKE ${"%" + search + "%"})
           ORDER BY s.title
         `
           : [],
@@ -170,6 +177,29 @@ export async function GET(req: Request) {
           ? db.content.findMany({
               where: {
                 active: true,
+                ...(person ? { createdBy: person } : {}),
+                ...(search
+                  ? {
+                      AND: [
+                        {
+                          OR: [
+                            {
+                              title: {
+                                contains: search,
+                                mode: "insensitive" as const,
+                              },
+                            },
+                            {
+                              body: {
+                                contains: search,
+                                mode: "insensitive" as const,
+                              },
+                            },
+                          ],
+                        },
+                      ],
+                    }
+                  : {}),
                 OR: [{ equipmentId: null }, { equipmentId: { in: ids } }],
                 ...(view === "training"
                   ? { kind: "video" }
@@ -190,6 +220,8 @@ export async function GET(req: Request) {
                 active: true,
                 mustChange: true,
                 email: true,
+                overdueEmail: true,
+                overdueInApp: true,
                 ...(u.role === "Admin"
                   ? { downtimeAccess: true, workspaceAccess: true }
                   : {}),
@@ -234,7 +266,14 @@ export async function GET(req: Request) {
       content,
       users:
         u.role === "Admin"
-          ? users
+          ? users.filter(
+              (p) =>
+                (!person || p.id === person) &&
+                (!search ||
+                  `${p.name} ${p.username}`
+                    .toLowerCase()
+                    .includes(search.toLowerCase())),
+            )
           : (view === "manage" ? await visiblePeople(u, ids) : []).map(
               (person) => ({
                 id: person.id,
@@ -466,7 +505,7 @@ export async function POST(req: Request) {
             .default([]),
           title: z.string().min(1).max(150),
           equipmentId: z.string().optional(),
-          body: z.string().min(1).max(10000),
+          body: z.string().max(10000).default(""),
         })
         .parse(b);
       if (
@@ -474,13 +513,21 @@ export async function POST(req: Request) {
         !(await db.equipment.findUnique({ where: { id: v.equipmentId } }))
       )
         throw new HttpError(400, "Unknown equipment");
-      if (action === "video") {
+      if (action === "guide" && !v.body.trim())
+        throw new HttpError(400, "Enter instructions");
+      if (action === "video" && v.body) {
         try {
           v.body = videoUrl(v.body);
         } catch {
           throw new HttpError(400, "Use an HTTPS YouTube or Vimeo video link");
         }
       }
+      if (
+        action === "video" &&
+        !v.body &&
+        !v.media.some((m) => m.kind === "video")
+      )
+        throw new HttpError(400, "Upload a video or enter a video link");
       if (v.equipmentId) await assertEquipmentAccess(u, v.equipmentId);
       else if (u.role !== "Admin")
         throw new HttpError(403, "Choose equipment in your assigned area");
@@ -515,6 +562,7 @@ export async function POST(req: Request) {
       const { id, ...fields } = v;
       const values = {
         ...fields,
+        ...(!id ? { createdBy: u.id } : {}),
         equipmentId: v.equipmentId || null,
         kind: action,
       };
@@ -542,7 +590,8 @@ export async function POST(req: Request) {
               z.object({
                 stepId: z.string(),
                 answer: z.boolean(),
-                photo: z.string().nullable(),
+                photo: z.string().uuid().nullable(),
+                video: z.string().uuid().nullable().optional(),
                 comment: z.string().max(1000),
                 at: z.iso.datetime().optional(),
               }),
@@ -579,7 +628,7 @@ export async function POST(req: Request) {
         steps.some(
           (s) =>
             !v.responses.some(
-              (r) => r.stepId === s.id && (!s.photo || r.photo),
+              (r) => r.stepId === s.id && (!s.photo || r.photo || r.video),
             ),
         )
       )
@@ -598,6 +647,17 @@ export async function POST(req: Request) {
         })) !== photoIds.length
       )
         throw new HttpError(403, "Photo must belong to you");
+      await ownEvidence(
+        u.id,
+        v.responses.flatMap((r) => [
+          ...(r.photo
+            ? [{ id: r.photo, kind: "photo" as const, caption: "" }]
+            : []),
+          ...(r.video
+            ? [{ id: r.video, kind: "video" as const, caption: "" }]
+            : []),
+        ]),
+      );
       if (
         new Date(v.started) > new Date() ||
         Date.now() - +new Date(v.started) > 86400000

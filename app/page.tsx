@@ -1,11 +1,20 @@
 "use client";
+import SectionFiltersBar from "./components/section-filters";
 import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import type { User, Data } from "@/lib/workspace-types";
 import type { Capability } from "@/lib/rules";
-import { api } from "@/lib/client-api";
+import {
+  api,
+  filterUrl,
+  setSectionFilters,
+  type SectionFilters,
+} from "@/lib/client-api";
 import { Field, Submit, HistoryPagingContext } from "./components/shared";
 import { emptyOperations, type OperationsData } from "@/lib/operations-types";
+const Maintenance = dynamic(() => import("./components/sections/maintenance"));
+const Reminders = dynamic(() => import("./components/sections/reminders"));
+const ExternalData = dynamic(() => import("./components/external-data"));
 const Overview = dynamic(() => import("./components/sections/overview"), {
   loading: () => <p className="muted">Loading section…</p>,
 });
@@ -85,6 +94,10 @@ const empty: Data = {
   policies: [],
 };
 export default function Home() {
+  const [filters, setFilters] = useState<SectionFilters>({
+    person: "",
+    search: "",
+  });
   const [user, setUser] = useState<User | null>(null),
     [loaded, setLoaded] = useState(false),
     [data, setData] = useState<Data>(empty),
@@ -443,6 +456,8 @@ export default function Home() {
     ["Overview", null, "◫"],
     ["Standard work", "work", "☑"],
     ["Time studies", "studies", "◷"],
+    ["Preventive maintenance", "maintenance", "⚒"],
+    ["Production results", "analytics", "▥"],
     ["DL/TL Standard Work", "audits", "◎"],
     ["Training", null, "▷"],
     ["Troubleshooting", null, "◇"],
@@ -564,7 +579,7 @@ export default function Home() {
               <span className="role-tag">{user.role}</span>
             </span>
           </header>
-          <div className="page">
+          <div className="page" key={filters.person + ":" + filters.search}>
             <div className="page-heading">
               <div>
                 <span className="eyebrow">FLOORWORK / OPERATIONS</span>
@@ -576,11 +591,19 @@ export default function Home() {
                 <p className="muted">{descriptions[tab]}</p>
               </div>
               {g.includes("export") && (
-                <a className="outline" href="/api/export">
+                <a className="outline" href={filterUrl("/api/export")}>
                   ↓ Export Excel
                 </a>
               )}
             </div>
+            <SectionFiltersBar
+              value={filters}
+              onApply={(value) => {
+                setSectionFilters(value);
+                setFilters(value);
+                void refresh().catch((e) => setError(e.message));
+              }}
+            />
             {error && (
               <div className="error" role="alert">
                 {error}
@@ -684,6 +707,12 @@ export default function Home() {
                 busy={busy}
               />
             )}
+            {tab === "Preventive maintenance" && (
+              <Maintenance userId={user.id} admin={user.role === "Admin"} />
+            )}
+            {tab === "Notifications" && (
+              <Reminders admin={user.role === "Admin"} />
+            )}
             {tab === "Notifications" && (
               <Notifications
                 data={operations}
@@ -691,6 +720,8 @@ export default function Home() {
                 busy={busy}
                 openIdea={() => setTab("Improvement ideas")}
                 openWork={() => setTab("Standard work")}
+                openProblem={() => setTab("Problem solving")}
+                openMaintenance={() => setTab("Preventive maintenance")}
               />
             )}
             {tab === "Leadership dashboard" && (
@@ -718,6 +749,28 @@ export default function Home() {
                 save={save}
                 busy={busy}
                 admin={user.role === "Admin"}
+              />
+            )}
+            {[
+              "Overview",
+              "Standard work",
+              "DL/TL Standard Work",
+              "Time studies",
+              "Training",
+              "Troubleshooting",
+              "Analytics",
+              "Downtime",
+              "Leadership dashboard",
+              "Improvement ideas",
+              "Problem solving",
+              "Preventive maintenance",
+              "Production results",
+              "Shift requirements",
+            ].includes(tab) && (
+              <ExternalData
+                section={tab}
+                admin={user.role === "Admin"}
+                canImport={g.includes("manage")}
               />
             )}
             {tab === "My account" && (

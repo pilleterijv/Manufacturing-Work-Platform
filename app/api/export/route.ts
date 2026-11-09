@@ -1,3 +1,4 @@
+import { readFilters, recordFilters } from "@/lib/filters";
 import { equipmentIds, recordScope } from "@/lib/location-access";
 import { streamWorkbook, paged } from "@/lib/excel-stream";
 import { db } from "@/lib/db";
@@ -20,11 +21,12 @@ export async function GET(req: Request) {
     const u = await requireUser("export");
     const g = await grants(u);
     const ids = await equipmentIds(u);
+    const { person, search } = readFilters(req.url);
     const asOf = new Date();
     const records = paged((cursor) =>
       db.record.findMany({
         where: {
-          AND: [recordScope(ids)],
+          AND: [recordScope(ids), recordFilters(person, search)],
           ...(g.includes("analytics") ? {} : { userId: u.id }),
           created: { lte: asOf },
           kind: {
@@ -74,6 +76,7 @@ export async function GET(req: Request) {
           "Answer",
           "Comment",
           "Photo ID",
+          "Video ID",
         ]);
         await sheets["Time observations"].addRow([
           "Study",
@@ -170,6 +173,7 @@ export async function GET(req: Request) {
                 a.answer ? "Yes" : "No",
                 a.comment,
                 a.photo,
+                a.video ?? "",
               ]);
           if (
             r.kind === "study" &&
@@ -207,7 +211,7 @@ export async function GET(req: Request) {
             }
           }
         }
-        await addOperationsSheets(book, g, u);
+        await addOperationsSheets(book, g, u, { person, search });
       },
       req.signal,
     );

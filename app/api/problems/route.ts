@@ -1,3 +1,5 @@
+import { readFilters } from "@/lib/filters";
+import { evidenceSchema, ownEvidence } from "@/lib/evidence";
 import {
   equipmentIds,
   assertEquipmentAccess,
@@ -43,6 +45,7 @@ export async function GET(req: Request) {
     const u = await requireUser("problems");
     const ids = await equipmentIds(u);
     const p = new URL(req.url).searchParams;
+    const { person } = readFilters(req.url);
     if (p.get("id")) {
       const record = await db.problem.findUnique({
         where: { id: idSchema.parse(p.get("id")) },
@@ -70,6 +73,20 @@ export async function GET(req: Request) {
       .parse(p.get("search") ?? "");
     const scope: Prisma.ProblemWhereInput = {
       equipmentId: { in: ids },
+      ...(person
+        ? {
+            AND: [
+              {
+                OR: [
+                  { ownerId: person },
+                  { reviewerId: person },
+                  { createdBy: person },
+                  { actions: { some: { ownerId: person } } },
+                ],
+              },
+            ],
+          }
+        : {}),
       ...(department
         ? { equipmentSnapshot: { path: ["department"], equals: department } }
         : {}),
@@ -300,6 +317,7 @@ export async function POST(req: Request) {
     const entry = { at: new Date().toISOString(), by: u.id, name: u.name };
     if (action === "create") {
       const input = problemSchema.parse(body);
+      await ownEvidence(u.id, input.media);
       const [equipment, people, previous] = await Promise.all([
         db.equipment.findUnique({ where: { id: input.equipmentId } }),
         db.user.count({
@@ -387,6 +405,10 @@ export async function POST(req: Request) {
         if (old.version !== version)
           throw new HttpError(409, "Action changed; refresh before saving");
         const input = actionSchema.parse(body);
+        if (input.type === "Checkpoint" && r.method === "2D")
+          throw new HttpError(400, "Checkpoints apply to 4D and 8D");
+        if (body.media === undefined) input.media = old.media as any;
+        await ownEvidence(u.id, input.media, old.media);
         await eligiblePeople(r.equipmentId, [input.ownerId], tx);
         await tx.problemAction.update({
           where: { id: aid },
@@ -434,10 +456,14 @@ export async function POST(req: Request) {
           );
         const status = z.enum(actionStatuses).parse(body.status),
           comment = z.string().trim().min(1).max(2000).parse(body.comment);
+        const media =
+          body.media === undefined ? a.media : evidenceSchema.parse(body.media);
+        await ownEvidence(u.id, media as any, a.media);
         return tx.problemAction.update({
           where: { id: aid },
           data: {
             status,
+            media: media as any,
             comment,
             completedAt: status === "Completed" ? new Date() : null,
             version: { increment: 1 },
@@ -464,6 +490,7 @@ export async function POST(req: Request) {
         if (r.actions.length >= 100)
           throw new HttpError(400, "Maximum 100 actions per record");
         const input = actionSchema.parse(body);
+        await ownEvidence(u.id, input.media);
         await eligiblePeople(r.equipmentId, [input.ownerId], tx);
         if (
           !(await tx.user.findFirst({
@@ -494,6 +521,8 @@ export async function POST(req: Request) {
       }
       const input = problemSchema.parse(body),
         status = z.enum(problemStatuses).parse(body.status);
+      if (body.media === undefined) input.media = r.media as any;
+      await ownEvidence(u.id, input.media, r.media);
       if (
         input.method !== r.method ||
         input.equipmentId !== r.equipmentId ||

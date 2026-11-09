@@ -1,3 +1,4 @@
+import { deliverReminderEmails } from "./reminders";
 import { allowedDowntimeEquipment } from "./downtime-access-rules";
 import nodemailer from "nodemailer";
 import { db } from "./db";
@@ -111,6 +112,7 @@ export async function deliverShiftEmails(
       });
     }
   }
+  const reminders = await deliverReminderEmails(transport);
   transport.close();
-  return { sent, configured: true };
+  return { sent, reminderEmailsSent: reminders.sent, configured: true };
 }

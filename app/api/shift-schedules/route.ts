@@ -1,3 +1,4 @@
+import { readFilters } from "@/lib/filters";
 import {
   equipmentIds,
   assertEquipmentAccess,
@@ -10,14 +11,36 @@ import { requireUser, jsonBody, failure, HttpError } from "@/lib/security";
 import { workScheduleSchema } from "@/lib/shift-schedule-rules";
 import { shiftConfigSchema } from "@/lib/operations-rules";
 import { smtpReady } from "@/lib/email-delivery";
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const u = await requireUser("manage");
     const ids = await equipmentIds(u);
+    const { person, search } = readFilters(req.url);
     const [schedules, people, standards, setting, health, pending, failed] =
       await Promise.all([
         db.workSchedule.findMany({
-          where: { equipmentId: { in: ids } },
+          where: {
+            equipmentId: { in: ids },
+            AND: [
+              ...(person
+                ? [
+                    {
+                      OR: [
+                        { assigneeIds: { array_contains: [person] } },
+                        { managerIds: { array_contains: [person] } },
+                      ],
+                    },
+                  ]
+                : []),
+              ...(search
+                ? [
+                    {
+                      title: { contains: search, mode: "insensitive" as const },
+                    },
+                  ]
+                : []),
+            ],
+          },
           orderBy: { id: "asc" },
           take: 1000,
         }),

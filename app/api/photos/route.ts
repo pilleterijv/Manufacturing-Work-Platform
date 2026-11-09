@@ -16,7 +16,15 @@ export async function POST(req: Request) {
   try {
     const u = await requireUser();
     const g = await grants(u);
-    if (!g.includes("work") && !g.includes("audits") && !g.includes("manage"))
+    if (
+      !g.includes("work") &&
+      !g.includes("audits") &&
+      !g.includes("manage") &&
+      !g.includes("maintenance") &&
+      !g.includes("training") &&
+      !g.includes("problems") &&
+      !g.includes("ideas")
+    )
       throw new HttpError(403, "Photo upload is not permitted");
     await limit(`photo:${u.id}`, 60, 3600);
     await limit("photo:global", 500, 3600);

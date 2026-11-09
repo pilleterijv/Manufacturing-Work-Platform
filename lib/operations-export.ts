@@ -12,6 +12,7 @@ export async function addOperationsSheets(
   book: ExportBook,
   grants: Capability[],
   user: import("./location-access").ScopedUser & { downtimeAccess: unknown },
+  filters: { person?: string; search: string } = { search: "" },
 ) {
   const ids = await equipmentIds(user);
   if (grants.includes("downtime")) {
@@ -48,6 +49,28 @@ export async function addOperationsSheets(
     const downtime = paged((cursor) =>
       db.downtime.findMany({
         where: {
+          AND: [
+            ...(filters.person
+              ? [
+                  {
+                    OR: [
+                      { startedBy: filters.person },
+                      { stoppedBy: filters.person },
+                    ],
+                  },
+                ]
+              : []),
+            ...(filters.search
+              ? [
+                  {
+                    reasonName: {
+                      contains: filters.search,
+                      mode: "insensitive" as const,
+                    },
+                  },
+                ]
+              : []),
+          ],
           startedAt: { lte: asOf },
           equipment: downtimeEquipmentWhere(user),
         },
@@ -120,7 +143,35 @@ export async function addOperationsSheets(
     const asOf = new Date();
     const ideas = paged((cursor) =>
       db.idea.findMany({
-        where: { createdAt: { lte: asOf }, equipmentId: { in: ids } },
+        where: {
+          createdAt: { lte: asOf },
+          equipmentId: { in: ids },
+          AND: [
+            ...(filters.person
+              ? [
+                  {
+                    OR: [
+                      { pilotId: filters.person },
+                      { validatorId: filters.person },
+                      { submitterId: filters.person },
+                      { createdBy: filters.person },
+                      { participants: { some: { userId: filters.person } } },
+                    ],
+                  },
+                ]
+              : []),
+            ...(filters.search
+              ? [
+                  {
+                    title: {
+                      contains: filters.search,
+                      mode: "insensitive" as const,
+                    },
+                  },
+                ]
+              : []),
+          ],
+        },
         take: 100,
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
         orderBy: { id: "asc" },

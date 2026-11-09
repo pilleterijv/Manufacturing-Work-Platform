@@ -1,4 +1,6 @@
 "use client";
+import { filterUrl } from "@/lib/client-api";
+import EvidenceInput, { EvidenceView } from "./evidence-input";
 import { departmentKey } from "@/lib/downtime-access-rules";
 import { useEffect, useState, useMemo, useRef, memo } from "react";
 import { Temporal } from "@js-temporal/polyfill";
@@ -606,6 +608,9 @@ export function ImprovementIdeas({
   save: Save;
   busy: boolean;
 }) {
+  const [ideaMedia, setIdeaMedia] = useState<
+    import("@/lib/evidence-schema").Evidence[]
+  >([]);
   const [equipmentId, setEquipment] = useState(""),
     [participants, setParticipants] = useState<string[]>([]);
   const today = localToday(data.config.timezone);
@@ -648,6 +653,7 @@ export function ImprovementIdeas({
             if (
               await save({
                 action: "idea",
+                media: ideaMedia,
                 ...values,
                 equipmentId,
                 participantIds: participants,
@@ -656,6 +662,7 @@ export function ImprovementIdeas({
               form.reset();
               setEquipment("");
               setParticipants([]);
+              setIdeaMedia([]);
             }
           }}
         >
@@ -763,6 +770,11 @@ export function ImprovementIdeas({
             private in-app message immediately. Your account is recorded as the
             creator, even when you submit on someone else's behalf.
           </p>
+          <EvidenceInput
+            label="Improvement photo or video evidence"
+            value={ideaMedia}
+            onChange={setIdeaMedia}
+          />
           <button className="primary" disabled={busy}>
             {busy ? "Saving…" : "Submit idea & notify pilot"}
           </button>
@@ -831,6 +843,7 @@ export function ImprovementIdeas({
               <p className="guide-body">{idea.currentState}</p>
               <h3>Proposed improvement</h3>
               <p className="guide-body">{idea.proposal}</p>
+              <EvidenceView media={idea.media ?? []} />
               <dl className="idea-people">
                 <dt>Submitted by</dt>
                 <dd>{idea.submitter.name}</dd>
@@ -907,12 +920,16 @@ export function Notifications({
   busy,
   openIdea,
   openWork,
+  openProblem,
+  openMaintenance,
 }: {
   data: OperationsData;
   save: Save;
   busy: boolean;
   openIdea: () => void;
   openWork: () => void;
+  openProblem?: () => void;
+  openMaintenance?: () => void;
 }) {
   return (
     <section className="panel">
@@ -940,11 +957,23 @@ export function Notifications({
           <div className="button-row">
             <button
               className="primary"
-              onClick={n.kind === "missed-work" ? openWork : openIdea}
+              onClick={
+                n.kind === "overdue"
+                  ? n.message.startsWith("Overdue pm:")
+                    ? openMaintenance
+                    : n.message.startsWith("Overdue idea:")
+                      ? openIdea
+                      : openProblem
+                  : n.kind === "missed-work"
+                    ? openWork
+                    : openIdea
+              }
             >
-              {n.kind === "missed-work"
-                ? "Open standard work"
-                : "Open improvement ideas"}
+              {n.kind === "overdue"
+                ? "Open overdue work"
+                : n.kind === "missed-work"
+                  ? "Open standard work"
+                  : "Open improvement ideas"}
             </button>
             {!n.readAt && (
               <button
@@ -998,7 +1027,9 @@ export function Leadership({
     setError("");
     try {
       const r = await fetch(
-        endpoint + "?" + new URLSearchParams({ department, from, to }),
+        filterUrl(
+          endpoint + "?" + new URLSearchParams({ department, from, to }),
+        ),
         { signal: controller.signal },
       );
       const body = await r.json();
@@ -1107,16 +1138,16 @@ export function Leadership({
             {canExport && (
               <a
                 className="outline"
-                href={
+                href={filterUrl(
                   endpoint +
-                  "?" +
-                  new URLSearchParams({
-                    department: report.department,
-                    from: report.from,
-                    to: report.to,
-                    format: "xlsx",
-                  })
-                }
+                    "?" +
+                    new URLSearchParams({
+                      department: report.department,
+                      from: report.from,
+                      to: report.to,
+                      format: "xlsx",
+                    }),
+                )}
               >
                 ↓ Export dashboard
               </a>

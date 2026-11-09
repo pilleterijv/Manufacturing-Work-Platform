@@ -1,3 +1,4 @@
+import { evidenceSchema } from "./evidence-schema";
 import { z } from "zod";
 export const methods = ["2D", "4D", "8D"] as const;
 export type Method = (typeof methods)[number];
@@ -205,6 +206,7 @@ export const defaultRequirements = (method: Method) => ({
   requireAction: true,
 });
 export const problemSchema = z.object({
+  media: evidenceSchema.default([]),
   title: z.string().trim().min(1).max(150),
   method: z.enum(methods),
   equipmentId: z.string().uuid(),
@@ -220,6 +222,7 @@ export const problemSchema = z.object({
 });
 export const actionSchema = z
   .object({
+    media: evidenceSchema.default([]),
     required: z.boolean().default(true),
     type: z.enum([
       "Containment",
