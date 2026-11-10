@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
+import RefreshControl, { useSectionRefresh } from "./refresh-control";
+import { useState, useEffect, useRef } from "react";
 import { api, filterUrl } from "@/lib/client-api";
 export default function ExternalData({
   section,
@@ -17,7 +18,9 @@ export default function ExternalData({
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
     [show, setShow] = useState(false);
+  const loadSequence = useRef(0);
   async function load(more = false) {
+    const sequence = ++loadSequence.current;
     const d = await api(
       "/api/external-data?" +
         new URLSearchParams({
@@ -25,16 +28,22 @@ export default function ExternalData({
           ...(more ? { cursor: data?.cursor ?? "" } : {}),
         }),
     );
+    if (sequence !== loadSequence.current) return;
     setData((old: any) =>
       more ? { ...d, items: [...old.items, ...d.items] } : d,
     );
   }
+  useSectionRefresh(
+    () => load(),
+    (e) => setError(e.message),
+  );
   useEffect(() => {
     load().catch((e) => setError(e.message));
   }, [section]);
   return (
     <section className="panel">
       <h2>Connected data · {section}</h2>
+      <RefreshControl onRefresh={() => load()} />
       {canExport && (
         <a
           className="outline"

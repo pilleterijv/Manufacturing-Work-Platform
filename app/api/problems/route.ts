@@ -95,6 +95,23 @@ export async function GET(req: Request) {
       ...(search
         ? {
             OR: [
+              {
+                equipmentId: {
+                  in: (
+                    await db.equipment.findMany({
+                      where: {
+                        id: { in: ids },
+                        OR: ["name", "department", "area", "line", "plant"].map(
+                          (k) => ({
+                            [k]: { contains: search, mode: "insensitive" },
+                          }),
+                        ),
+                      },
+                      select: { id: true },
+                    })
+                  ).map((e) => e.id),
+                },
+              },
               { reference: { contains: search, mode: "insensitive" } },
               { title: { contains: search, mode: "insensitive" } },
             ],

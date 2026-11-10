@@ -1,7 +1,9 @@
 "use client";
+import RefreshControl from "./refresh-control";
 import { createContext, useContext } from "react";
 export const HistoryPagingContext = createContext({
   loadMore: async () => {},
+  refresh: async () => {},
   loading: false,
   hasMore: false,
 });
@@ -58,6 +60,7 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
   const paging = useContext(HistoryPagingContext);
   return (
     <section className="panel history">
+      <RefreshControl onRefresh={paging.refresh} />
       {!records.length ? (
         <div className="empty">
           <span>◇</span>

@@ -1,4 +1,5 @@
 "use client";
+import RefreshControl, { useSectionRefresh } from "../refresh-control";
 import PersonSelect from "../person-select";
 import { useState, useEffect, useRef } from "react";
 import { api, filterUrl } from "@/lib/client-api";
@@ -29,16 +30,23 @@ export default function Maintenance({
     [uploading, setUploading] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
+  const loadSequence = useRef(0);
   async function load(more = false) {
+    const sequence = ++loadSequence.current;
     const d = await api(
       "/api/maintenance?kind=" +
         kind +
         (more && data?.cursor ? "&cursor=" + data.cursor : ""),
     );
+    if (sequence !== loadSequence.current) return;
     setData((old: any) =>
       more ? { ...d, plans: [...old.plans, ...d.plans] } : d,
     );
   }
+  useSectionRefresh(
+    () => load(),
+    (e) => setError(e.message),
+  );
   useEffect(() => {
     load().catch((e) => setError(e.message));
   }, []);
@@ -448,6 +456,7 @@ export default function Maintenance({
       )}
       <section className="panel">
         <h2>{label} completion history</h2>
+        <RefreshControl onRefresh={() => load()} />
         <p className="small muted">
           Latest 100 matching completions. Export contains the full matching
           history.

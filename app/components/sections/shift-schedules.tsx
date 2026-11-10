@@ -1,4 +1,5 @@
 "use client";
+import { useSectionRefresh } from "../refresh-control";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client-api";
 import { Field } from "../shared";
@@ -26,6 +27,10 @@ export default function ShiftSchedules() {
       setError((e as Error).message);
     }
   }
+  useSectionRefresh(
+    () => load(),
+    (e) => setError(e.message),
+  );
   useEffect(() => {
     void load();
   }, []);

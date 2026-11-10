@@ -1,4 +1,5 @@
 "use client";
+import RefreshControl, { useSectionRefresh } from "../refresh-control";
 import PersonSelect from "../person-select";
 import EvidenceInput from "../evidence-input";
 import { useEffect, useState, useRef } from "react";
@@ -158,6 +159,13 @@ export default function Problems({
       setError((e as Error).message);
     }
   }
+  useSectionRefresh(
+    async () => {
+      await load();
+      if (view === "queue") await loadQueue();
+    },
+    (e) => setError(e.message),
+  );
   useEffect(() => {
     void load();
     setSelected(null);
@@ -1050,6 +1058,7 @@ export default function Problems({
               )}
               <section className="panel table-wrap">
                 <h2>Problem-solving records</h2>
+                <RefreshControl onRefresh={() => load()} />
                 <table>
                   <thead>
                     <tr>
