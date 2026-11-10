@@ -1,11 +1,16 @@
 "use client";
 import { useState, useEffect } from "react";
+import SearchPicker, { type SearchChoice } from "./search-picker";
 import { api, type SectionFilters } from "@/lib/client-api";
 export default function SectionFiltersBar({
   value,
+  section,
+  titles = [],
   onApply,
 }: {
   value: SectionFilters;
+  section: string;
+  titles?: string[];
   onApply: (f: SectionFilters) => void;
 }) {
   const [draft, setDraft] = useState(value),
@@ -14,11 +19,40 @@ export default function SectionFiltersBar({
     >([]),
     [name, setName] = useState(""),
     [error, setError] = useState("");
+  const [options, setOptions] = useState<SearchChoice[]>([]);
+  useEffect(() => setDraft(value), [value]);
   useEffect(() => {
     api("/api/people")
       .then((r) => setPeople(r.people))
       .catch((e) => setError(e.message));
   }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      api(
+        "/api/section-options?" +
+          new URLSearchParams({ section, q: draft.search }),
+        undefined,
+        controller.signal,
+      )
+        .then((r) => !controller.signal.aborted && setOptions(r.options))
+        .catch((e) => {
+          if (!controller.signal.aborted) setError(e.message);
+        });
+    }, 200);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [section, draft.search]);
+  const choices = [
+    ...options,
+    ...[...new Set(titles)].map((value) => ({
+      value,
+      label: value,
+      kind: "Task / record",
+    })),
+  ];
   return (
     <section className="panel">
       <form
@@ -28,26 +62,30 @@ export default function SectionFiltersBar({
           onApply(draft);
         }}
       >
-        <label className="field">
-          <span>Search this section</span>
-          <input
-            maxLength={150}
-            placeholder="Equipment, tasks or descriptions"
-            value={draft.search}
-            onChange={(e) =>
-              setDraft((d) => ({ ...d, search: e.target.value }))
-            }
-          />
-        </label>
-        <label className="field">
-          <span>Find a person</span>
-          <input
-            maxLength={150}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Type a name or username"
-          />
-        </label>
+        <SearchPicker
+          label="Search this section"
+          value={draft.search}
+          onChange={(v) => setDraft((d) => ({ ...d, search: v }))}
+          onSelect={(c) => setDraft((d) => ({ ...d, search: c.value }))}
+          choices={choices}
+          placeholder="Choose or type equipment, an area or a task"
+        />
+        <SearchPicker
+          label="Find a person"
+          selection={draft.person}
+          value={name}
+          onChange={setName}
+          onSelect={(c) => {
+            setDraft((d) => ({ ...d, person: c.value }));
+            setName(c.label);
+          }}
+          choices={people.map((p) => ({
+            value: p.id,
+            label: `${p.name} (${p.username})`,
+            kind: p.active ? "Person" : "Inactive account",
+          }))}
+          placeholder="Choose or type a name or username"
+        />
         <label className="field">
           <span>Filter by person</span>
           <select

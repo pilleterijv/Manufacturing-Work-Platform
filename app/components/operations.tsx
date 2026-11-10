@@ -1,9 +1,11 @@
 "use client";
+import RefreshControl, { useSectionRefresh } from "./refresh-control";
+import { HistoryPagingContext } from "./shared";
 import PersonSelect from "./person-select";
 import { filterUrl } from "@/lib/client-api";
 import EvidenceInput, { EvidenceView } from "./evidence-input";
 import { departmentKey } from "@/lib/downtime-access-rules";
-import { useEffect, useState, useMemo, useRef, memo } from "react";
+import { useEffect, useState, useMemo, useRef, memo, useContext } from "react";
 import { Temporal } from "@js-temporal/polyfill";
 import {
   durationText,
@@ -105,6 +107,7 @@ export function Downtime({
   save: Save;
   busy: boolean;
 }) {
+  const historyRefresh = useContext(HistoryPagingContext).refresh;
   const [equipmentId, setEquipment] = useState(""),
     [reason, setReason] = useState(""),
     [recordDepartment, setRecordDepartment] = useState(""),
@@ -337,6 +340,7 @@ export function Downtime({
       )}
       <div className="section-title">
         <h2>Downtime history by shift</h2>
+        <RefreshControl onRefresh={historyRefresh} />
         <select
           aria-label="Downtime department"
           value={department}
@@ -609,6 +613,7 @@ export function ImprovementIdeas({
   save: Save;
   busy: boolean;
 }) {
+  const historyRefresh = useContext(HistoryPagingContext).refresh;
   const [ideaUploading, setIdeaUploading] = useState(false);
   const [ideaMedia, setIdeaMedia] = useState<
     import("@/lib/evidence-schema").Evidence[]
@@ -794,6 +799,7 @@ export function ImprovementIdeas({
       </section>
       <div className="section-title">
         <h2>Improvement pipeline</h2>
+        <RefreshControl onRefresh={historyRefresh} />
         <select
           aria-label="Ideas department"
           value={department}
@@ -1065,6 +1071,10 @@ export function Leadership({
       if (!controller.signal.aborted) setLoading(false);
     }
   }
+  useSectionRefresh(
+    () => load(),
+    (e) => setError(e.message),
+  );
   useEffect(() => {
     void load();
     return () => request.current?.abort();

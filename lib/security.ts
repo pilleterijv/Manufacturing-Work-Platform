@@ -1,3 +1,4 @@
+import { serviceIssue } from "./service-errors";
 import { canAdminister } from "./capabilities";
 import type { AdminPrivilege } from "./delegation-rules";
 import { grants } from "./capabilities";
@@ -112,7 +113,23 @@ export function failure(e: unknown) {
       { error: "Check the entered values" },
       { status: 400 },
     );
-  console.error("Request failed", e instanceof Error ? e.name : "unknown");
+  const issue = serviceIssue(e);
+  if (issue.kind === "database") {
+    console.error(`Database request failed [${issue.code}]: ${issue.message}`);
+    return Response.json(
+      {
+        error:
+          "The database needs attention. Contact an administrator or retry after service is restored.",
+        code: issue.code,
+      },
+      { status: 503 },
+    );
+  }
+  console.error(
+    "Request failed",
+    e instanceof Error ? e.name : "unknown",
+    issue.code,
+  );
   return Response.json(
     { error: "Unable to complete the request" },
     { status: 500 },

@@ -1,4 +1,5 @@
 "use client";
+import { useSectionRefresh } from "../refresh-control";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client-api";
 import { Field } from "../shared";
@@ -18,6 +19,10 @@ export default function DepartmentAccounts() {
     setData(d);
     return d;
   }
+  useSectionRefresh(
+    () => load(),
+    (e) => setError(e.message),
+  );
   useEffect(() => {
     load().catch((e) => setError(e.message));
   }, []);

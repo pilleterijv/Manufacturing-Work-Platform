@@ -6,6 +6,11 @@ import {
 import { canOpenSection } from "@/lib/navigation";
 import { dashboardPreferences } from "@/lib/dashboard-preferences";
 import CompanyBrand from "./components/company-brand";
+import RefreshControl, {
+  SectionRefreshContext,
+} from "./components/refresh-control";
+import SectionDashboard from "./components/section-dashboard";
+import { hasSectionViews } from "@/lib/section-views";
 import SectionFiltersBar from "./components/section-filters";
 import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
@@ -139,6 +144,21 @@ export default function Home() {
     [opsDepartment, setOpsDepartment] = useState(""),
     [opsLoading, setOpsLoading] = useState(false),
     [loadingMore, setLoadingMore] = useState(false);
+  const [sectionMode, setSectionMode] = useState<"dashboard" | "detail">(
+      "detail",
+    ),
+    [expanded, setExpanded] = useState<Record<string, boolean>>({}),
+    [refreshRevision, setRefreshRevision] = useState(0),
+    [suggestedTitles, setSuggestedTitles] = useState<string[]>([]);
+  async function refreshSection() {
+    setError("");
+    setNotice("");
+    opsGeneration.current++;
+    historyGeneration.current++;
+    await refresh();
+    setRefreshRevision((v) => v + 1);
+  }
+  useEffect(() => setSuggestedTitles([]), [tab]);
   const initialHome = useRef<string | null>(null);
   const refreshEpoch = useRef(0),
     currentView = useRef(tab);
@@ -586,430 +606,536 @@ export default function Home() {
     "My account": "Manage your password and your signed-in devices.",
   };
   return (
-    <HistoryPagingContext.Provider
-      value={{
-        loadMore,
-        loading: loadingMore,
-        hasMore: data.page?.hasMore ?? false,
-      }}
-    >
-      <div className="shell">
-        <aside className="sidebar">
-          <CompanyBrand />
-          <div className="workspace">
-            <i /> Manufacturing workspace<span>OPERATIONS PLATFORM</span>
-          </div>
-          <span className="nav-label">WORKSPACE</span>
-          <nav>
-            {nav
-              .filter(([name]) => canOpenSection(user, name))
-              .map(([name, , icon]) => (
-                <button
-                  key={name}
-                  className={tab === name ? "nav-item active" : "nav-item"}
-                  onClick={() => {
-                    setTab(name);
-                    setOpsDepartment("");
-                    setError("");
-                    setNotice("");
-                  }}
-                >
-                  <span>{icon}</span>
-                  {name}
-                  {name === "Notifications" &&
-                    operations.notifications.some((n) => !n.readAt) && (
-                      <span className="notification-count">
-                        {
-                          operations.notifications.filter((n) => !n.readAt)
-                            .length
-                        }
-                      </span>
+    <SectionRefreshContext.Provider value={refreshRevision}>
+      <HistoryPagingContext.Provider
+        value={{
+          loadMore,
+          refresh: refreshSection,
+          loading: loadingMore,
+          hasMore: data.page?.hasMore ?? false,
+        }}
+      >
+        <div className="shell">
+          <aside className="sidebar">
+            <CompanyBrand />
+            <div className="workspace">
+              <i /> Manufacturing workspace<span>OPERATIONS PLATFORM</span>
+            </div>
+            <span className="nav-label">WORKSPACE</span>
+            <nav>
+              {nav
+                .filter(([name]) => canOpenSection(user, name))
+                .map(([name, , icon]) => (
+                  <div key={name} className="nav-group">
+                    <button
+                      aria-expanded={
+                        hasSectionViews(name) ? !!expanded[name] : undefined
+                      }
+                      className={tab === name ? "nav-item active" : "nav-item"}
+                      onClick={() => {
+                        setTab(name);
+                        setSectionMode("detail");
+                        setExpanded((old) => ({
+                          ...old,
+                          [name]: tab !== name ? true : !old[name],
+                        }));
+                        setOpsDepartment("");
+                        setError("");
+                        setNotice("");
+                      }}
+                    >
+                      <span>{icon}</span>
+                      {name}
+                      {name === "Notifications" &&
+                        operations.notifications.some((n) => !n.readAt) && (
+                          <span className="notification-count">
+                            {
+                              operations.notifications.filter((n) => !n.readAt)
+                                .length
+                            }
+                          </span>
+                        )}
+                      {hasSectionViews(name) ? (
+                        <b aria-hidden="true">{expanded[name] ? "⌃" : "⌄"}</b>
+                      ) : (
+                        tab === name && <b>•</b>
+                      )}
+                    </button>
+                    {hasSectionViews(name) && expanded[name] && (
+                      <div className="nav-submenu" aria-label={`${name} views`}>
+                        <button
+                          className={
+                            tab === name && sectionMode === "dashboard"
+                              ? "active"
+                              : ""
+                          }
+                          aria-label={`${name} dashboard`}
+                          onClick={() => {
+                            setTab(name);
+                            setSectionMode("dashboard");
+                            setOpsDepartment("");
+                          }}
+                        >
+                          ▥ Dashboard
+                        </button>
+                        <button
+                          className={
+                            tab === name && sectionMode === "detail"
+                              ? "active"
+                              : ""
+                          }
+                          aria-label={`${name} in detail`}
+                          onClick={() => {
+                            setTab(name);
+                            setSectionMode("detail");
+                            setOpsDepartment("");
+                          }}
+                        >
+                          ☷ In detail
+                        </button>
+                      </div>
                     )}
-                  {tab === name && <b>•</b>}
-                </button>
-              ))}
-          </nav>
-          <div className="sidebar-bottom">
-            <div className="avatar">{user.name.slice(0, 2).toUpperCase()}</div>
-            <div>
-              <strong>{user.name}</strong>
-              <small>{user.role}</small>
-            </div>
-            <button
-              aria-label="Sign out"
-              onClick={() => void account({ action: "logout" })}
-            >
-              →
-            </button>
-          </div>
-        </aside>
-        <main className="main">
-          <header className="topbar">
-            <span>
-              Workspace <span className="muted"> / {tab}</span>
-            </span>
-            <span className="status">
-              <i /> Database connected{" "}
-              <span className="role-tag">{user.role}</span>
-            </span>
-          </header>
-          <div className="page" key={filters.person + ":" + filters.search}>
-            <div className="page-heading">
+                  </div>
+                ))}
+            </nav>
+            <div className="sidebar-bottom">
+              <div className="avatar">
+                {user.name.slice(0, 2).toUpperCase()}
+              </div>
               <div>
-                <span className="eyebrow">MANUFACTURING / OPERATIONS</span>
-                <h1>
-                  {tab === "Overview"
-                    ? `Welcome, ${user.name.split(" ")[0]}.`
-                    : tab}
-                </h1>
-                <p className="muted">{descriptions[tab]}</p>
+                <strong>{user.name}</strong>
+                <small>{user.role}</small>
               </div>
-              {g.includes("export") && (
-                <a
-                  className="outline"
-                  href={filterUrl(
-                    tab === "5S audits"
-                      ? "/api/five-s?format=xlsx"
-                      : tab === "Defect reporting"
-                        ? "/api/defects?format=xlsx"
-                        : tab === "TPM / CIL"
-                          ? "/api/maintenance?kind=cil&format=xlsx"
-                          : tab === "Preventive maintenance"
-                            ? "/api/maintenance?format=xlsx"
-                            : tab === "Production results"
-                              ? "/api/external-data?section=Production%20results&format=xlsx"
-                              : tab === "Problem solving"
-                                ? "/api/problems?format=xlsx"
-                                : "/api/export",
-                  )}
-                >
-                  ↓ Export Excel
-                </a>
-              )}
-            </div>
-            <SectionFiltersBar
-              value={filters}
-              onApply={(value) => {
-                opsGeneration.current++;
-                historyGeneration.current++;
-                refreshEpoch.current++;
-                setSectionFilters(value);
-                setFilters(value);
-                setPlatformReady(false);
-                setPlatformTab("");
-                setData(empty);
-                setOperationsReady(false);
-                setOperations(emptyOperations);
-              }}
-            />
-            {error && (
-              <div className="error" role="alert">
-                {error}
-              </div>
-            )}
-            {notice && (
-              <div className="notice" role="status">
-                ✓ {notice}
-              </div>
-            )}
-            {((["Downtime", "Improvement ideas"].includes(tab) &&
-              !operationsReady) ||
-              (![
-                "Overview",
-                "Notifications",
-                "Leadership dashboard",
-                "My account",
-                "Downtime",
-                "Improvement ideas",
-              ].includes(tab) &&
-                !sectionReady)) && (
-              <p className="muted" role="status">
-                Loading section data…
-              </p>
-            )}
-            {tab === "Overview" && (
-              <PersonalDashboard
-                key={JSON.stringify(preferences)}
-                preferences={preferences}
-                go={setTab}
-              />
-            )}
-            {tab === "Overview" && (
-              <Overview
-                navigationUser={user}
-                preferences={preferences}
-                data={data}
-                go={setTab}
-                grants={g}
-                admin={user.role === "Admin"}
+              <button
+                aria-label="Sign out"
+                onClick={() => void account({ action: "logout" })}
               >
-                {(g.includes("dashboard") || g.includes("leadership")) && (
+                →
+              </button>
+            </div>
+          </aside>
+          <main className="main">
+            <header className="topbar">
+              <span>
+                Workspace <span className="muted"> / {tab}</span>
+              </span>
+              <span className="status">
+                <i /> Signed in <span className="role-tag">{user.role}</span>
+              </span>
+            </header>
+            <div className="page" key={filters.person + ":" + filters.search}>
+              <div className="page-heading">
+                <div>
+                  <span className="eyebrow">MANUFACTURING / OPERATIONS</span>
+                  <h1>
+                    {tab === "Overview"
+                      ? `Welcome, ${user.name.split(" ")[0]}.`
+                      : tab}
+                  </h1>
+                  <p className="muted">{descriptions[tab]}</p>
+                </div>
+                <RefreshControl
+                  onRefresh={refreshSection}
+                  label="Refresh section"
+                />
+                {g.includes("export") && (
+                  <a
+                    className="outline"
+                    href={filterUrl(
+                      tab === "5S audits"
+                        ? "/api/five-s?format=xlsx"
+                        : tab === "Defect reporting"
+                          ? "/api/defects?format=xlsx"
+                          : tab === "TPM / CIL"
+                            ? "/api/maintenance?kind=cil&format=xlsx"
+                            : tab === "Preventive maintenance"
+                              ? "/api/maintenance?format=xlsx"
+                              : tab === "Production results"
+                                ? "/api/external-data?section=Production%20results&format=xlsx"
+                                : tab === "Problem solving"
+                                  ? "/api/problems?format=xlsx"
+                                  : "/api/export",
+                    )}
+                  >
+                    ↓ Export Excel
+                  </a>
+                )}
+              </div>
+              <SectionFiltersBar
+                key={tab}
+                section={tab}
+                titles={[
+                  ...data.standards.map((s) => s.title),
+                  ...data.records
+                    .map((r) => r.data?.title || r.data?.snapshot?.title)
+                    .filter(Boolean),
+                  ...data.content.map((c) => c.title),
+                  ...suggestedTitles,
+                ]}
+                value={filters}
+                onApply={(value) => {
+                  opsGeneration.current++;
+                  historyGeneration.current++;
+                  refreshEpoch.current++;
+                  setSectionFilters(value);
+                  setFilters(value);
+                  setPlatformReady(false);
+                  setPlatformTab("");
+                  setData(empty);
+                  setOperationsReady(false);
+                  setOperations(emptyOperations);
+                }}
+              />
+              {error && (
+                <div className="error" role="alert">
+                  {error}
+                </div>
+              )}
+              {notice && (
+                <div className="notice" role="status">
+                  ✓ {notice}
+                </div>
+              )}
+              {((["Downtime", "Improvement ideas"].includes(tab) &&
+                !operationsReady) ||
+                (![
+                  "Overview",
+                  "Notifications",
+                  "Leadership dashboard",
+                  "My account",
+                  "Downtime",
+                  "Improvement ideas",
+                ].includes(tab) &&
+                  !sectionReady)) && (
+                <p className="muted" role="status">
+                  Loading section data…
+                </p>
+              )}
+              {hasSectionViews(tab) && (
+                <div
+                  className="section-view-switch"
+                  role="group"
+                  aria-label={`${tab} view mode`}
+                >
+                  <button
+                    className={
+                      sectionMode === "dashboard" ? "primary" : "outline"
+                    }
+                    aria-pressed={sectionMode === "dashboard"}
+                    onClick={() => setSectionMode("dashboard")}
+                  >
+                    Dashboard
+                  </button>
+                  <button
+                    className={sectionMode === "detail" ? "primary" : "outline"}
+                    aria-pressed={sectionMode === "detail"}
+                    onClick={() => setSectionMode("detail")}
+                  >
+                    In detail
+                  </button>
+                </div>
+              )}
+              {hasSectionViews(tab) && sectionMode === "dashboard" && (
+                <SectionDashboard
+                  key={tab + filters.search + filters.person}
+                  section={tab}
+                  openDetails={() => setSectionMode("detail")}
+                  onTitles={setSuggestedTitles}
+                />
+              )}
+              <div hidden={hasSectionViews(tab) && sectionMode === "dashboard"}>
+                {tab === "Overview" && (
+                  <PersonalDashboard
+                    key={JSON.stringify(preferences)}
+                    preferences={preferences}
+                    go={setTab}
+                  />
+                )}
+                {tab === "Overview" && (
+                  <Overview
+                    navigationUser={user}
+                    preferences={preferences}
+                    data={data}
+                    go={setTab}
+                    grants={g}
+                    admin={user.role === "Admin"}
+                  >
+                    {(g.includes("dashboard") || g.includes("leadership")) && (
+                      <Leadership
+                        timezone={operations.config.timezone}
+                        canExport={g.includes("export")}
+                        endpoint="/api/dashboard"
+                        canOverall={g.includes("leadership")}
+                      />
+                    )}
+                  </Overview>
+                )}
+                {tab === "Dashboard settings" && (
+                  <DashboardSettings
+                    saved={(value) =>
+                      setUser((u) =>
+                        u ? { ...u, dashboardPreferences: value } : u,
+                      )
+                    }
+                  />
+                )}
+                {tab === "Assistant" && (
+                  <Assistant
+                    go={(name) => {
+                      if (canOpenSection(user, name)) setTab(name);
+                    }}
+                  />
+                )}
+                {tab === "Locations" && sectionReady && (
+                  <LocationsEditor data={data} save={save} busy={busy} />
+                )}
+                {tab === "Accounts" && user.role !== "Admin" && (
+                  <DepartmentAccounts />
+                )}
+                {tab === "Problem solving" && (
+                  <Problems
+                    userId={user.id}
+                    userName={user.name}
+                    canExport={g.includes("export")}
+                  />
+                )}
+                {tab === "Standard work" && sectionReady && (
+                  <Work data={data} save={save} busy={busy} audit={false} />
+                )}
+                {tab === "DL/TL Standard Work" && sectionReady && (
+                  <Work data={data} save={save} busy={busy} audit />
+                )}
+                {tab === "Time studies" && sectionReady && (
+                  <Studies data={data} save={save} busy={busy} />
+                )}
+                {tab === "Training" && sectionReady && (
+                  <Content
+                    data={data}
+                    kind="video"
+                    manage={g.includes("training")}
+                    save={save}
+                    busy={busy}
+                  />
+                )}
+                {tab === "Troubleshooting" && sectionReady && (
+                  <Content
+                    data={data}
+                    kind="guide"
+                    manage={
+                      g.includes("manage") ||
+                      privileges.includes("resources.manage")
+                    }
+                    save={save}
+                    busy={busy}
+                  />
+                )}
+                {tab === "Downtime" && operationsReady && (
+                  <Downtime
+                    data={operations}
+                    equipment={operations.equipment}
+                    admin={user.role === "Admin"}
+                    department={opsDepartment}
+                    onDepartment={setOpsDepartment}
+                    loadMore={loadMoreOperations}
+                    loadingMore={opsLoading}
+                    save={(b) => save(b, "/api/operations")}
+                    busy={busy}
+                  />
+                )}
+                {tab === "Improvement ideas" && operationsReady && (
+                  <ImprovementIdeas
+                    data={operations}
+                    equipment={data.equipment}
+                    userId={user.id}
+                    admin={user.role === "Admin"}
+                    department={opsDepartment}
+                    onDepartment={setOpsDepartment}
+                    loadMore={loadMoreOperations}
+                    loadingMore={opsLoading}
+                    save={(b) => save(b, "/api/operations")}
+                    busy={busy}
+                  />
+                )}
+                {tab === "5S audits" && (
+                  <FiveS userId={user.id} admin={user.role === "Admin"} />
+                )}
+                {tab === "Defect reporting" && (
+                  <Defects userId={user.id} admin={user.role === "Admin"} />
+                )}
+                {tab === "TPM / CIL" && (
+                  <Maintenance
+                    key="cil"
+                    kind="cil"
+                    userId={user.id}
+                    admin={user.role === "Admin"}
+                  />
+                )}
+                {tab === "Preventive maintenance" && (
+                  <Maintenance
+                    key="pm"
+                    userId={user.id}
+                    admin={user.role === "Admin"}
+                  />
+                )}
+                {tab === "Notifications" && (
+                  <Reminders admin={user.role === "Admin"} />
+                )}
+                {tab === "Notifications" && (
+                  <Notifications
+                    data={operations}
+                    save={(b) => save(b, "/api/operations")}
+                    busy={busy}
+                    openIdea={() => setTab("Improvement ideas")}
+                    openWork={() => setTab("Standard work")}
+                    openProblem={() => setTab("Problem solving")}
+                    openMaintenance={() => setTab("Preventive maintenance")}
+                    openCil={() => setTab("TPM / CIL")}
+                    openAccounts={() => setTab("Accounts")}
+                  />
+                )}
+                {tab === "Leadership dashboard" && (
                   <Leadership
                     timezone={operations.config.timezone}
                     canExport={g.includes("export")}
-                    endpoint="/api/dashboard"
-                    canOverall={g.includes("leadership")}
                   />
                 )}
-              </Overview>
-            )}
-            {tab === "Dashboard settings" && (
-              <DashboardSettings
-                saved={(value) =>
-                  setUser((u) =>
-                    u ? { ...u, dashboardPreferences: value } : u,
-                  )
-                }
-              />
-            )}
-            {tab === "Assistant" && (
-              <Assistant
-                go={(name) => {
-                  if (canOpenSection(user, name)) setTab(name);
-                }}
-              />
-            )}
-            {tab === "Locations" && sectionReady && (
-              <LocationsEditor data={data} save={save} busy={busy} />
-            )}
-            {tab === "Accounts" && user.role !== "Admin" && (
-              <DepartmentAccounts />
-            )}
-            {tab === "Problem solving" && (
-              <Problems
-                userId={user.id}
-                userName={user.name}
-                canExport={g.includes("export")}
-              />
-            )}
-            {tab === "Standard work" && sectionReady && (
-              <Work data={data} save={save} busy={busy} audit={false} />
-            )}
-            {tab === "DL/TL Standard Work" && sectionReady && (
-              <Work data={data} save={save} busy={busy} audit />
-            )}
-            {tab === "Time studies" && sectionReady && (
-              <Studies data={data} save={save} busy={busy} />
-            )}
-            {tab === "Training" && sectionReady && (
-              <Content
-                data={data}
-                kind="video"
-                manage={g.includes("training")}
-                save={save}
-                busy={busy}
-              />
-            )}
-            {tab === "Troubleshooting" && sectionReady && (
-              <Content
-                data={data}
-                kind="guide"
-                manage={
-                  g.includes("manage") ||
-                  privileges.includes("resources.manage")
-                }
-                save={save}
-                busy={busy}
-              />
-            )}
-            {tab === "Downtime" && operationsReady && (
-              <Downtime
-                data={operations}
-                equipment={operations.equipment}
-                admin={user.role === "Admin"}
-                department={opsDepartment}
-                onDepartment={setOpsDepartment}
-                loadMore={loadMoreOperations}
-                loadingMore={opsLoading}
-                save={(b) => save(b, "/api/operations")}
-                busy={busy}
-              />
-            )}
-            {tab === "Improvement ideas" && operationsReady && (
-              <ImprovementIdeas
-                data={operations}
-                equipment={data.equipment}
-                userId={user.id}
-                admin={user.role === "Admin"}
-                department={opsDepartment}
-                onDepartment={setOpsDepartment}
-                loadMore={loadMoreOperations}
-                loadingMore={opsLoading}
-                save={(b) => save(b, "/api/operations")}
-                busy={busy}
-              />
-            )}
-            {tab === "5S audits" && (
-              <FiveS userId={user.id} admin={user.role === "Admin"} />
-            )}
-            {tab === "Defect reporting" && (
-              <Defects userId={user.id} admin={user.role === "Admin"} />
-            )}
-            {tab === "TPM / CIL" && (
-              <Maintenance
-                key="cil"
-                kind="cil"
-                userId={user.id}
-                admin={user.role === "Admin"}
-              />
-            )}
-            {tab === "Preventive maintenance" && (
-              <Maintenance
-                key="pm"
-                userId={user.id}
-                admin={user.role === "Admin"}
-              />
-            )}
-            {tab === "Notifications" && (
-              <Reminders admin={user.role === "Admin"} />
-            )}
-            {tab === "Notifications" && (
-              <Notifications
-                data={operations}
-                save={(b) => save(b, "/api/operations")}
-                busy={busy}
-                openIdea={() => setTab("Improvement ideas")}
-                openWork={() => setTab("Standard work")}
-                openProblem={() => setTab("Problem solving")}
-                openMaintenance={() => setTab("Preventive maintenance")}
-                openCil={() => setTab("TPM / CIL")}
-                openAccounts={() => setTab("Accounts")}
-              />
-            )}
-            {tab === "Leadership dashboard" && (
-              <Leadership
-                timezone={operations.config.timezone}
-                canExport={g.includes("export")}
-              />
-            )}
-            {tab === "Shift requirements" &&
-              canOpenSection(user, "Shift requirements") && <ShiftSchedules />}
-            {tab === "Integrations" && user.role === "Admin" && (
-              <Integrations />
-            )}
-            {tab === "Manage" &&
-              !g.includes("manage") &&
-              !privileges.includes("standards.manage") &&
-              !privileges.includes("equipment.manage") &&
-              privileges.includes("resources.manage") && (
-                <section className="panel">
-                  <h2>Guide management</h2>
-                  <p>
-                    Your delegated guide editor is available in Troubleshooting.
-                  </p>
-                  <button
-                    className="primary"
-                    onClick={() => setTab("Troubleshooting")}
-                  >
-                    Open troubleshooting editor
-                  </button>
-                </section>
-              )}
-            {tab === "Manage" && sectionReady && (
-              <Manage
-                data={data}
-                save={save}
-                busy={busy}
-                canStandards={
-                  g.includes("manage") ||
-                  privileges.includes("standards.manage")
-                }
-                canEquipment={
-                  g.includes("manage") ||
-                  privileges.includes("equipment.manage")
-                }
-              />
-            )}
-            {tab === "Analytics" && sectionReady && <Analytics data={data} />}
-            {tab === "Permissions" && sectionReady && (
-              <Permissions data={data} save={save} busy={busy} />
-            )}
-            {tab === "Accounts" && user.role === "Admin" && sectionReady && (
-              <Accounts
-                reload={() => void refresh()}
-                data={data}
-                save={save}
-                busy={busy}
-                admin={user.role === "Admin"}
-              />
-            )}
-            {[
-              "Overview",
-              "Standard work",
-              "DL/TL Standard Work",
-              "Time studies",
-              "Training",
-              "Troubleshooting",
-              "Analytics",
-              "Downtime",
-              "Leadership dashboard",
-              "Improvement ideas",
-              "Problem solving",
-              "Preventive maintenance",
-              "Production results",
-              "Shift requirements",
-            ].includes(tab) && (
-              <ExternalData
-                key={tab}
-                section={tab}
-                admin={user.role === "Admin"}
-                canImport={g.includes("manage")}
-                canExport={g.includes("export")}
-              />
-            )}
-            {tab === "My account" && (
-              <section className="panel narrow">
-                <h2>Change password</h2>
-                <p className="muted">
-                  Changing your password signs out every device.
-                </p>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const f = new FormData(e.currentTarget);
-                    void account({
-                      action: "password",
-                      current: f.get("current"),
-                      password: f.get("password"),
-                    });
-                  }}
-                >
-                  <Field label="Current password">
-                    <input
-                      name="current"
-                      type="password"
-                      autoComplete="current-password"
-                      required
+                {tab === "Shift requirements" &&
+                  canOpenSection(user, "Shift requirements") && (
+                    <ShiftSchedules />
+                  )}
+                {tab === "Integrations" && user.role === "Admin" && (
+                  <Integrations />
+                )}
+                {tab === "Manage" &&
+                  !g.includes("manage") &&
+                  !privileges.includes("standards.manage") &&
+                  !privileges.includes("equipment.manage") &&
+                  privileges.includes("resources.manage") && (
+                    <section className="panel">
+                      <h2>Guide management</h2>
+                      <p>
+                        Your delegated guide editor is available in
+                        Troubleshooting.
+                      </p>
+                      <button
+                        className="primary"
+                        onClick={() => setTab("Troubleshooting")}
+                      >
+                        Open troubleshooting editor
+                      </button>
+                    </section>
+                  )}
+                {tab === "Manage" && sectionReady && (
+                  <Manage
+                    data={data}
+                    save={save}
+                    busy={busy}
+                    canStandards={
+                      g.includes("manage") ||
+                      privileges.includes("standards.manage")
+                    }
+                    canEquipment={
+                      g.includes("manage") ||
+                      privileges.includes("equipment.manage")
+                    }
+                  />
+                )}
+                {tab === "Analytics" && sectionReady && (
+                  <Analytics data={data} />
+                )}
+                {tab === "Permissions" && sectionReady && (
+                  <Permissions data={data} save={save} busy={busy} />
+                )}
+                {tab === "Accounts" &&
+                  user.role === "Admin" &&
+                  sectionReady && (
+                    <Accounts
+                      reload={() => void refresh()}
+                      data={data}
+                      save={save}
+                      busy={busy}
+                      admin={user.role === "Admin"}
                     />
-                  </Field>
-                  <Field label="New password">
-                    <input
-                      name="password"
-                      type="password"
-                      minLength={12}
-                      maxLength={128}
-                      autoComplete="new-password"
-                      required
-                    />
-                  </Field>
-                  <Submit busy={busy}>Change password</Submit>
-                </form>
-                <hr />
-                <button
-                  className="outline"
-                  onClick={() => void account({ action: "logoutAll" })}
-                >
-                  Sign out all devices
-                </button>
-              </section>
-            )}
-            <footer>
-              MANUFACTURING WORK PLATFORM{" "}
-              <span>Built for the people behind the process.</span>
-            </footer>
-          </div>
-        </main>
-      </div>
-    </HistoryPagingContext.Provider>
+                  )}
+                {[
+                  "Overview",
+                  "Standard work",
+                  "DL/TL Standard Work",
+                  "Time studies",
+                  "Training",
+                  "Troubleshooting",
+                  "Analytics",
+                  "Downtime",
+                  "Leadership dashboard",
+                  "Improvement ideas",
+                  "Problem solving",
+                  "Preventive maintenance",
+                  "Production results",
+                  "Shift requirements",
+                ].includes(tab) && (
+                  <ExternalData
+                    key={tab}
+                    section={tab}
+                    admin={user.role === "Admin"}
+                    canImport={g.includes("manage")}
+                    canExport={g.includes("export")}
+                  />
+                )}
+                {tab === "My account" && (
+                  <section className="panel narrow">
+                    <h2>Change password</h2>
+                    <p className="muted">
+                      Changing your password signs out every device.
+                    </p>
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const f = new FormData(e.currentTarget);
+                        void account({
+                          action: "password",
+                          current: f.get("current"),
+                          password: f.get("password"),
+                        });
+                      }}
+                    >
+                      <Field label="Current password">
+                        <input
+                          name="current"
+                          type="password"
+                          autoComplete="current-password"
+                          required
+                        />
+                      </Field>
+                      <Field label="New password">
+                        <input
+                          name="password"
+                          type="password"
+                          minLength={12}
+                          maxLength={128}
+                          autoComplete="new-password"
+                          required
+                        />
+                      </Field>
+                      <Submit busy={busy}>Change password</Submit>
+                    </form>
+                    <hr />
+                    <button
+                      className="outline"
+                      onClick={() => void account({ action: "logoutAll" })}
+                    >
+                      Sign out all devices
+                    </button>
+                  </section>
+                )}
+              </div>
+              <footer>
+                MANUFACTURING WORK PLATFORM{" "}
+                <span>Built for the people behind the process.</span>
+              </footer>
+            </div>
+          </main>
+        </div>
+      </HistoryPagingContext.Provider>
+    </SectionRefreshContext.Provider>
   );
 }

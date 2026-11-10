@@ -1,4 +1,5 @@
 "use client";
+import RefreshControl, { useSectionRefresh } from "../refresh-control";
 import { useEffect, useRef, useState } from "react";
 import { api, filterUrl } from "@/lib/client-api";
 import { fiveSPillars } from "@/lib/floor-rules";
@@ -21,7 +22,16 @@ export default function FiveS({
     [busy, setBusy] = useState(false),
     [uploading, setUploading] = useState(false);
   const uploads = useRef(0);
-  const load = () => api("/api/five-s").then(setData);
+  const loadSequence = useRef(0);
+  const load = async () => {
+    const sequence = ++loadSequence.current;
+    const next = await api("/api/five-s");
+    if (sequence === loadSequence.current) setData(next);
+  };
+  useSectionRefresh(
+    () => load(),
+    (e) => setError(e.message),
+  );
   useEffect(() => {
     load().catch((e) => setError(e.message));
   }, []);
@@ -402,6 +412,7 @@ export default function FiveS({
       )}
       <section className="panel">
         <h2>5S audit history</h2>
+        <RefreshControl onRefresh={() => load()} />
         <p className="small muted">
           Latest 100 matching audits. Export includes the full matching history.
         </p>

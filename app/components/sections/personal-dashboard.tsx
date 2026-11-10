@@ -1,4 +1,5 @@
 "use client";
+import { useSectionRefresh } from "../refresh-control";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client-api";
 import {
@@ -18,6 +19,12 @@ export default function PersonalDashboard({
       dashboardPreferences(preferences).defaultScope,
     ),
     [error, setError] = useState("");
+  useSectionRefresh(
+    async () => {
+      setData(await api("/api/personal-dashboard?scope=" + scope));
+    },
+    (e) => setError(e.message),
+  );
   useEffect(() => {
     const c = new AbortController();
     api("/api/personal-dashboard?scope=" + scope, undefined, c.signal)

@@ -29,7 +29,25 @@ export async function GET(req: Request) {
       where: {
         locationId: { in: ids },
         ...(person ? { assigneeIds: { array_contains: [person] } } : {}),
-        ...(search ? { title: { contains: search, mode: "insensitive" } } : {}),
+        ...(search
+          ? {
+              OR: [
+                { title: { contains: search, mode: "insensitive" as const } },
+                {
+                  locationId: {
+                    in: areas
+                      .filter((a) =>
+                        [a.plant, a.department, a.area, a.line]
+                          .join(" ")
+                          .toLowerCase()
+                          .includes(search.toLowerCase()),
+                      )
+                      .map((a) => a.id),
+                  },
+                },
+              ],
+            }
+          : {}),
       },
       orderBy: { title: "asc" },
     });
