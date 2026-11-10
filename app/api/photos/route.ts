@@ -1,3 +1,4 @@
+import { adminPrivileges } from "@/lib/capabilities";
 import sharp from "sharp";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -16,7 +17,17 @@ export async function POST(req: Request) {
   try {
     const u = await requireUser();
     const g = await grants(u);
+    const mediaDelegate = (await adminPrivileges(u)).some((p) =>
+      [
+        "standards.manage",
+        "resources.manage",
+        "training.manage",
+        "maintenance.manage",
+        "fiveS.manage",
+      ].includes(p),
+    );
     if (
+      !mediaDelegate &&
       !g.includes("work") &&
       !g.includes("audits") &&
       !g.includes("manage") &&

@@ -4,6 +4,10 @@ A browser application for standard work, photographic evidence, time studies, DL
 
 This update adds area-based **5S audits**, machine **TPM/CIL**, **defect reporting with optional MaintainX work-order submission**, personal/assigned-department dashboards, registration approval, password-recovery emails and searchable account pickers. See [setup and limits](docs/five-s-tpm-access.md) and [screenshots](docs/screenshots/five-s-tpm). Migration 011 preserves existing work. Live MaintainX/SMTP require private IT setup; no company work orders or emails have been sent by development tests.
 
+## Personal dashboards, account delegation and assistant
+
+Each account can choose its login section and dashboard panels. Managers manage ordinary accounts wholly within their assigned scope; Admin can grant specific additional permissions to individual accounts. Neutral branding replaces the company-specific wordmark. The read-only Assistant provides permitted built-in navigation help plus optional OpenAI answers after private server setup and Admin enablement. See [setup and boundaries](docs/personal-dashboards-access-assistant.md) and [current screenshots](docs/screenshots/personal-access). Migration 012 preserves existing work and role policies.
+
 ## Orange / white company styling
 
 The interface uses an orange/white theme with neutral Manufacturing Work Platform branding. Named company branding has been removed. See [brand asset handover](docs/company-branding.md).

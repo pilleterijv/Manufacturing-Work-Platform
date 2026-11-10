@@ -256,19 +256,48 @@ export const helpTopics: HelpTopic[] = [
 export const permittedHelp = (u: NavigationUser) =>
   helpTopics.filter((t) => canOpenSection(u, t.section));
 export function guideAnswer(question: string, topics: HelpTopic[]) {
-  const words =
-    question
-      .toLowerCase()
-      .match(/[a-z0-9]+/g)
-      ?.filter((w) => w.length > 2) ?? [];
+  const stop = new Set([
+    "how",
+    "what",
+    "where",
+    "can",
+    "could",
+    "would",
+    "should",
+    "the",
+    "this",
+    "that",
+    "and",
+    "for",
+    "with",
+    "from",
+    "please",
+    "help",
+    "want",
+    "need",
+    "use",
+    "do",
+    "to",
+    "is",
+    "it",
+    "an",
+    "of",
+  ]);
+  const words = [
+    ...new Set(question.toLowerCase().match(/[a-z0-9]+/g) ?? []),
+  ].filter((w) => w.length >= 2 && !stop.has(w));
   const scored = topics
-    .map((t) => ({
-      t,
-      score: words.reduce(
-        (n, w) => n + (t.keywords.toLowerCase().includes(w) ? 1 : 0),
-        0,
-      ),
-    }))
+    .map((t) => {
+      const title = new Set(t.section.toLowerCase().match(/[a-z0-9]+/g) ?? []),
+        keywords = new Set(t.keywords.toLowerCase().match(/[a-z0-9]+/g) ?? []);
+      return {
+        t,
+        score: words.reduce(
+          (n, w) => n + (title.has(w) ? 2 : keywords.has(w) ? 1 : 0),
+          0,
+        ),
+      };
+    })
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score);
   const found = scored.slice(0, 3).map((x) => x.t);

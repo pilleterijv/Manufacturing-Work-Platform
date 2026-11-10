@@ -371,6 +371,13 @@ export async function POST(req: Request) {
       );
       if (area) v.area = area.area;
       if (
+        !allowedDowntimeEquipment(u.role, u.workspaceAccess, { ...v, id: "" })
+      )
+        throw new HttpError(
+          403,
+          "Location is outside your assigned departments/areas",
+        );
+      if (
         rows.some(
           (r) =>
             same(r.plant, v.plant) &&
@@ -380,13 +387,6 @@ export async function POST(req: Request) {
         )
       )
         throw new HttpError(409, "This location already exists");
-      if (
-        !allowedDowntimeEquipment(u.role, u.workspaceAccess, { ...v, id: "" })
-      )
-        throw new HttpError(
-          403,
-          "Location is outside your assigned departments/areas",
-        );
       await db.location.create({ data: v });
       return Response.json({ ok: true });
     }

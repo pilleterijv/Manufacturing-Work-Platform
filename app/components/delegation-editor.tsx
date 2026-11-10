@@ -67,7 +67,25 @@ export default function DelegationEditor({ userId }: { userId: string }) {
                 checked={target.extraGrants.includes(c)}
                 onChange={(e) => toggle("extraGrants", c, e.target.checked)}
               />
-              {c}
+              {(
+                {
+                  work: "Standard work",
+                  studies: "Time studies",
+                  audits: "DL/TL Standard Work",
+                  analytics: "Analytics / production results",
+                  export: "Excel exports",
+                  manage: "All operational editors in assigned locations",
+                  training: "Training editing",
+                  downtime: "Downtime",
+                  ideas: "Improvement ideas",
+                  leadership: "Leadership dashboard",
+                  dashboard: "Department dashboard",
+                  problems: "Problem solving",
+                  maintenance: "PMs / CILs",
+                  fiveS: "5S audits",
+                  defects: "Defect reporting",
+                } as Record<string, string>
+              )[c] ?? c}
             </label>
           ))}
         </div>

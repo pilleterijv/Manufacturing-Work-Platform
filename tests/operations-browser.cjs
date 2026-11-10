@@ -683,6 +683,21 @@ main()
     await db.record.deleteMany({ where: { userId: { in: ids } } });
     await db.content.deleteMany({ where: { id: { in: contentIds } } });
     await db.standard.deleteMany({ where: { id: { in: standardIds } } });
+    const reminderIds = (
+      await db.reminder.findMany({
+        where: { equipmentId: { in: eq } },
+        select: { id: true },
+      })
+    ).map((r) => r.id);
+    await db.notification.deleteMany({
+      where: {
+        OR: [
+          { userId: { in: ids } },
+          { kind: "overdue", sourceId: { in: reminderIds } },
+        ],
+      },
+    });
+    await db.reminder.deleteMany({ where: { equipmentId: { in: eq } } });
     await db.equipment.deleteMany({ where: { id: { in: eq } } });
     await db.session.deleteMany({ where: { userId: { in: ids } } });
     await db.user.deleteMany({ where: { id: { in: ids } } });

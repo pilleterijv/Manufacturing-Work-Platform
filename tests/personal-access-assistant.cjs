@@ -529,6 +529,13 @@ async function main() {
       .count(),
     0,
   );
+  await page
+    .locator(".personal-dashboard .metric")
+    .first()
+    .getByText("PMs / CILs", { exact: true })
+    .waitFor();
+  assert.equal(await page.locator(".personal-dashboard .metric").count(), 2);
+  assert.equal(await page.locator(".personal-dashboard details").count(), 2);
   await page.screenshot({
     path: shots + "/custom-dashboard.png",
     fullPage: true,
@@ -587,6 +594,40 @@ async function main() {
     await mp.getByRole("cell", { name: users[8].name, exact: true }).count(),
     0,
   );
+  await mp
+    .getByRole("button", { name: "Create department account", exact: true })
+    .click();
+  await mp
+    .getByLabel("New account username", { exact: true })
+    .fill(prefix.toLowerCase() + "-ui-created");
+  await mp
+    .getByLabel("Account display name", { exact: true })
+    .fill(prefix + " UI employee");
+  await mp
+    .getByLabel("Initial machine (instead of an area)", { exact: true })
+    .selectOption(equipment[0].id);
+  await mp
+    .getByLabel("Initial temporary password", { exact: true })
+    .fill("UI initial " + randomUUID() + "!");
+  await mp
+    .getByRole("button", { name: "Create assigned account", exact: true })
+    .click();
+  await mp.getByRole("status").filter({ hasText: "Account saved" }).waitFor();
+  assert.equal(
+    await mp
+      .getByLabel("Workspace access", { exact: true })
+      .locator("option[value=all]")
+      .count(),
+    0,
+  );
+  const uiAccount = await db.user.findUniqueOrThrow({
+    where: { username: prefix.toLowerCase() + "-ui-created" },
+  });
+  assert.deepEqual(uiAccount.workspaceAccess, {
+    mode: "restricted",
+    locations: [],
+    equipmentIds: [equipment[0].id],
+  });
   await mp.screenshot({
     path: shots + "/manager-accounts.png",
     fullPage: true,

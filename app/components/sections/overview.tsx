@@ -1,4 +1,5 @@
 "use client";
+import { canOpenSection, type NavigationUser } from "@/lib/navigation";
 import type { ReactNode } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
 import type { Data, Step, Cycle, Standard } from "@/lib/workspace-types";
@@ -19,12 +20,14 @@ export default function Overview({
   children,
   admin = false,
   preferences,
+  navigationUser,
 }: {
   data: Data;
   go: (s: string) => void;
   grants: Capability[];
   children?: ReactNode;
   admin?: boolean;
+  navigationUser?: NavigationUser;
   preferences?: import("@/lib/dashboard-preferences").DashboardPreferences;
 }) {
   const runs = data.records.filter((r) => r.kind === "run"),
@@ -56,6 +59,18 @@ export default function Overview({
           <div className="module-grid">
             {(
               [
+                [
+                  "Dashboard settings",
+                  null,
+                  "⚙",
+                  "Choose your login section, panels and dashboard layout.",
+                ],
+                [
+                  "Assistant",
+                  null,
+                  "?",
+                  "Get navigation help for the sections available to you.",
+                ],
                 [
                   "Standard work",
                   "work",
@@ -188,8 +203,10 @@ export default function Overview({
                 ],
               ] as [string, Capability | null, string, string][]
             )
-              .filter(
-                ([, capability]) => !capability || grants.includes(capability),
+              .filter(([name, capability]) =>
+                navigationUser
+                  ? canOpenSection(navigationUser, name)
+                  : !capability || grants.includes(capability),
               )
               .map(([name, , icon, detail]) => (
                 <button

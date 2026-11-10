@@ -143,6 +143,15 @@ test("login sections and assistant topics follow current authority rather than a
   assert(canOpenSection({ ...u, grants: [...u.grants] }, "Assistant"));
   const topics = permittedHelp({ ...u, grants: [...u.grants] });
   assert(!topics.some((t) => t.section === "Problem solving"));
+  const cilTopics = permittedHelp({
+    role: "Operator",
+    grants: ["maintenance", "work"],
+  });
+  assert.equal(
+    guideAnswer("How do I perform a CIL?", cilTopics).links[0],
+    "TPM / CIL",
+  );
+  assert.equal(guideAnswer("PM", cilTopics).links[0], "Preventive maintenance");
   assert(
     !guideAnswer("how can I reset another account", topics).links.includes(
       "Accounts",

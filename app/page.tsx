@@ -736,6 +736,7 @@ export default function Home() {
             )}
             {tab === "Overview" && (
               <Overview
+                navigationUser={user}
                 preferences={preferences}
                 data={data}
                 go={setTab}
@@ -886,6 +887,24 @@ export default function Home() {
             {tab === "Integrations" && user.role === "Admin" && (
               <Integrations />
             )}
+            {tab === "Manage" &&
+              !g.includes("manage") &&
+              !privileges.includes("standards.manage") &&
+              !privileges.includes("equipment.manage") &&
+              privileges.includes("resources.manage") && (
+                <section className="panel">
+                  <h2>Guide management</h2>
+                  <p>
+                    Your delegated guide editor is available in Troubleshooting.
+                  </p>
+                  <button
+                    className="primary"
+                    onClick={() => setTab("Troubleshooting")}
+                  >
+                    Open troubleshooting editor
+                  </button>
+                </section>
+              )}
             {tab === "Manage" && sectionReady && (
               <Manage
                 data={data}

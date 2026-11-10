@@ -182,11 +182,21 @@ export async function POST(req: Request) {
         action === "create"
           ? crypto.randomUUID()
           : z.string().uuid().parse(b.id);
+    const initialPrivileges = effectivePrivileges(u.role, u.adminPrivileges);
+    if (
+      action === "delegation"
+        ? u.role !== "Admin"
+        : !initialPrivileges.includes(names[action] as AdminPrivilege)
+    )
+      throw new HttpError(
+        403,
+        "This account action has not been delegated to you",
+      );
+    await limit(`account-admin:${u.id}`, 100, 3600);
     const password =
       action === "password" || action === "create"
         ? await hashPassword(z.string().max(128).parse(b.password))
         : undefined;
-    await limit(`account-admin:${u.id}`, 100, 3600);
     await db.$transaction(async (tx) => {
       const locks = [u.id, id].sort();
       await tx.$queryRaw`SELECT id FROM "User" WHERE id=ANY(${locks}::text[]) ORDER BY id FOR UPDATE`;
@@ -226,8 +236,6 @@ export async function POST(req: Request) {
         actorCaps = caps(actor);
       if (action !== "create") {
         if (!target) throw new HttpError(404, "Account not found");
-        if (z.number().int().positive().parse(b.version) !== target.version)
-          throw new HttpError(409, "Account changed; reload before saving");
         if (
           actor.role !== "Admin" &&
           (target.id === actor.id ||
@@ -240,6 +248,8 @@ export async function POST(req: Request) {
             403,
             "Admin must manage this protected, broader-permission or cross-department account",
           );
+        if (z.number().int().positive().parse(b.version) !== target.version)
+          throw new HttpError(409, "Account changed; reload before saving");
       }
       const checkAccess = async (raw: unknown) => {
         const access = downtimeAccessSchema.parse(raw);

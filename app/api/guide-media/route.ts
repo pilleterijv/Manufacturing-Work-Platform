@@ -1,3 +1,4 @@
+import { adminPrivileges } from "@/lib/capabilities";
 import { db } from "@/lib/db";
 import { storeVideo } from "@/lib/storage";
 import {
@@ -15,7 +16,17 @@ export async function POST(req: Request) {
   try {
     const u = await requireUser();
     const g = await grants(u);
+    const mediaDelegate = (await adminPrivileges(u)).some((p) =>
+      [
+        "standards.manage",
+        "resources.manage",
+        "training.manage",
+        "maintenance.manage",
+        "fiveS.manage",
+      ].includes(p),
+    );
     if (
+      !mediaDelegate &&
       ![
         "manage",
         "training",
