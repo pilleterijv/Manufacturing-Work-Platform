@@ -325,7 +325,7 @@ const check = async (r, status = 200) => {
       .getByRole("button", { name: "↻ Refresh section", exact: true })
       .click();
     await page
-      .getByText(prefix + " Incoming defect", { exact: true })
+      .getByRole("heading", { name: new RegExp(prefix + " Incoming defect") })
       .waitFor();
     assert.equal(
       await page.getByLabel("Defect title", { exact: true }).inputValue(),
