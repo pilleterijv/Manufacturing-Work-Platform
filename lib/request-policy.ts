@@ -55,3 +55,29 @@ export function requestAllowed(
     return false;
   return true;
 }
+
+// Diagnostics contain addresses only, never request bodies, cookies or URL credentials.
+export function originCheckDiagnostic(
+  req: Request,
+  configured: string | undefined,
+) {
+  const address = (value: string | null | undefined) => {
+    if (!value) return "<missing>";
+    try {
+      return new URL(value).origin;
+    } catch {
+      return "<invalid>";
+    }
+  };
+  const site = req.headers.get("sec-fetch-site");
+  return {
+    expectedOrigin: address(configured),
+    receivedOrigin: address(req.headers.get("origin")),
+    requestOrigin: address(req.url),
+    fetchSite: ["same-origin", "same-site", "cross-site", "none"].includes(
+      site || "",
+    )
+      ? site
+      : "<missing or invalid>",
+  };
+}
