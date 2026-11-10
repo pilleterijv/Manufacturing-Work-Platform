@@ -1,16 +1,32 @@
+import { readFilters, recordFilters } from "@/lib/filters";
+import { equipmentIds, recordScope } from "@/lib/location-access";
 import { streamWorkbook, paged } from "@/lib/excel-stream";
 import { db } from "@/lib/db";
 import { requireUser, grants, failure } from "@/lib/security";
 import { stats } from "@/lib/rules";
 import { addOperationsSheets } from "@/lib/operations-export";
+const locationColumns = [
+  "Plant",
+  "Department",
+  "Area",
+  "Line",
+  "Equipment name",
+];
+const locationValues = (equipment: any) =>
+  ["plant", "department", "area", "line", "name"].map(
+    (key) => equipment?.[key] ?? "",
+  );
 export async function GET(req: Request) {
   try {
     const u = await requireUser("export");
     const g = await grants(u);
+    const ids = await equipmentIds(u);
+    const { person, search } = readFilters(req.url);
     const asOf = new Date();
     const records = paged((cursor) =>
       db.record.findMany({
         where: {
+          AND: [recordScope(ids), recordFilters(person, search)],
           ...(g.includes("analytics") ? {} : { userId: u.id }),
           created: { lte: asOf },
           kind: {
@@ -38,8 +54,8 @@ export async function GET(req: Request) {
             "Responses",
             "Time observations",
             "Statistics",
-            "Audits",
-            "Audit cycles",
+            "DL-TL Standard Work",
+            "DL-TL cycles",
           ].map((name) => [name, book.addWorksheet(name)]),
         );
         await sheets["Standard work"].addRow([
@@ -48,7 +64,8 @@ export async function GET(req: Request) {
           "Recorder",
           "Standard",
           "Revision",
-          "Equipment",
+          "Equipment ID",
+          ...locationColumns,
           "Duration seconds",
           "Follow up",
         ]);
@@ -59,11 +76,13 @@ export async function GET(req: Request) {
           "Answer",
           "Comment",
           "Photo ID",
+          "Video ID",
         ]);
         await sheets["Time observations"].addRow([
           "Study",
           "Title",
-          "Equipment",
+          "Equipment ID",
+          ...locationColumns,
           "Element",
           "Seconds",
           "Timestamp",
@@ -79,18 +98,20 @@ export async function GET(req: Request) {
           "Range",
           "Standard deviation (population)",
         ]);
-        await sheets.Audits.addRow([
+        await sheets["DL-TL Standard Work"].addRow([
           "ID",
           "Date",
-          "Auditor",
-          "Operator",
+          "Recorded by",
+          "Operator / context",
           "Standard",
           "Revision",
+          "Equipment ID",
+          ...locationColumns,
           "Target seconds",
           "Tolerance percent",
           "Follow up",
         ]);
-        await sheets["Audit cycles"].addRow([
+        await sheets["DL-TL cycles"].addRow([
           "Audit",
           "Element",
           "Seconds",
@@ -111,23 +132,26 @@ export async function GET(req: Request) {
               d.snapshot.title,
               d.snapshot.revision,
               d.snapshot.equipmentId,
+              ...locationValues(d.snapshot.equipment),
               d.durationSeconds,
               d.followUp,
             ]);
           if (r.kind === "audit" && g.includes("audits")) {
-            await sheets.Audits.addRow([
+            await sheets["DL-TL Standard Work"].addRow([
               r.id,
               r.created,
               r.user.name,
               d.operator,
               d.snapshot.title,
               d.snapshot.revision,
+              d.snapshot.equipmentId,
+              ...locationValues(d.snapshot.equipment),
               d.snapshot.target,
               d.snapshot.tolerance,
               d.followUp,
             ]);
-            for (const c of d.cycles)
-              await sheets["Audit cycles"].addRow([
+            for (const c of d.cycles ?? [])
+              await sheets["DL-TL cycles"].addRow([
                 r.id,
                 c.element,
                 c.seconds,
@@ -149,16 +173,18 @@ export async function GET(req: Request) {
                 a.answer ? "Yes" : "No",
                 a.comment,
                 a.photo,
+                a.video ?? "",
               ]);
           if (
             r.kind === "study" &&
             (g.includes("studies") || g.includes("analytics"))
           ) {
-            for (const c of d.cycles)
+            for (const c of d.cycles ?? [])
               await sheets["Time observations"].addRow([
                 r.id,
                 d.title,
                 d.equipmentId,
+                ...locationValues(d.equipmentSnapshot),
                 c.element,
                 c.seconds,
                 c.at,
@@ -185,7 +211,7 @@ export async function GET(req: Request) {
             }
           }
         }
-        await addOperationsSheets(book, g, u);
+        await addOperationsSheets(book, g, u, { person, search });
       },
       req.signal,
     );

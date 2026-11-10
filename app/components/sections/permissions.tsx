@@ -71,8 +71,12 @@ export default function Permissions({
                 }
               />
               <span>
-                <strong>{cap}</strong>
-                <small>Allow {cap} actions</small>
+                <strong>
+                  {cap === "audits" ? "DL/TL Standard Work" : cap}
+                </strong>
+                <small>
+                  Allow {cap === "audits" ? "DL/TL Standard Work" : cap} actions
+                </small>
               </span>
             </label>
           ))}
@@ -80,10 +84,11 @@ export default function Permissions({
         <Submit busy={busy}>Save role permissions</Submit>
       </form>
       <p className="small muted">
-        Role grants apply across the workspace. Administrators assign each
-        user’s downtime departments, areas and machines under Accounts. These
-        assignments restrict downtime recording and operational history, while
-        dashboard and leadership grants control aggregate reporting.
+        Roles control permitted functions. Admin assigns each person's
+        departments, areas and machines under Accounts. Those assignments
+        restrict work, histories, guides, problem solving, dashboards and
+        exports. Downtime access can narrow those assignments further. Accounts,
+        location catalogs and role policies are Admin-only.
       </p>
     </section>
   );

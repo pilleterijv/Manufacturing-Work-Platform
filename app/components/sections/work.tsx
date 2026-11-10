@@ -1,4 +1,5 @@
 "use client";
+import EvidenceInput from "../evidence-input";
 import { useState, useEffect, useRef } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
 import type { Data, Step, Cycle, Standard } from "@/lib/workspace-types";
@@ -24,7 +25,10 @@ export default function Work({
   busy: boolean;
   audit: boolean;
 }) {
-  const latest = data.standards;
+  const uploads = useRef(0);
+  const latest = data.standards.filter(
+    (s) => s.kind === (audit ? "audit" : "run"),
+  );
   const [id, setId] = useState(""),
     [responses, setResponses] = useState<
       Record<
@@ -32,8 +36,10 @@ export default function Work({
         {
           answer: boolean | null;
           photo: string | null;
+          video?: string | null;
           comment: string;
           at?: string;
+          fiveSAuditId?: string;
         }
       >
     >({}),
@@ -42,6 +48,13 @@ export default function Work({
     [operator, setOperator] = useState(""),
     [localError, setLocalError] = useState(""),
     [uploading, setUploading] = useState(false);
+  const [fiveS, setFiveS] = useState<any>(null);
+  useEffect(() => {
+    if (audit && data.standards.some((s) => s.steps.some((x) => x.fiveSPlanId)))
+      api("/api/five-s")
+        .then(setFiveS)
+        .catch((e) => setLocalError(e.message));
+  }, [audit, data.standards]);
   const s = data.standards.find((s) => s.id === id);
   function select(id: string) {
     setId(id);
@@ -60,33 +73,16 @@ export default function Work({
       },
     }));
   }
-  async function upload(step: string, file: File) {
-    setUploading(true);
-    setLocalError("");
-    try {
-      if (file.size > 8 * 1024 * 1024) throw Error("Photos must be under 8 MB");
-      const image = await new Promise<string>((res, rej) => {
-        const r = new FileReader();
-        r.onload = () => res(String(r.result));
-        r.onerror = rej;
-        r.readAsDataURL(file);
-      });
-      const p = await api("/api/photos", { image });
-      update(step, { photo: p.id });
-    } catch (e) {
-      setLocalError((e as Error).message);
-    } finally {
-      setUploading(false);
-    }
-  }
   return (
     <>
       <section className="panel">
         <div className="section-title">
-          <h2>{audit ? "New standard work audit" : "Start a verification"}</h2>
-          <span className="badge">
-            {audit ? "SUPERVISOR" : "STANDARD WORK"}
-          </span>
+          <h2>
+            {audit
+              ? "Complete assigned DL/TL Standard Work"
+              : "Start a verification"}
+          </h2>
+          <span className="badge">{audit ? "DL/TL" : "STANDARD WORK"}</span>
         </div>
         <Field label="Standard work">
           <select
@@ -97,7 +93,15 @@ export default function Work({
             <option value="">Select a process</option>
             {latest.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.title} · revision {s.revision}
+                {s.title} · revision {s.revision} ·{" "}
+                {(() => {
+                  const e = data.equipment.find((e) => e.id === s.equipmentId);
+                  return e
+                    ? [e.plant, e.department, e.area, e.line, e.name]
+                        .filter(Boolean)
+                        .join(" / ")
+                    : s.equipmentId;
+                })()}
               </option>
             ))}
           </select>
@@ -115,16 +119,14 @@ export default function Work({
                 s.steps.some(
                   (step) =>
                     responses[step.id]?.answer == null ||
-                    (step.photo && !responses[step.id]?.photo),
+                    (step.photo &&
+                      !responses[step.id]?.photo &&
+                      !responses[step.id]?.video),
                 )
               ) {
                 setLocalError(
-                  "Answer every step and attach each required photo",
+                  "Answer every step and attach each required photo or video",
                 );
-                return;
-              }
-              if (audit && !cycles.length) {
-                setLocalError("Record at least one audit cycle");
                 return;
               }
               if (
@@ -155,12 +157,11 @@ export default function Work({
             <div className={audit ? "audit-grid" : ""}>
               <div>
                 {audit && (
-                  <Field label="Operator being audited">
+                  <Field label="Operator / context (optional)">
                     <input
                       value={operator}
                       onChange={(e) => setOperator(e.target.value)}
                       maxLength={150}
-                      required
                       placeholder="Operator name or employee ID"
                     />
                   </Field>
@@ -173,9 +174,39 @@ export default function Work({
                       </span>
                       <div>
                         <h3>{step.text}</h3>
+                        {step.fiveSPlanId && (
+                          <Field label="Completed linked 5S audit">
+                            <select
+                              required
+                              value={responses[step.id]?.fiveSAuditId ?? ""}
+                              onChange={(e) =>
+                                update(step.id, {
+                                  fiveSAuditId: e.target.value,
+                                })
+                              }
+                            >
+                              <option value="">
+                                Complete the linked audit in 5S audits, then
+                                return here
+                              </option>
+                              {fiveS?.records
+                                .filter(
+                                  (r: any) =>
+                                    r.planId === step.fiveSPlanId &&
+                                    r.userId === fiveS.userId,
+                                )
+                                .map((r: any) => (
+                                  <option key={r.id} value={r.id}>
+                                    {r.snapshot.title} · {r.score}/{r.maximum} ·{" "}
+                                    {new Date(r.createdAt).toLocaleString()}
+                                  </option>
+                                ))}
+                            </select>
+                          </Field>
+                        )}
                         <p className="small muted">
                           {step.photo
-                            ? "Photo evidence required"
+                            ? "Photo or video evidence required"
                             : "Verify against the approved standard"}
                         </p>
                       </div>
@@ -199,31 +230,49 @@ export default function Work({
                         </button>
                       ))}
                     </div>
-                    <Field
+                    <EvidenceInput
+                      singleKinds
                       label={
                         step.photo
-                          ? "Evidence photo · required"
-                          : "Evidence photo · optional"
+                          ? "Evidence photo or video · required"
+                          : "Evidence photo or video · optional"
                       }
-                    >
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        capture="environment"
-                        disabled={uploading}
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) void upload(step.id, f);
-                        }}
-                      />
-                    </Field>
-                    {responses[step.id]?.photo && (
-                      <img
-                        className="photo-preview"
-                        src={`/api/photos/${responses[step.id].photo}`}
-                        alt={`Evidence for step ${i + 1}`}
-                      />
-                    )}
+                      value={[
+                        ...(responses[step.id]?.photo
+                          ? [
+                              {
+                                id: responses[step.id].photo!,
+                                kind: "photo" as const,
+                                caption: "",
+                              },
+                            ]
+                          : []),
+                        ...(responses[step.id]?.video
+                          ? [
+                              {
+                                id: responses[step.id].video!,
+                                kind: "video" as const,
+                                caption: "",
+                              },
+                            ]
+                          : []),
+                      ]}
+                      onBusy={(b) => {
+                        uploads.current = Math.max(
+                          0,
+                          uploads.current + (b ? 1 : -1),
+                        );
+                        setUploading(uploads.current > 0);
+                      }}
+                      onChange={(items) =>
+                        update(step.id, {
+                          photo:
+                            items.find((m) => m.kind === "photo")?.id ?? null,
+                          video:
+                            items.find((m) => m.kind === "video")?.id ?? null,
+                        })
+                      }
+                    />
                     <Field label="Comment">
                       <textarea
                         maxLength={1000}
@@ -248,8 +297,8 @@ export default function Work({
                     tolerance={s.tolerance}
                   />
                   <p className="small muted">
-                    Cycle timestamps and the current standard criteria are
-                    preserved with this audit.
+                    Optional cycle timestamps and the current standard criteria
+                    are preserved with this audit.
                   </p>
                 </div>
               )}
@@ -260,13 +309,17 @@ export default function Work({
               </div>
             )}
             <Submit busy={busy || uploading}>
-              {audit ? "Save audit" : "Complete standard work"}
+              {audit
+                ? "Complete DL/TL Standard Work"
+                : "Complete standard work"}
             </Submit>
           </form>
         )}
       </section>
       <div className="section-title">
-        <h2>{audit ? "Audit history" : "Completed verifications"}</h2>
+        <h2>
+          {audit ? "DL/TL Standard Work history" : "Completed verifications"}
+        </h2>
         <span className="muted">Historical revisions preserved</span>
       </div>
       <History

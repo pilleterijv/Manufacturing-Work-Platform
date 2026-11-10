@@ -1,4 +1,7 @@
 "use client";
+import PersonSelect from "./person-select";
+import { filterUrl } from "@/lib/client-api";
+import EvidenceInput, { EvidenceView } from "./evidence-input";
 import { departmentKey } from "@/lib/downtime-access-rules";
 import { useEffect, useState, useMemo, useRef, memo } from "react";
 import { Temporal } from "@js-temporal/polyfill";
@@ -53,7 +56,9 @@ function Equipment({
       <option value="">Select equipment</option>
       {equipment.map((e) => (
         <option key={e.id} value={e.id}>
-          {e.name} · {e.department} / {e.line}
+          {[e.plant, e.department, e.area, e.line, e.name]
+            .filter(Boolean)
+            .join(" / ")}
         </option>
       ))}
     </select>
@@ -604,25 +609,24 @@ export function ImprovementIdeas({
   save: Save;
   busy: boolean;
 }) {
+  const [ideaUploading, setIdeaUploading] = useState(false);
+  const [ideaMedia, setIdeaMedia] = useState<
+    import("@/lib/evidence-schema").Evidence[]
+  >([]);
+  const [participantSearch, setParticipantSearch] = useState("");
   const [equipmentId, setEquipment] = useState(""),
     [participants, setParticipants] = useState<string[]>([]);
   const today = localToday(data.config.timezone);
   function person(label: string, name: string, defaultValue = "") {
     return (
       <Field label={label}>
-        <select
+        <PersonSelect
+          people={data.people}
           aria-label={label}
           name={name}
           required
           defaultValue={defaultValue}
-        >
-          <option value="">Select a person</option>
-          {data.people.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name} ({p.username})
-            </option>
-          ))}
-        </select>
+        />
       </Field>
     );
   }
@@ -646,6 +650,7 @@ export function ImprovementIdeas({
             if (
               await save({
                 action: "idea",
+                media: ideaMedia,
                 ...values,
                 equipmentId,
                 participantIds: participants,
@@ -654,6 +659,7 @@ export function ImprovementIdeas({
               form.reset();
               setEquipment("");
               setParticipants([]);
+              setIdeaMedia([]);
             }
           }}
         >
@@ -732,28 +738,42 @@ export function ImprovementIdeas({
           </div>
           <fieldset className="field participant-fieldset">
             <legend>Participants</legend>
+            <input
+              aria-label="Search participants"
+              placeholder="Search employee name or username"
+              value={participantSearch}
+              onChange={(e) => setParticipantSearch(e.target.value)}
+            />
             <span
               className="participant-picker"
               role="group"
               aria-label="Participants"
             >
-              {data.people.map((p) => (
-                <label key={p.id} className="participant-option">
-                  <input
-                    type="checkbox"
-                    aria-label={`Participant ${p.name}`}
-                    checked={participants.includes(p.id)}
-                    onChange={(e) =>
-                      setParticipants((prev) =>
-                        e.target.checked
-                          ? [...prev, p.id]
-                          : prev.filter((id) => id !== p.id),
-                      )
-                    }
-                  />
-                  {p.name} ({p.username})
-                </label>
-              ))}
+              {data.people
+                .filter(
+                  (p) =>
+                    participants.includes(p.id) ||
+                    `${p.name} ${p.username}`
+                      .toLowerCase()
+                      .includes(participantSearch.toLowerCase()),
+                )
+                .map((p) => (
+                  <label key={p.id} className="participant-option">
+                    <input
+                      type="checkbox"
+                      aria-label={`Participant ${p.name}`}
+                      checked={participants.includes(p.id)}
+                      onChange={(e) =>
+                        setParticipants((prev) =>
+                          e.target.checked
+                            ? [...prev, p.id]
+                            : prev.filter((id) => id !== p.id),
+                        )
+                      }
+                    />
+                    {p.name} ({p.username})
+                  </label>
+                ))}
             </span>
           </fieldset>
           <p className="small muted">
@@ -761,7 +781,13 @@ export function ImprovementIdeas({
             private in-app message immediately. Your account is recorded as the
             creator, even when you submit on someone else's behalf.
           </p>
-          <button className="primary" disabled={busy}>
+          <EvidenceInput
+            label="Improvement photo or video evidence"
+            onBusy={setIdeaUploading}
+            value={ideaMedia}
+            onChange={setIdeaMedia}
+          />
+          <button className="primary" disabled={busy || ideaUploading}>
             {busy ? "Saving…" : "Submit idea & notify pilot"}
           </button>
         </form>
@@ -829,6 +855,7 @@ export function ImprovementIdeas({
               <p className="guide-body">{idea.currentState}</p>
               <h3>Proposed improvement</h3>
               <p className="guide-body">{idea.proposal}</p>
+              <EvidenceView media={idea.media ?? []} />
               <dl className="idea-people">
                 <dt>Submitted by</dt>
                 <dd>{idea.submitter.name}</dd>
@@ -905,12 +932,20 @@ export function Notifications({
   busy,
   openIdea,
   openWork,
+  openProblem,
+  openMaintenance,
+  openCil,
+  openAccounts,
 }: {
   data: OperationsData;
   save: Save;
   busy: boolean;
   openIdea: () => void;
   openWork: () => void;
+  openProblem?: () => void;
+  openMaintenance?: () => void;
+  openCil?: () => void;
+  openAccounts?: () => void;
 }) {
   return (
     <section className="panel">
@@ -938,11 +973,29 @@ export function Notifications({
           <div className="button-row">
             <button
               className="primary"
-              onClick={n.kind === "missed-work" ? openWork : openIdea}
+              onClick={
+                n.kind === "registration"
+                  ? openAccounts
+                  : n.kind === "overdue"
+                    ? n.message.startsWith("Overdue pm: CIL ·")
+                      ? openCil
+                      : n.message.startsWith("Overdue pm:")
+                        ? openMaintenance
+                        : n.message.startsWith("Overdue idea:")
+                          ? openIdea
+                          : openProblem
+                    : n.kind === "missed-work"
+                      ? openWork
+                      : openIdea
+              }
             >
-              {n.kind === "missed-work"
-                ? "Open standard work"
-                : "Open improvement ideas"}
+              {n.kind === "registration"
+                ? "Review registration requests"
+                : n.kind === "overdue"
+                  ? "Open overdue work"
+                  : n.kind === "missed-work"
+                    ? "Open standard work"
+                    : "Open improvement ideas"}
             </button>
             {!n.readAt && (
               <button
@@ -996,7 +1049,9 @@ export function Leadership({
     setError("");
     try {
       const r = await fetch(
-        endpoint + "?" + new URLSearchParams({ department, from, to }),
+        filterUrl(
+          endpoint + "?" + new URLSearchParams({ department, from, to }),
+        ),
         { signal: controller.signal },
       );
       const body = await r.json();
@@ -1105,16 +1160,16 @@ export function Leadership({
             {canExport && (
               <a
                 className="outline"
-                href={
+                href={filterUrl(
                   endpoint +
-                  "?" +
-                  new URLSearchParams({
-                    department: report.department,
-                    from: report.from,
-                    to: report.to,
-                    format: "xlsx",
-                  })
-                }
+                    "?" +
+                    new URLSearchParams({
+                      department: report.department,
+                      from: report.from,
+                      to: report.to,
+                      format: "xlsx",
+                    }),
+                )}
               >
                 ↓ Export dashboard
               </a>
@@ -1133,7 +1188,7 @@ export function Leadership({
               true,
             )}
             {metric(
-              "Supervisor audits",
+              "DL/TL Standard Work",
               s.audits,
               `${s.auditFollowUps} require follow-up`,
             )}
@@ -1189,10 +1244,10 @@ export function Leadership({
                 ))}
               </div>
               <p className="small muted">
-                Work, studies, audits, downtime, and new ideas use the selected
-                period. Equipment, standards, libraries, and the idea pipeline
-                show their current state. Department libraries include shared
-                resources.
+                Work, studies, DL/TL Standard Work, downtime, and new ideas use
+                the selected period. Equipment, standards, libraries, and the
+                idea pipeline show their current state. Department libraries
+                include shared resources.
               </p>
             </section>
             <section className="panel">

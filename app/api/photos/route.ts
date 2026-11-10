@@ -1,3 +1,4 @@
+import { adminPrivileges } from "@/lib/capabilities";
 import sharp from "sharp";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -16,7 +17,27 @@ export async function POST(req: Request) {
   try {
     const u = await requireUser();
     const g = await grants(u);
-    if (!g.includes("work") && !g.includes("audits"))
+    const mediaDelegate = (await adminPrivileges(u)).some((p) =>
+      [
+        "standards.manage",
+        "resources.manage",
+        "training.manage",
+        "maintenance.manage",
+        "fiveS.manage",
+      ].includes(p),
+    );
+    if (
+      !mediaDelegate &&
+      !g.includes("work") &&
+      !g.includes("audits") &&
+      !g.includes("manage") &&
+      !g.includes("maintenance") &&
+      !g.includes("training") &&
+      !g.includes("problems") &&
+      !g.includes("ideas") &&
+      !g.includes("fiveS") &&
+      !g.includes("defects")
+    )
       throw new HttpError(403, "Photo upload is not permitted");
     await limit(`photo:${u.id}`, 60, 3600);
     await limit("photo:global", 500, 3600);

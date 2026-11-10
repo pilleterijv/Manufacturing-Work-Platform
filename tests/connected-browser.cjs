@@ -48,6 +48,7 @@ async function main() {
           email: `fixture-${users.length}-${suffix}@example.invalid`,
           password: hash,
           mustChange: false,
+          workspaceAccess:{mode:"all",locations:[],equipmentIds:[]},
         },
       }),
     );

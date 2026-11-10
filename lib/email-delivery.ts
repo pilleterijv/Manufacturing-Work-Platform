@@ -1,3 +1,5 @@
+import { deliverReminderEmails } from "./reminders";
+import { allowedDowntimeEquipment } from "./downtime-access-rules";
 import nodemailer from "nodemailer";
 import { db } from "./db";
 export function smtpReady() {
@@ -52,7 +54,13 @@ export async function deliverShiftEmails(
       db.workSchedule.findUnique({ where: { id: row.scheduleId } }),
       db.user.findUnique({ where: { id: row.userId } }),
     ]);
+    const equipment = schedule
+      ? await db.equipment.findUnique({ where: { id: schedule.equipmentId } })
+      : null;
     if (
+      !equipment ||
+      !user ||
+      !allowedDowntimeEquipment(user.role, user.workspaceAccess, equipment) ||
       !schedule?.active ||
       !schedule.notifyEmail ||
       !user?.active ||
@@ -104,6 +112,7 @@ export async function deliverShiftEmails(
       });
     }
   }
+  const reminders = await deliverReminderEmails(transport);
   transport.close();
-  return { sent, configured: true };
+  return { sent, reminderEmailsSent: reminders.sent, configured: true };
 }

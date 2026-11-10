@@ -1,3 +1,5 @@
+import { adminPrivileges } from "@/lib/capabilities";
+import { dashboardPreferences } from "@/lib/dashboard-preferences";
 import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { z } from "zod";
@@ -28,6 +30,8 @@ export async function GET() {
             role: u.role,
             mustChange: u.mustChange,
             grants: await grants(u),
+            adminPrivileges: await adminPrivileges(u),
+            dashboardPreferences: dashboardPreferences(u.dashboardPreferences),
           }
         : null,
     });

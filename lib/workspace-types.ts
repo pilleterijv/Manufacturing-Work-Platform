@@ -1,3 +1,5 @@
+import type { AdminPrivilege } from "./delegation-rules";
+import type { DashboardPreferences } from "./dashboard-preferences";
 import type { Capability } from "./rules";
 export type User = {
   id: string;
@@ -6,9 +8,18 @@ export type User = {
   role: string;
   mustChange: boolean;
   grants: Capability[];
+  adminPrivileges?: AdminPrivilege[];
+  dashboardPreferences?: DashboardPreferences;
 };
-export type Step = { id: string; text: string; photo: boolean };
+export type Step = {
+  id: string;
+  text: string;
+  photo: boolean;
+  fiveSPlanId?: string;
+};
 export type Standard = {
+  kind: string;
+  assigneeIds: string[];
   id: string;
   family: string;
   revision: number;
@@ -34,7 +45,16 @@ export type Entry = {
   user: { name: string };
   data: any;
 };
+export type Location = {
+  id: string;
+  plant: string;
+  department: string;
+  area: string;
+  line: string;
+  active: boolean;
+};
 export type Data = {
+  locations?: Location[];
   page?: { hasMore: boolean; cursor: string | null };
   overview?: {
     runs: number;
@@ -51,6 +71,7 @@ export type Data = {
     title: string;
     equipmentId: string;
     body: string;
+    media?: { id: string; kind: "photo" | "video"; caption: string }[];
   }[];
   users: any[];
   policies: { role: string; grants: Capability[] }[];

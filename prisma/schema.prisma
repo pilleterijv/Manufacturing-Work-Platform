@@ -8,11 +8,18 @@ datasource db {
 }
 model User {
  id String @id @default(uuid())
+ dashboardDepartment Json?
+ dashboardPreferences Json @default("{}")
+ extraGrants Json @default("[]")
+ adminPrivileges Json @default("[]")
+ overdueInApp Boolean @default(true)
+ overdueEmail Boolean @default(true)
  email String?
  username String @unique
  name String
  password String
  role String
+ workspaceAccess Json @default("{\"mode\":\"restricted\",\"locations\":[],\"equipmentIds\":[]}")
  downtimeAccess Json @default("{\"mode\":\"all\",\"locations\":[],\"equipmentIds\":[]}")
  active Boolean @default(true)
  mustChange Boolean @default(true)
@@ -47,6 +54,15 @@ model Equipment {
  downtime Downtime[]
  ideas Idea[]
 }
+model Location {
+ id String @id @default(uuid())
+ plant String
+ department String
+ area String @default("")
+ line String @default("")
+ active Boolean @default(true)
+ @@unique([plant,department,area,line])
+}
 model Standard {
  id String @id @default(uuid())
  family String
@@ -55,6 +71,8 @@ model Standard {
  equipmentId String
  target Float
  tolerance Float
+ kind String @default("run")
+ assigneeIds Json @default("[]")
  steps Json
  created DateTime @default(now())
  equipment Equipment @relation(fields:[equipmentId],references:[id])
@@ -72,11 +90,14 @@ model Record {
  standard Standard? @relation(fields:[standardId],references:[id])
 }
 model Content {
+ createdBy String?
+ createdAt DateTime @default(now())
  id String @id @default(uuid())
  kind String
  title String
  equipmentId String?
  body String
+ media Json @default("[]")
  active Boolean @default(true)
 }
 model Policy {
@@ -124,6 +145,7 @@ model Setting {
  value Json
 }
 model Idea {
+ media Json @default("[]")
  id String @id @default(uuid())
  title String
  equipmentId String
@@ -171,6 +193,7 @@ model Notification {
 }
 
 model Problem {
+ media Json @default("[]")
  id String @id @default(uuid())
  reference String @unique
  method String
@@ -184,6 +207,7 @@ model Problem {
  team String
  dueDate String
  previousId String?
+ requirements Json?
  answers Json
  status String @default("Open")
  createdBy String
@@ -197,6 +221,8 @@ model Problem {
  @@index([status,dueDate])
 }
 model ProblemAction {
+ media Json @default("[]")
+ required Boolean @default(true)
  id String @id @default(uuid())
  problemId String
  type String
@@ -215,6 +241,7 @@ model ProblemAction {
 }
 
 model WorkSchedule {
+ kind String @default("run")
  id String @id @default(uuid())
  family String
  equipmentId String
@@ -293,4 +320,155 @@ model IntegrationReceipt {
  downtimeId String?
  outcome String
  @@unique([sourceId,eventId])
+}
+
+model GuideMedia {
+ id String @id @default(uuid())
+ userId String
+ mime String
+ bytes Int
+ created DateTime @default(now())
+}
+
+model MaintenancePlan {
+ kind String @default("pm")
+ id String @id @default(uuid())
+ equipmentId String
+ title String
+ steps Json
+ assigneeId String
+ intervalDays Int
+ nextDue String
+ active Boolean @default(true)
+ version Int @default(1)
+ createdBy String
+ history Json
+}
+model Reminder {
+ id String @id @default(uuid())
+ dedupeKey String @unique
+ entityType String
+ entityId String
+ equipmentId String
+ userId String
+ subject String
+ message String
+ email Boolean
+ status String @default("Pending")
+ attempts Int @default(0)
+ nextAttemptAt DateTime @default(now())
+ claimedUntil DateTime?
+ sentAt DateTime?
+ createdAt DateTime @default(now())
+ lastError String?
+ @@index([status,nextAttemptAt])
+}
+model ExternalFeed {
+ mode String @default("api")
+ id String @id @default(uuid())
+ sourceId String
+ name String
+ section String
+ active Boolean @default(true)
+ cursor String @default("0")
+ lastImportedAt DateTime?
+ lastError String?
+}
+model ExternalRow {
+ id String @id @default(uuid())
+ feedId String
+ externalId String
+ equipmentId String
+ personId String?
+ title String
+ details String
+ occurredAt DateTime
+ values Json
+ updatedAt DateTime @updatedAt
+ @@unique([feedId,externalId])
+ @@index([equipmentId,occurredAt])
+}
+
+model ExternalRevision {
+ id String @id @default(uuid())
+ rowId String
+ snapshot Json
+ importedAt DateTime @default(now())
+}
+
+model FiveSPlan {
+ id String @id @default(uuid())
+ locationId String
+ title String
+ questions Json
+ assigneeIds Json
+ active Boolean @default(true)
+ version Int @default(1)
+ createdBy String
+ history Json
+}
+model FiveSAudit {
+ id String @id @default(uuid())
+ planId String
+ locationId String
+ userId String
+ snapshot Json
+ responses Json
+ media Json
+ score Int
+ maximum Int
+ createdAt DateTime @default(now())
+ @@index([locationId,createdAt])
+}
+model Defect {
+ id String @id @default(uuid())
+ equipmentId String
+ title String
+ description String
+ priority String
+ status String @default("Open")
+ reportedBy String
+ assigneeId String?
+ media Json
+ equipmentSnapshot Json
+ version Int @default(1)
+ history Json
+ createdAt DateTime @default(now())
+ updatedAt DateTime @updatedAt
+ maintainxStatus String @default("Not submitted")
+ maintainxId String?
+ submissionAt DateTime?
+ submissionError String?
+ @@index([equipmentId,status])
+}
+model RegistrationRequest {
+ id String @id @default(uuid())
+ username String
+ name String
+ email String
+ department String
+ reason String
+ status String @default("Pending")
+ reviewedBy String?
+ createdUserId String?
+ createdAt DateTime @default(now())
+ reviewedAt DateTime?
+ @@index([status,createdAt])
+}
+model PasswordReset {
+ tokenHash String @id
+ userId String
+ userVersion Int
+ expires DateTime
+ createdAt DateTime @default(now())
+}
+
+model AccountAudit {
+ id String @id @default(uuid())
+ actorId String
+ targetId String
+ action String
+ data Json
+ createdAt DateTime @default(now())
+ @@index([targetId,createdAt])
 }

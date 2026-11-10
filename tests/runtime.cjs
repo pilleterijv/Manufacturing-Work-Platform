@@ -61,11 +61,53 @@ async function main() {
       resolve();
     });
   });
+  // A separately launched worker must load .env before constructing its DB pool.
+  // Disable all external transports; this smoke check only touches the local test DB.
+  assert(
+    ["localhost", "127.0.0.1"].includes(
+      new URL(process.env.DATABASE_URL).hostname,
+    ),
+  );
+  if (fs.existsSync(path.join(process.cwd(), ".env"))) {
+    const workerEnv = {
+      ...process.env,
+      COMPANY_SQL_SERVER: "",
+      SMTP_HOST: "",
+      EXTERNAL_DATA_FEEDS_JSON: "[]",
+    };
+    delete workerEnv.DATABASE_URL;
+    delete workerEnv.DATABASE_SETUP_URL;
+    await new Promise((resolve, reject) => {
+      const child = spawn(
+        process.execPath,
+        [path.join(root, "tools/background-worker.cjs"), "--once"],
+        {
+          cwd: process.cwd(),
+          env: workerEnv,
+          stdio: ["ignore", "pipe", "pipe"],
+        },
+      );
+      let output = "";
+      const timer = setTimeout(() => {
+        child.kill();
+        reject(Error("Bundled worker timed out"));
+      }, 30000);
+      child.stdout.on("data", (chunk) => (output += chunk));
+      child.stderr.on("data", (chunk) => (output += chunk));
+      child.on("error", reject);
+      child.on("exit", (code) => {
+        clearTimeout(timer);
+        code === 0
+          ? resolve()
+          : reject(Error("Bundled env-file worker failed: " + output));
+      });
+    });
+  }
   const u = await db.user.findUnique({ where: { username } });
   assert(u && u.mustChange && u.role === "Admin");
   assert(await verifyPassword(password, u.password));
   console.log(
-    "PASS: isolated runtime database/account tools, required WASM asset, hidden password prompts, and exclusion of configuration/photos.",
+    "PASS: isolated runtime database/account tools, required WASM asset, hidden password prompts, env-file worker startup, and exclusion of configuration/photos.",
   );
 }
 main()

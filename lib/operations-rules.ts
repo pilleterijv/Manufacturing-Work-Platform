@@ -147,6 +147,12 @@ export function durationText(seconds: number) {
     .toString()
     .padStart(2, "0")}:${(value % 60).toString().padStart(2, "0")}`;
 }
-export function localToday(timezone: string) {
-  return Temporal.Now.zonedDateTimeISO(timezone).toPlainDate().toString();
+export function localToday(timezone: string, now?: Date) {
+  return (
+    now
+      ? Temporal.Instant.from(now.toISOString()).toZonedDateTimeISO(timezone)
+      : Temporal.Now.zonedDateTimeISO(timezone)
+  )
+    .toPlainDate()
+    .toString();
 }

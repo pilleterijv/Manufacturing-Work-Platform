@@ -1,33 +1,70 @@
+import { requireDelegated } from "@/lib/security";
+import { readFilters } from "@/lib/filters";
+import {
+  equipmentIds,
+  assertEquipmentAccess,
+  eligiblePeople,
+  visiblePeople,
+} from "@/lib/location-access";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireUser, jsonBody, failure, HttpError } from "@/lib/security";
 import { workScheduleSchema } from "@/lib/shift-schedule-rules";
 import { shiftConfigSchema } from "@/lib/operations-rules";
 import { smtpReady } from "@/lib/email-delivery";
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    await requireUser("manage");
+    const u = await requireDelegated("schedules.manage", "manage");
+    const ids = await equipmentIds(u);
+    const { person, search } = readFilters(req.url);
     const [schedules, people, standards, setting, health, pending, failed] =
       await Promise.all([
-        db.workSchedule.findMany({ orderBy: { id: "asc" }, take: 1000 }),
-        db.user.findMany({
-          where: { active: true },
-          select: { id: true, name: true, role: true, email: true },
-          orderBy: { name: "asc" },
+        db.workSchedule.findMany({
+          where: {
+            equipmentId: { in: ids },
+            AND: [
+              ...(person
+                ? [
+                    {
+                      OR: [
+                        { assigneeIds: { array_contains: [person] } },
+                        { managerIds: { array_contains: [person] } },
+                      ],
+                    },
+                  ]
+                : []),
+              ...(search
+                ? [
+                    {
+                      title: { contains: search, mode: "insensitive" as const },
+                    },
+                  ]
+                : []),
+            ],
+          },
+          orderBy: { id: "asc" },
+          take: 1000,
         }),
+        visiblePeople(u, ids),
         db.$queryRaw<
           any[]
-        >`SELECT DISTINCT ON (s.family) s.*,e.name AS "equipmentName",e.department FROM "Standard" s JOIN "Equipment" e ON e.id=s."equipmentId" ORDER BY s.family,s.revision DESC`,
+        >`SELECT DISTINCT ON (s.family) s.*,e.name AS "equipmentName",e.department FROM "Standard" s JOIN "Equipment" e ON e.id=s."equipmentId" WHERE e.id=ANY(${ids}::text[]) ORDER BY s.family,s.revision DESC`,
         db.setting.findUniqueOrThrow({ where: { key: "shifts" } }),
         db.setting.findUnique({ where: { key: "shift-monitor-health" } }),
-        db.emailDelivery.count({ where: { status: "Pending" } }),
-        db.emailDelivery.count({ where: { status: "Failed" } }),
+        u.role === "Admin"
+          ? db.emailDelivery.count({ where: { status: "Pending" } })
+          : Promise.resolve(null),
+        u.role === "Admin"
+          ? db.emailDelivery.count({ where: { status: "Failed" } })
+          : Promise.resolve(null),
       ]);
     return Response.json({
       schedules,
-      people: people.map(({ email, ...person }) => ({
-        ...person,
-        hasEmail: !!email,
+      people: people.map(({ id, name, role, hasEmail }) => ({
+        id,
+        name,
+        role,
+        hasEmail,
       })),
       standards,
       config: setting.value,
@@ -40,7 +77,7 @@ export async function GET() {
 }
 export async function POST(req: Request) {
   try {
-    const u = await requireUser("manage"),
+    const u = await requireDelegated("schedules.manage", "manage"),
       b = await jsonBody(req);
     if (b.action === "create") {
       const v = workScheduleSchema.parse(b),
@@ -53,6 +90,19 @@ export async function POST(req: Request) {
         orderBy: { revision: "desc" },
       });
       if (!latest) throw new HttpError(400, "Choose a current standard");
+      await assertEquipmentAccess(u, latest.equipmentId);
+      await eligiblePeople(latest.equipmentId, [
+        ...v.assigneeIds,
+        ...v.managerIds,
+      ]);
+      if (
+        latest.kind === "audit" &&
+        (latest.assigneeIds as string[]).length &&
+        v.assigneeIds.some(
+          (id) => !(latest.assigneeIds as string[]).includes(id),
+        )
+      )
+        throw new HttpError(400, "Choose people assigned to this DL/TL task");
       if (
         v.shiftNames.some((name) => !config.shifts.some((s) => s.name === name))
       )
@@ -86,6 +136,7 @@ export async function POST(req: Request) {
       await db.workSchedule.create({
         data: {
           ...v,
+          kind: latest.kind,
           assigneeIds: assignees,
           managerIds: ids,
           equipmentId: latest.equipmentId,
@@ -111,6 +162,7 @@ export async function POST(req: Request) {
         const old = await tx.workSchedule.findUnique({ where: { id: v.id } });
         if (!old || old.version !== v.version)
           throw new HttpError(409, "Schedule changed; refresh before saving");
+        await assertEquipmentAccess(u, old.equipmentId, tx);
         if (v.notifyEmail) {
           const managers = await tx.user.findMany({
             where: { id: { in: old.managerIds as string[] }, active: true },
@@ -140,8 +192,13 @@ export async function POST(req: Request) {
           });
       });
     } else if (b.action === "retryFailedEmails") {
+      const permittedIds = await equipmentIds(u);
       const enabled = await db.workSchedule.findMany({
-        where: { active: true, notifyEmail: true },
+        where: {
+          active: true,
+          notifyEmail: true,
+          equipmentId: { in: permittedIds },
+        },
         select: { id: true },
       });
       await db.emailDelivery.updateMany({

@@ -35,7 +35,7 @@ export async function reportResponse(
       await summary.addRow(["Generated UTC", report.generatedAt]);
       await summary.addRow([
         "Period metrics",
-        "Work, studies, audits, downtime, ideas created",
+        "Work, studies, DL/TL Standard Work, downtime, ideas created",
       ]);
       await summary.addRow([
         "Current metrics",

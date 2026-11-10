@@ -1,3 +1,7 @@
+import { canAdminister } from "./capabilities";
+import type { AdminPrivilege } from "./delegation-rules";
+import { grants } from "./capabilities";
+export { grants } from "./capabilities";
 import { HttpError } from "./http-error";
 export { HttpError } from "./http-error";
 import { configuredOrigin } from "./request-policy";
@@ -30,16 +34,6 @@ export async function currentUser() {
     s.version === s.user.version
     ? s.user
     : null;
-}
-export async function grants(user: { role: string }) {
-  if (user.role === "Admin") return [...capabilities];
-  const policy = await db.policy.findUnique({ where: { role: user.role } });
-  return Array.isArray(policy?.grants)
-    ? policy.grants.filter(
-        (x): x is Capability =>
-          typeof x === "string" && capabilities.includes(x as Capability),
-      )
-    : [];
 }
 export async function requireUser(cap?: Capability, allowChange = false) {
   const u = await currentUser();
@@ -106,4 +100,14 @@ export function failure(e: unknown) {
     { error: "Unable to complete the request" },
     { status: 500 },
   );
+}
+
+export async function requireDelegated(
+  privilege: AdminPrivilege,
+  cap: Capability,
+) {
+  const u = await requireUser();
+  if (!(await grants(u)).includes(cap) && !(await canAdminister(u, privilege)))
+    throw new HttpError(403, "This action has not been delegated to you");
+  return u;
 }

@@ -16,6 +16,7 @@ export type DownEvent = {
   stopper: { name: string } | null;
 };
 export type Idea = {
+  media?: import("./evidence-schema").Evidence[];
   id: string;
   title: string;
   equipmentSnapshot: EquipmentSnapshot;

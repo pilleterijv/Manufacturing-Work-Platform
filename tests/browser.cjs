@@ -52,6 +52,7 @@ async function main() {
           role,
           password: hash,
           mustChange: false,
+          workspaceAccess: { mode: "all", locations: [], equipmentIds: [] },
         },
       }),
     );
@@ -111,6 +112,19 @@ async function main() {
     where: { family: fixtureFamily },
   });
   standardIds.push(s.id);
+  const auditStandard = await db.standard.create({
+    data: {
+      family: randomUUID(),
+      revision: 1,
+      title: s.title + " DL/TL",
+      equipmentId: equipment.id,
+      target: s.target,
+      tolerance: s.tolerance,
+      steps: s.steps,
+      kind: "audit",
+    },
+  });
+  standardIds.push(auditStandard.id);
   await page.reload();
   await page.getByRole("heading", { name: "Welcome, Jordan." }).waitFor();
   await page
@@ -129,7 +143,7 @@ async function main() {
     mimeType: "image/png",
     buffer: image,
   });
-  await page.getByAltText("Evidence for step 1").waitFor();
+  await page.getByAltText("Evidence").first().waitFor();
   photoId = (await db.photo.findFirst({ where: { userId: users[0].id } })).id;
   await page
     .getByRole("button", { name: "Complete standard work", exact: true })
@@ -160,16 +174,18 @@ async function main() {
   });
   assert(study.data.cycles[0].seconds > 0.3);
   await page
-    .getByRole("button", { name: "◎ Supervisor audits", exact: true })
+    .getByRole("button", { name: "◎ DL/TL Standard Work", exact: true })
     .click();
-  await page.getByLabel("Standard work", { exact: true }).selectOption(s.id);
-  await page.getByLabel("Operator being audited").fill("Operator 104");
+  await page
+    .getByLabel("Standard work", { exact: true })
+    .selectOption(auditStandard.id);
+  await page.getByLabel("Operator / context (optional)").fill("Operator 104");
   await page.getByRole("button", { name: "✕ No", exact: true }).click();
   await page.locator("textarea").fill("Quality check requires follow-up.");
   await page
     .locator("input[type=file]")
     .setInputFiles({ name: "audit.png", mimeType: "image/png", buffer: image });
-  await page.getByAltText("Evidence for step 1").waitFor();
+  await page.getByAltText("Evidence").first().waitFor();
   await page.getByRole("button", { name: "Start cycle", exact: true }).click();
   await page.waitForTimeout(350);
   await page
@@ -179,7 +195,9 @@ async function main() {
     path: "docs/screenshots/supervisor-input.png",
     fullPage: true,
   });
-  await page.getByRole("button", { name: "Save audit", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Complete DL/TL Standard Work", exact: true })
+    .click();
   await page.getByRole("status").waitFor();
   const audit = await db.record.findFirst({
     where: { userId: users[0].id, kind: "audit" },
@@ -255,7 +273,7 @@ async function main() {
   const workbook = new Excel.Workbook();
   await workbook.xlsx.load(await exportResponse.body());
   assert.equal(workbook.worksheets.length, 9);
-  assert(workbook.getWorksheet("Audit cycles").rowCount > 1);
+  assert(workbook.getWorksheet("DL-TL cycles").rowCount > 1);
   const operator = await browser.newContext();
   await login(operator, users[3].username);
   assert.equal(
@@ -331,12 +349,12 @@ async function main() {
   const mp = await manager.newPage();
   await mp.goto(origin);
   await mp
-    .getByRole("button", { name: "◎ Supervisor audits", exact: true })
+    .getByRole("button", { name: "◎ DL/TL Standard Work", exact: true })
     .click();
   await mp
     .getByLabel("Standard work", { exact: true })
-    .selectOption(revised.id);
-  await mp.getByLabel("Operator being audited").fill("Operator 104");
+    .selectOption(auditStandard.id);
+  await mp.getByLabel("Operator / context (optional)").fill("Operator 104");
   await mp.getByRole("button", { name: "✓ Yes", exact: true }).click();
   await mp.getByRole("button", { name: "Start cycle", exact: true }).click();
   await mp.waitForTimeout(300);
@@ -379,6 +397,7 @@ async function main() {
         await request(manager, "/api/platform", {
           action: "guide",
           title: "Archive regression " + suffix,
+          equipmentId: equipment.id,
           body: "Approved guidance.",
         })
       ).status,
@@ -628,9 +647,11 @@ main()
       );
     await db.photo.deleteMany({ where: { userId: { in: ids } } });
     await db.session.deleteMany({ where: { userId: { in: ids } } });
-    await db.user.deleteMany({ where: { id: { in: ids } } });
+    await db.content.deleteMany({
+      where: { OR: [{ id: { in: contentIds } }, { createdBy: { in: ids } }] },
+    });
     await db.standard.deleteMany({ where: { id: { in: standardIds } } });
-    await db.content.deleteMany({ where: { id: { in: contentIds } } });
+    await db.user.deleteMany({ where: { id: { in: ids } } });
     await db.rate.deleteMany({
       where: { OR: ids.map((id) => ({ key: { contains: id } })) },
     });

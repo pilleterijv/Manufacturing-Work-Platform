@@ -29,6 +29,7 @@ async function main() {
           role,
           password: hash,
           mustChange: false,
+          workspaceAccess:{mode:"all",locations:[],equipmentIds:[]},
         },
       }),
     );
@@ -44,6 +45,7 @@ async function main() {
         data: { name, plant, department, area, line: "Line A" },
       }),
     );
+  for(const e of equipment) await db.location.upsert({where:{plant_department_area_line:{plant:e.plant,department:e.department,area:e.area,line:e.line}},create:{plant:e.plant,department:e.department,area:e.area,line:e.line},update:{}});
   reason = await db.downtimeReason.create({
     data: { name: "Location verification " + suffix },
   });
@@ -317,15 +319,7 @@ async function main() {
   });
   const mp = await manager.newPage();
   await mp.goto(origin);
-  await mp
-    .locator("nav")
-    .getByRole("button", { name: /Accounts$/ })
-    .click();
-  await mp.getByLabel("Account", { exact: true }).selectOption(users[1].id);
-  assert.equal(
-    await mp.getByLabel("Downtime access", { exact: true }).count(),
-    0,
-  );
+  assert.equal(await mp.locator("nav").getByRole("button",{name:/Accounts$/}).count(),0);
   // Operational exports use the same assignment filter, even with export rights.
   const originalOperator = (
     await db.policy.findUniqueOrThrow({ where: { role: "Operator" } })

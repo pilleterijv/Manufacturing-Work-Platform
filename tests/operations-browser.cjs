@@ -65,6 +65,7 @@ async function main() {
           role,
           password: hash,
           mustChange: false,
+          workspaceAccess: { mode: "all", locations: [], equipmentIds: [] },
         },
       }),
     );
@@ -332,7 +333,10 @@ async function main() {
   assert(directory.every((p) => !("password" in p) && !("role" in p)));
   const mp = await manager.newPage();
   await mp.goto(origin);
-  await mp.getByRole("button", { name: /Notifications/ }).click();
+  await mp
+    .locator("nav")
+    .getByRole("button", { name: /Notifications/ })
+    .click();
   await mp.getByText(/You are the pilot for/).waitFor();
   await mp.screenshot({
     path: "docs/screenshots/pilot-notification.png",
@@ -560,7 +564,10 @@ async function main() {
     .waitFor();
   await mp.getByLabel("From date", { exact: true }).fill("2026-10-30");
   await mp.getByLabel("To date", { exact: true }).fill("2026-10-30");
-  await mp.getByRole("button", { name: "Apply filters", exact: true }).click();
+  await mp
+    .locator("form.leadership-filters")
+    .getByRole("button", { name: "Apply filters", exact: true })
+    .click();
   await mp
     .getByText("2026-10-30 through 2026-10-30", { exact: false })
     .waitFor();
@@ -571,7 +578,10 @@ async function main() {
   await mp
     .getByLabel("Leadership department", { exact: true })
     .selectOption(equipment[1].department);
-  await mp.getByRole("button", { name: "Apply filters", exact: true }).click();
+  await mp
+    .locator("form.leadership-filters")
+    .getByRole("button", { name: "Apply filters", exact: true })
+    .click();
   await mp
     .getByRole("heading", {
       name: `${equipment[1].department} — section dashboard`,
@@ -673,6 +683,21 @@ main()
     await db.record.deleteMany({ where: { userId: { in: ids } } });
     await db.content.deleteMany({ where: { id: { in: contentIds } } });
     await db.standard.deleteMany({ where: { id: { in: standardIds } } });
+    const reminderIds = (
+      await db.reminder.findMany({
+        where: { equipmentId: { in: eq } },
+        select: { id: true },
+      })
+    ).map((r) => r.id);
+    await db.notification.deleteMany({
+      where: {
+        OR: [
+          { userId: { in: ids } },
+          { kind: "overdue", sourceId: { in: reminderIds } },
+        ],
+      },
+    });
+    await db.reminder.deleteMany({ where: { equipmentId: { in: eq } } });
     await db.equipment.deleteMany({ where: { id: { in: eq } } });
     await db.session.deleteMany({ where: { userId: { in: ids } } });
     await db.user.deleteMany({ where: { id: { in: ids } } });

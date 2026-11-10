@@ -1,3 +1,4 @@
+import { equipmentScope } from "@/lib/location-access";
 import { db } from "@/lib/db";
 import { requireUser, grants, failure, HttpError } from "@/lib/security";
 import { leadershipReport } from "@/lib/leadership";
@@ -12,7 +13,7 @@ export async function GET(req: Request) {
     // Department aggregate access is independent from workspace-wide leadership.
     if (!g.includes("leadership") && !params.get("department")) {
       const first = await db.equipment.findFirst({
-        where: { department: { not: "" } },
+        where: { AND: [equipmentScope(user), { department: { not: "" } }] },
         orderBy: { department: "asc" },
         select: { department: true },
       });
@@ -25,7 +26,7 @@ export async function GET(req: Request) {
     }
     if (params.get("format") === "xlsx") await requireUser("export");
     return await withReportSlot(async () =>
-      reportResponse(await leadershipReport(params), params, req.signal),
+      reportResponse(await leadershipReport(params, user), params, req.signal),
     );
   } catch (error) {
     return failure(error);

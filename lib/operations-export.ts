@@ -1,3 +1,4 @@
+import { equipmentIds } from "./location-access";
 import { downtimeEquipmentWhere } from "./downtime-access";
 import { paged, type ExportBook } from "./excel-stream";
 import { db } from "./db";
@@ -10,8 +11,23 @@ import {
 export async function addOperationsSheets(
   book: ExportBook,
   grants: Capability[],
-  user: { role: string; downtimeAccess: unknown },
+  user: import("./location-access").ScopedUser & { downtimeAccess: unknown },
+  filters: { person?: string; search: string } = { search: "" },
 ) {
+  const ids = await equipmentIds(user);
+  const matchedEquipment = filters.search
+    ? (
+        await db.equipment.findMany({
+          where: {
+            id: { in: ids },
+            OR: ["name", "plant", "department", "area", "line"].map((k) => ({
+              [k]: { contains: filters.search, mode: "insensitive" as const },
+            })),
+          },
+          select: { id: true },
+        })
+      ).map((e) => e.id)
+    : ids;
   if (grants.includes("downtime")) {
     const events = book.addWorksheet("Downtime events"),
       shifts = book.addWorksheet("Downtime shifts");
@@ -46,6 +62,33 @@ export async function addOperationsSheets(
     const downtime = paged((cursor) =>
       db.downtime.findMany({
         where: {
+          AND: [
+            ...(filters.person
+              ? [
+                  {
+                    OR: [
+                      { startedBy: filters.person },
+                      { stoppedBy: filters.person },
+                    ],
+                  },
+                ]
+              : []),
+            ...(filters.search
+              ? [
+                  {
+                    OR: [
+                      {
+                        reasonName: {
+                          contains: filters.search,
+                          mode: "insensitive" as const,
+                        },
+                      },
+                      { equipmentId: { in: matchedEquipment } },
+                    ],
+                  },
+                ]
+              : []),
+          ],
           startedAt: { lte: asOf },
           equipment: downtimeEquipmentWhere(user),
         },
@@ -118,7 +161,52 @@ export async function addOperationsSheets(
     const asOf = new Date();
     const ideas = paged((cursor) =>
       db.idea.findMany({
-        where: { createdAt: { lte: asOf } },
+        where: {
+          createdAt: { lte: asOf },
+          equipmentId: { in: ids },
+          AND: [
+            ...(filters.person
+              ? [
+                  {
+                    OR: [
+                      { pilotId: filters.person },
+                      { validatorId: filters.person },
+                      { submitterId: filters.person },
+                      { createdBy: filters.person },
+                      { participants: { some: { userId: filters.person } } },
+                    ],
+                  },
+                ]
+              : []),
+            ...(filters.search
+              ? [
+                  {
+                    OR: [
+                      {
+                        title: {
+                          contains: filters.search,
+                          mode: "insensitive" as const,
+                        },
+                      },
+                      {
+                        proposal: {
+                          contains: filters.search,
+                          mode: "insensitive" as const,
+                        },
+                      },
+                      {
+                        currentState: {
+                          contains: filters.search,
+                          mode: "insensitive" as const,
+                        },
+                      },
+                      { equipmentId: { in: matchedEquipment } },
+                    ],
+                  },
+                ]
+              : []),
+          ],
+        },
         take: 100,
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
         orderBy: { id: "asc" },

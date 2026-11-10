@@ -1,3 +1,4 @@
+import { validateDatabaseTargets } from "../lib/database-target";
 import "dotenv/config";
 import { Pool } from "pg";
 import { readFile, readdir } from "node:fs/promises";
@@ -5,6 +6,10 @@ import { createHash } from "node:crypto";
 import { db } from "../lib/db";
 import { defaults } from "../lib/rules";
 async function main() {
+  validateDatabaseTargets(
+    process.env.DATABASE_URL,
+    process.env.DATABASE_SETUP_URL,
+  );
   const pool = new Pool({
     connectionString:
       process.env.DATABASE_SETUP_URL || process.env.DATABASE_URL,
@@ -97,6 +102,34 @@ async function main() {
         body: "1. Stop the station safely and follow your approved isolation procedure.\n2. Check the label roll and guides against the approved setup.\n3. Ask the team leader to verify alignment.\n4. Run and inspect a first piece before restarting production.",
       },
     });
+  }
+  const locationKey = (e: {
+    plant: string;
+    department: string;
+    area: string;
+    line: string;
+  }) =>
+    JSON.stringify(
+      [e.plant, e.department, e.area, e.line].map((v) =>
+        v.trim().toLowerCase(),
+      ),
+    );
+  const knownLocations = new Set(
+    (await db.location.findMany()).map(locationKey),
+  );
+  for (const e of await db.equipment.findMany()) {
+    const key = locationKey(e);
+    if (!knownLocations.has(key)) {
+      await db.location.create({
+        data: {
+          plant: e.plant,
+          department: e.department,
+          area: e.area,
+          line: e.line,
+        },
+      });
+      knownLocations.add(key);
+    }
   }
   await db.session.deleteMany({ where: { expires: { lt: new Date() } } });
   await db.rate.deleteMany({ where: { expires: { lt: new Date() } } });

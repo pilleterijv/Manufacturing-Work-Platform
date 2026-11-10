@@ -1,3 +1,11 @@
+import { readFilters } from "./filters";
+import {
+  assignedEquipmentIds,
+  equipmentIds,
+  equipmentSql,
+  visiblePeople,
+  type ScopedUser,
+} from "./location-access";
 import { Temporal } from "@js-temporal/polyfill";
 import { Prisma } from "@prisma/client";
 import { db } from "./db";
@@ -26,7 +34,33 @@ type CycleStats = {
   range: number | null;
   standardDeviation: number | null;
 };
-export async function leadershipReport(params: URLSearchParams) {
+export async function leadershipReport(
+  params: URLSearchParams,
+  user: ScopedUser,
+) {
+  const ids = await equipmentIds(user);
+  const { person, search } = readFilters("http://localhost/?" + params);
+  const assignmentIds = await assignedEquipmentIds(ids, person);
+  const permitted = { equipmentId: { in: ids } };
+  const problemFilter = {
+    ...permitted,
+    AND: [
+      ...(person
+        ? [
+            {
+              OR: [
+                { ownerId: person },
+                { reviewerId: person },
+                { actions: { some: { ownerId: person } } },
+              ],
+            },
+          ]
+        : []),
+      ...(search
+        ? [{ title: { contains: search, mode: "insensitive" as const } }]
+        : []),
+    ],
+  };
   const setting = await db.setting.findUniqueOrThrow({
     where: { key: "shifts" },
   });
@@ -58,11 +92,12 @@ export async function leadershipReport(params: URLSearchParams) {
   const recordScope = Prisma.sql`FROM "Record" r LEFT JOIN "Equipment" e
     ON e.id = COALESCE(r.data->>'equipmentId', r.data->'snapshot'->>'equipmentId')
     WHERE r.created >= ${start} AND r.created < ${end}
+    AND ${equipmentSql(ids, Prisma.sql`e.id`)}
+    ${person ? Prisma.sql`AND r."userId"=${person}` : Prisma.empty}
+    ${search ? Prisma.sql`AND (r.data::text ILIKE ${"%" + search + "%"} OR e.name ILIKE ${"%" + search + "%"})` : Prisma.empty}
     ${department ? Prisma.sql`AND COALESCE(r.data->'equipmentSnapshot'->>'department', r.data->'snapshot'->'equipment'->>'department', e.department) = ${department}` : Prisma.empty}`;
   const base = Prisma.sql`WITH scoped AS (SELECT r.kind, r.data ${recordScope})`;
-  const ideaScope = department
-    ? Prisma.sql`WHERE "equipmentSnapshot"->>'department' = ${department}`
-    : Prisma.empty;
+  const ideaScope = Prisma.sql`WHERE ${equipmentSql(ids, Prisma.sql`"equipmentId"`)} ${person ? Prisma.sql`AND ("pilotId"=${person} OR "validatorId"=${person} OR "submitterId"=${person} OR "createdBy"=${person} OR id IN (SELECT "ideaId" FROM "IdeaParticipant" WHERE "userId"=${person}))` : Prisma.empty} ${search ? Prisma.sql`AND title ILIKE ${"%" + search + "%"}` : Prisma.empty} ${department ? Prisma.sql`AND "equipmentSnapshot"->>'department'=${department}` : Prisma.empty}`;
   const [
     countRows,
     responseRows,
@@ -102,41 +137,51 @@ export async function leadershipReport(params: URLSearchParams) {
     db.$queryRaw<
       { kind: string; total: number }[]
     >(Prisma.sql`SELECT c.kind,count(*)::int AS total
-      FROM "Content" c LEFT JOIN "Equipment" e ON e.id=c."equipmentId" WHERE c.active
+      FROM "Content" c LEFT JOIN "Equipment" e ON e.id=c."equipmentId" WHERE c.active AND (c."equipmentId" IS NULL OR ${equipmentSql(assignmentIds, Prisma.sql`c."equipmentId"`)})
       ${department ? Prisma.sql`AND (c."equipmentId" IS NULL OR e.department=${department})` : Prisma.empty} GROUP BY c.kind`),
     db.$queryRaw<
       { total: number }[]
     >(Prisma.sql`SELECT count(*)::int AS total FROM (
       SELECT DISTINCT ON (family) "equipmentId" FROM "Standard" ORDER BY family, revision DESC
     ) s JOIN "Equipment" e ON e.id=s."equipmentId"
-    ${department ? Prisma.sql`WHERE e.department=${department}` : Prisma.empty}`),
-    db.equipment.count({ where: department ? { department } : {} }),
+    WHERE ${equipmentSql(assignmentIds, Prisma.sql`e.id`)} ${department ? Prisma.sql`AND e.department=${department}` : Prisma.empty}`),
+    db.equipment.count({
+      where: {
+        id: { in: assignmentIds },
+        ...(department ? { department } : {}),
+      },
+    }),
     department
       ? Promise.resolve(null)
-      : db.user.count({ where: { active: true } }),
-    db.$queryRaw<
-      { department: string }[]
-    >(Prisma.sql`SELECT department FROM "Equipment"
-      UNION SELECT "equipmentSnapshot"->>'department' FROM "Downtime"
-      UNION SELECT "equipmentSnapshot"->>'department' FROM "Idea"
-      UNION SELECT COALESCE(data->'equipmentSnapshot'->>'department',data->'snapshot'->'equipment'->>'department') FROM "Record"`),
+      : visiblePeople(user, ids).then(
+          (p) => p.filter((p) => !person || p.id === person).length,
+        ),
+    db.equipment.findMany({
+      where: { id: { in: ids } },
+      select: { department: true },
+      distinct: ["department"],
+    }),
     db.problem.groupBy({
       by: ["method", "status"],
-      where: department
-        ? { equipmentSnapshot: { path: ["department"], equals: department } }
-        : {},
+      where: {
+        ...problemFilter,
+        ...(department
+          ? { equipmentSnapshot: { path: ["department"], equals: department } }
+          : {}),
+      },
       _count: true,
     }),
     db.problemAction.count({
       where: {
         status: { not: "Completed" },
-        ...(department
-          ? {
-              problem: {
+        problem: {
+          ...problemFilter,
+          ...(department
+            ? {
                 equipmentSnapshot: { path: ["department"], equals: department },
-              },
-            }
-          : {}),
+              }
+            : {}),
+        },
       },
     }),
   ]);
@@ -153,6 +198,22 @@ export async function leadershipReport(params: URLSearchParams) {
   const events = paged((cursor) =>
     db.downtime.findMany({
       where: {
+        ...permitted,
+        AND: [
+          ...(person
+            ? [{ OR: [{ startedBy: person }, { stoppedBy: person }] }]
+            : []),
+          ...(search
+            ? [
+                {
+                  reasonName: {
+                    contains: search,
+                    mode: "insensitive" as const,
+                  },
+                },
+              ]
+            : []),
+        ],
         startedAt: { lt: end },
         OR: [{ endedAt: null }, { endedAt: { gt: start } }],
         ...(department

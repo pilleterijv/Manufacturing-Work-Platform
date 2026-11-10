@@ -1,4 +1,6 @@
 import "dotenv/config";
+import { pollExternalData } from "../lib/external-poller";
+import { queueOverdueReminders } from "../lib/reminders";
 import { db } from "../lib/db";
 import { checkShiftWork } from "../lib/shift-monitor";
 import { deliverShiftEmails } from "../lib/email-delivery";
@@ -13,8 +15,16 @@ process.on("SIGINT", () => {
   stopping = true;
 });
 const jobs = [
+  {
+    name: "expired-password-links",
+    interval: 1800000,
+    run: () =>
+      db.passwordReset.deleteMany({ where: { expires: { lt: new Date() } } }),
+  },
+  { name: "external-data", interval: 30000, run: pollExternalData },
   { name: "sql", interval: 10000, run: pollCompanySql },
   { name: "shifts", interval: 60000, run: checkShiftWork },
+  { name: "overdue", interval: 60000, run: () => queueOverdueReminders() },
   { name: "email", interval: 10000, run: deliverShiftEmails },
 ];
 async function runJob(job: (typeof jobs)[number]) {

@@ -1,8 +1,12 @@
 "use client";
+import PersonSelect from "../person-select";
+import EvidenceInput from "../evidence-input";
 import { useEffect, useState, useRef } from "react";
-import { api } from "@/lib/client-api";
+import { api, filterUrl } from "@/lib/client-api";
 import {
   methods,
+  defaultRequirements,
+  actionTypes,
   methodology,
   checkpoints,
   problemStatuses,
@@ -15,11 +19,14 @@ type Person = { id: string; name: string };
 type Equipment = {
   id: string;
   name: string;
+  plant: string;
   department: string;
   area: string;
   line: string;
 };
 type Action = {
+  required: boolean;
+  media?: import("@/lib/evidence-schema").Evidence[];
   id: string;
   type: string;
   checkpoint: string;
@@ -73,6 +80,7 @@ type List = {
   };
 };
 const empty: ProblemInput = {
+  media: [],
   title: "",
   method: "2D",
   equipmentId: "",
@@ -111,6 +119,7 @@ export default function Problems({
     [caseStatus, setCaseStatus] = useState("Open"),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
+    [caseUploading, setCaseUploading] = useState(false),
     [busy, setBusy] = useState(false),
     [loading, setLoading] = useState(false);
   const generation = useRef(0);
@@ -207,6 +216,7 @@ export default function Problems({
     setDraft({
       ...empty,
       method: m,
+      requirements: { ...defaultRequirements(m), actionTypes: [] },
       occurredOn: data!.today,
       dueDate: data!.today,
       ownerId: userId,
@@ -326,9 +336,9 @@ export default function Problems({
           <button className="outline">Search</button>
         </form>
         <p className="small muted">
-          Department filters organize reporting; workspace permissions control
-          access. Summary counts cover every matching record, including pages
-          not loaded.
+          Department filters organize reporting; role permissions and
+          department/area assignments control access. Summary counts cover every
+          matching record, including pages not loaded.
         </p>
       </section>
       {error && (
@@ -387,7 +397,7 @@ export default function Problems({
             {canExport && (
               <a
                 className="outline"
-                href={"/api/problems?" + params() + "&format=xlsx"}
+                href={filterUrl("/api/problems?" + params() + "&format=xlsx")}
               >
                 ↓ Export problem solving
               </a>
@@ -413,7 +423,12 @@ export default function Problems({
               {queue.items.map((a) => (
                 <article className="problem-action" key={a.id}>
                   <div className="section-title">
-                    <h3>{a.title}</h3>
+                    <h3>
+                      {a.title}{" "}
+                      <span className="badge">
+                        {a.required ? "Required" : "Optional"}
+                      </span>
+                    </h3>
                     <span
                       className={
                         "badge " + (a.dueDate < data.today ? "warn" : "")
@@ -430,7 +445,7 @@ export default function Problems({
                   <ActionUpdate
                     a={a}
                     busy={busy}
-                    save={(s, c) =>
+                    save={(s, c, media) =>
                       post({
                         action: "updateAction",
                         id: a.problem.id,
@@ -438,6 +453,7 @@ export default function Problems({
                         version: a.version,
                         status: s,
                         comment: c,
+                        media,
                       })
                     }
                   />
@@ -532,8 +548,15 @@ export default function Problems({
                           </option>
                           {data.equipment.map((eq) => (
                             <option key={eq.id} value={eq.id}>
-                              {eq.name} · {eq.department} / {eq.area} /{" "}
-                              {eq.line}
+                              {[
+                                eq.plant,
+                                eq.department,
+                                eq.area,
+                                eq.line,
+                                eq.name,
+                              ]
+                                .filter(Boolean)
+                                .join(" / ")}
                             </option>
                           ))}
                         </select>
@@ -559,24 +582,24 @@ export default function Problems({
                         />
                       </Field>
                       <Field label="Facilitator / owner">
-                        <select
+                        <PersonSelect
+                          people={data?.people ?? []}
+                          aria-label="Facilitator / owner"
                           required
                           value={draft.ownerId}
                           onChange={(e) => patch({ ownerId: e.target.value })}
-                        >
-                          {peopleOptions}
-                        </select>
+                        />
                       </Field>
                       <Field label="Reviewer">
-                        <select
+                        <PersonSelect
+                          people={data?.people ?? []}
+                          aria-label="Reviewer"
                           required
                           value={draft.reviewerId}
                           onChange={(e) =>
                             patch({ reviewerId: e.target.value })
                           }
-                        >
-                          {peopleOptions}
-                        </select>
+                        />
                       </Field>
                       <Field label="Record due date">
                         <input
@@ -584,6 +607,24 @@ export default function Problems({
                           required
                           value={draft.dueDate}
                           onChange={(e) => patch({ dueDate: e.target.value })}
+                        />
+                      </Field>
+                      <Field label="Add team member from employee directory">
+                        <PersonSelect
+                          aria-label="Add team member from employee directory"
+                          people={data?.people ?? []}
+                          value=""
+                          onChange={(e) => {
+                            const p = data?.people.find(
+                              (p) => p.id === e.target.value,
+                            );
+                            if (p)
+                              patch({
+                                team: [draft.team, p.name]
+                                  .filter(Boolean)
+                                  .join(", "),
+                              });
+                          }}
                         />
                       </Field>
                       <Field label="Team / participants">
@@ -596,10 +637,71 @@ export default function Problems({
                       </Field>
                     </div>
                     <p className="small muted">
-                      Save incomplete work as an open record. All methodology
-                      fields and completed actions are required before the
-                      assigned reviewer or Admin can close it.
+                      Save incomplete work as an open record. Choose the
+                      required fields and action categories below. Required
+                      tracked actions must be completed before closure; optional
+                      actions can remain open.
                     </p>
+                    <fieldset>
+                      <legend>Closure requirements</legend>
+                      <label className="check">
+                        <input
+                          type="checkbox"
+                          checked={
+                            (
+                              draft.requirements ??
+                              defaultRequirements(draft.method)
+                            ).requireAction
+                          }
+                          onChange={(e) =>
+                            patch({
+                              requirements: {
+                                ...defaultRequirements(draft.method),
+                                ...draft.requirements,
+                                actionTypes:
+                                  draft.requirements?.actionTypes ?? [],
+                                requireAction: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                        At least one tracked action required
+                      </label>
+                      <p>Require a completed action in these categories:</p>
+                      {actionTypes
+                        .filter(
+                          (t) => t !== "Checkpoint" || draft.method !== "2D",
+                        )
+                        .map((t) => (
+                          <label className="check" key={t}>
+                            <input
+                              type="checkbox"
+                              checked={
+                                draft.requirements?.actionTypes.includes(t) ??
+                                false
+                              }
+                              onChange={(e) =>
+                                patch({
+                                  requirements: {
+                                    ...defaultRequirements(draft.method),
+                                    ...draft.requirements,
+                                    actionTypes: e.target.checked
+                                      ? [
+                                          ...(draft.requirements?.actionTypes ??
+                                            []),
+                                          t,
+                                        ]
+                                      : (
+                                          draft.requirements?.actionTypes ?? []
+                                        ).filter((x) => x !== t),
+                                  },
+                                })
+                              }
+                            />
+                            {t}
+                          </label>
+                        ))}
+                    </fieldset>
                     {methodology[draft.method].sections.map((section) => (
                       <fieldset
                         className="problem-discipline"
@@ -609,6 +711,30 @@ export default function Problems({
                         <div className="form-grid">
                           {section.fields.map(([key, label]) => (
                             <Field key={key} label={label}>
+                              <label className="check">
+                                <input
+                                  type="checkbox"
+                                  checked={(
+                                    draft.requirements ??
+                                    defaultRequirements(draft.method)
+                                  ).fields.includes(key)}
+                                  onChange={(e) => {
+                                    const r = draft.requirements ?? {
+                                      ...defaultRequirements(draft.method),
+                                      actionTypes: [],
+                                    };
+                                    patch({
+                                      requirements: {
+                                        ...r,
+                                        fields: e.target.checked
+                                          ? [...r.fields, key]
+                                          : r.fields.filter((k) => k !== key),
+                                      },
+                                    });
+                                  }}
+                                />
+                                Required for closure
+                              </label>
                               {[
                                 "standardExists",
                                 "standardClear",
@@ -651,6 +777,12 @@ export default function Problems({
                         </div>
                       </fieldset>
                     ))}
+                    <EvidenceInput
+                      label="Problem photo or video evidence"
+                      onBusy={setCaseUploading}
+                      value={draft.media ?? []}
+                      onChange={(media) => patch({ media })}
+                    />
                     {selected && (
                       <Field label="Problem status">
                         <select
@@ -663,7 +795,10 @@ export default function Problems({
                         </select>
                       </Field>
                     )}
-                    <button className="primary" disabled={busy}>
+                    <button
+                      className="primary"
+                      disabled={busy || caseUploading}
+                    >
                       {busy
                         ? "Saving…"
                         : selected
@@ -701,6 +836,95 @@ export default function Problems({
                                 new Date(a.completedAt).toLocaleString()
                               : ""}
                           </p>
+                          <details>
+                            <summary>
+                              Edit action details, assignment and requirement
+                            </summary>
+                            <form
+                              onSubmit={async (e) => {
+                                e.preventDefault();
+                                const f = new FormData(e.currentTarget);
+                                await post({
+                                  action: "editAction",
+                                  id: selected.id,
+                                  actionId: a.id,
+                                  version: a.version,
+                                  title: f.get("title"),
+                                  type: f.get("type"),
+                                  ownerId: f.get("ownerId"),
+                                  dueDate: f.get("dueDate"),
+                                  checkpoint: f.get("checkpoint") ?? "",
+                                  required: f.get("required") === "on",
+                                });
+                              }}
+                            >
+                              <Field label="Action description">
+                                <input
+                                  name="title"
+                                  required
+                                  maxLength={500}
+                                  defaultValue={a.title}
+                                />
+                              </Field>
+                              <Field label="Action type">
+                                <select name="type" defaultValue={a.type}>
+                                  {actionTypes
+                                    .filter(
+                                      (t) =>
+                                        t !== "Checkpoint" ||
+                                        selected.method !== "2D",
+                                    )
+                                    .map((t) => (
+                                      <option key={t}>{t}</option>
+                                    ))}
+                                </select>
+                              </Field>
+                              <Field label="Action owner">
+                                <PersonSelect
+                                  people={data?.people ?? []}
+                                  aria-label="Action owner"
+                                  name="ownerId"
+                                  defaultValue={a.ownerId}
+                                  required
+                                />
+                              </Field>
+                              <Field label="Action due date">
+                                <input
+                                  name="dueDate"
+                                  type="date"
+                                  defaultValue={a.dueDate}
+                                  required
+                                />
+                              </Field>
+                              {selected.method !== "2D" && (
+                                <Field label="Checkpoint category">
+                                  <select
+                                    name="checkpoint"
+                                    defaultValue={a.checkpoint}
+                                  >
+                                    <option value="">Not a checkpoint</option>
+                                    {checkpoints.map((t) => (
+                                      <option key={t}>{t}</option>
+                                    ))}
+                                  </select>
+                                </Field>
+                              )}
+                              <label className="check">
+                                <input
+                                  name="required"
+                                  type="checkbox"
+                                  defaultChecked={a.required}
+                                />
+                                Required for closure
+                              </label>
+                              <button
+                                className="outline"
+                                disabled={busy || selected.status === "Closed"}
+                              >
+                                Save action details
+                              </button>
+                            </form>
+                          </details>
                           <ActionUpdate
                             key={a.id + ":" + a.version}
                             a={a}
@@ -743,6 +967,7 @@ export default function Problems({
                             if (
                               await post({
                                 action: "addAction",
+                                required: f.required === "on",
                                 ...f,
                                 id: selected.id,
                                 version: selected.version,
@@ -772,9 +997,12 @@ export default function Problems({
                               </select>
                             </Field>
                             <Field label="Action owner">
-                              <select name="ownerId" required>
-                                {peopleOptions}
-                              </select>
+                              <PersonSelect
+                                people={data?.people ?? []}
+                                aria-label="Action owner"
+                                name="ownerId"
+                                required
+                              />
                             </Field>
                             <Field label="Action due date">
                               <input
@@ -795,6 +1023,14 @@ export default function Problems({
                               </Field>
                             )}
                           </div>
+                          <label className="check">
+                            <input
+                              type="checkbox"
+                              name="required"
+                              defaultChecked
+                            />
+                            Required for closure
+                          </label>
                           <button className="primary" disabled={busy}>
                             Add tracked action
                           </button>
@@ -896,8 +1132,14 @@ function ActionUpdate({
 }: {
   a: Action;
   busy: boolean;
-  save: (status: string, comment: string) => Promise<unknown>;
+  save: (
+    status: string,
+    comment: string,
+    media: import("@/lib/evidence-schema").Evidence[],
+  ) => Promise<unknown>;
 }) {
+  const [media, setMedia] = useState(a.media ?? []),
+    [uploading, setUploading] = useState(false);
   const [status, setStatus] = useState(a.status),
     [comment, setComment] = useState("");
   return (
@@ -905,7 +1147,7 @@ function ActionUpdate({
       className="problem-action-update"
       onSubmit={async (e) => {
         e.preventDefault();
-        if (await save(status, comment)) setComment("");
+        if (await save(status, comment, media)) setComment("");
       }}
     >
       <Field label="New action status">
@@ -924,7 +1166,13 @@ function ActionUpdate({
           placeholder="What changed? What was verified?"
         />
       </Field>
-      <button className="outline" disabled={busy}>
+      <EvidenceInput
+        label="Action photo or video evidence"
+        value={media}
+        onChange={setMedia}
+        onBusy={setUploading}
+      />
+      <button className="outline" disabled={busy || uploading}>
         Submit action update
       </button>
     </form>

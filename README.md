@@ -1,6 +1,28 @@
 # Floorwork — Manufacturing Work Platform
 
-A browser application for standard work, photographic evidence, time studies, supervisor audits, troubleshooting, training, role permissions, downtime tracking, improvement ideas, leadership reporting, and Excel exports. PostgreSQL is the primary database; Excel is an export format.
+A browser application for standard work, photographic evidence, time studies, DL/TL Standard Work, troubleshooting, training, role permissions, downtime tracking, improvement ideas, leadership reporting, and Excel exports. PostgreSQL is the primary database; Excel is an export format.
+
+This update adds area-based **5S audits**, machine **TPM/CIL**, **defect reporting with optional MaintainX work-order submission**, personal/assigned-department dashboards, registration approval, password-recovery emails and searchable account pickers. See [setup and limits](docs/five-s-tpm-access.md) and [screenshots](docs/screenshots/five-s-tpm). Migration 011 preserves existing work. Live MaintainX/SMTP require private IT setup; no company work orders or emails have been sent by development tests.
+
+## Personal dashboards, account delegation and assistant
+
+Each account can choose its login section and dashboard panels. Managers manage ordinary accounts wholly within their assigned scope; Admin can grant specific additional permissions to individual accounts. Neutral branding replaces the company-specific wordmark. The read-only Assistant provides permitted built-in navigation help plus optional OpenAI answers after private server setup and Admin enablement. See [setup and boundaries](docs/personal-dashboards-access-assistant.md) and [current screenshots](docs/screenshots/personal-access). Migration 012 preserves existing work and role policies.
+
+## Orange / white company styling
+
+The interface uses an orange/white theme with neutral Manufacturing Work Platform branding. Named company branding has been removed. See [brand asset handover](docs/company-branding.md).
+
+## Company hosting, Windows and ownership
+
+Command Prompt can launch the app but does not replace Node.js. For employees to use it without installing Node or Docker, host it once on a company server and distribute its HTTPS/PWA shortcut. Docker is optional; the server still needs a Node runtime and PostgreSQL (native or managed). A signed Windows installer with a bundled runtime is a separate packaging task. Follow the [step-by-step company rollout guide](docs/company-rollout-step-by-step.md) for ownership, private repositories, staging, Windows/server deployment, TrakSYS/SQL/Excel/MaintainX connections, identity, backups and pilot acceptance.
+
+## PMs, people filters, overdue reminders and connected data
+
+See [feature setup and validation](docs/maintenance-data-validation.md) and the [company ownership/server integration handover](docs/company-ownership-deployment.md). This update adds machine PMs, scoped people/text filters, overdue in-app/email reminders, device video evidence and Excel production-results imports, with read-only SQL Server/PostgreSQL feeds for operational sections. Migration 010 is additive. Email, company databases and TrakSYS still require private IT configuration and live validation.
+
+## Department assignments and visual guides
+
+See [department/area setup, manager assignments, DL/TL tasks, problem-solving requirements and device media](docs/location-task-management.md). **After upgrading, Admin must assign departments/areas to non-Admin users before they resume work.** Migration 009 preserves restricted downtime assignments as the initial workspace scope; other non-Admin accounts start without assigned locations.
 
 ## Install on tablets / shared workplace use
 
@@ -70,13 +92,13 @@ Use npm run dev for development. APP_ORIGIN must exactly match the origin you br
 
 - **Standard work:** latest revisions, ordered Yes/No steps, required/optional photos and comments, completion history, timestamped records, and frozen standard snapshots.
 - **Time studies:** named work elements, repeated stopwatch observations, raw seconds/timestamps, average, median, minimum, maximum, range, and population standard deviation per element.
-- **Supervisor audits:** operator identification, Yes/No findings, photographic evidence, repeated cycle timing, target+tolerance checks, follow-up flags, and original criteria retained per audit.
+- **DL/TL Standard Work:** department/area-specific assigned checklists, Yes/No findings, required/optional photographic evidence, optional operator context and cycle timing, follow-up flags, and immutable revision history.
 - **Training:** searchable equipment-associated YouTube/Vimeo links, trusted embed URLs, playback on demand, and archive. Uploaded MP4 hosting and certification tracking are not implemented.
 - **Troubleshooting:** searchable plain-text guides with equipment association and archive.
 - **Management:** equipment hierarchy, standard authoring and immutable revision history. Existing runs and audits are never rewritten when a standard changes.
 - **Downtime:** Admin-managed reasons and timer availability; shared start/stop timer per equipment; server timestamps survive reloads; no overlapping active events for a machine. Configure 1–8 daily shifts and an IANA time zone. Events split across shift boundaries, overnight dates, and daylight-saving changes, using the schedule and reason/equipment snapshots saved when they started.
-- **Leadership dashboard:** workspace-wide and department-level summaries of work, studies, audits, downtime, ideas, standards, training, guides, and equipment. Default reporting period is 30 local calendar days, with a maximum 366-day range. Period metrics and current library/pipeline counts are labeled separately. Reporting uses complete queried records, rather than the paged operational histories. Department filters are reporting tools, not access restrictions. Admin and Manager have leadership access by default; Admin can edit role grants.
-- **Improvement ideas:** current state, proposal, equipment/department, due date, submitter, pilot, validator, and participants. Creator identity is always recorded separately. The pilot receives a **private in-app notification**, created in the same transaction as the idea. Notifications refresh every 20 seconds while signed in and can be marked read. Email delivery is not configured. Pilot/validator can update progress; only the validator or Admin can mark completed. Ideas are shared within the workspace among people with the ideas permission.
+- **Leadership dashboard:** workspace-wide and department-level summaries of work, studies, audits, downtime, ideas, standards, training, guides, and equipment. Default reporting period is 30 local calendar days, with a maximum 366-day range. Period metrics and current library/pipeline counts are labeled separately. Reporting uses complete queried records, rather than the paged operational histories. Department filters organize reporting; department/area assignments restrict the underlying records and exports. Admin and Manager have leadership access by default; Admin can edit role grants.
+- **Improvement ideas:** current state, proposal, equipment/department, due date, submitter, pilot, validator, and participants. Creator identity is always recorded separately. The pilot receives a **private in-app notification**, created in the same transaction as the idea. Notifications refresh every 20 seconds while signed in and can be marked read. Overdue reminders support separately switchable in-app and email delivery after IT configures SMTP. Pilot/validator can update progress; only the validator or Admin can mark completed. Ideas are shared within the workspace among people with the ideas permission.
 - **Access:** individual accounts, Admin/Manager/DL-TL/Operator roles, editable role policies checked by the server on every request, forced initial/reset password change, account reset/deactivation, remembered sessions, and session revocation.
 - **Analytics/Excel:** completed records, No-answer rates, failures by equipment/step, elapsed completion time, timing statistics, audit follow-ups; up to nine XLSX sheets with raw observations. A scheduled completion percentage is not displayed; Shift requirements separately monitors missed shift completions. Overview displays eight recent records with exact totals; work histories load 100 records per page with a Load more history button. Statistics in the Analytics section reflect loaded history; leadership reports and exports query their complete scope.
 
@@ -121,9 +143,9 @@ The dashboard/problem-solving update adds migration 006. It preserves existing r
 
 Downtime recording uses **department → area → machine** dropdowns. Department choices include the plant to distinguish duplicate names. Changing a parent clears the child selection, and selecting a currently-down machine card restores its full location.
 
-As Admin, open **Accounts**, select an existing user, and use **Downtime location access**. Choose unrestricted access or assign whole departments, areas, specific machines, or a combination. Empty restricted assignments block all downtime recording. Whole-location grants include future machines in that location; explicit machine grants follow the machine if it moves. Existing accounts remain unrestricted after migration 007, and Admin retains full access.
+As Admin, open **Accounts**, select an existing user, and use **Downtime location access**. Choose unrestricted access or assign whole departments, areas, specific machines, or a combination. Empty restricted assignments block all downtime recording. Whole-location grants include future machines in that location; explicit machine grants follow the machine if it moves. Migration 009 adds workspace assignments above the downtime-specific scope; see the upgrade note at the top. Admin retains full access.
 
-Assignments are enforced on start/stop requests, live timers, operational history and raw downtime exports. Revocation takes effect on the next request, including stopping existing timers; another authorized person or Admin can stop a timer after its starter loses access. Leadership/department aggregate dashboards still follow their separate role permissions. Only Admin can edit assignments, and Accounts-capable non-admins cannot promote anyone to Admin or edit Admin accounts. Other modules continue to use workspace role grants.
+Assignments are enforced on start/stop requests, live timers, operational history and raw downtime exports. Revocation takes effect on the next request, including stopping existing timers; another authorized person or Admin can stop a timer after its starter loses access. Leadership/department dashboards require their role grants and are narrowed by workspace assignments. Only Admin can edit accounts or assignments. Other operational modules also enforce workspace department/area assignments.
 
 Run `npm run test:downtime-access` against a local production app to verify the hierarchy, assignment editing, immediate revocation, unauthorized starts/stops and scoped reads/exports. Back up data before upgrading; preserve your existing `.env`, uploads and database volume.
 

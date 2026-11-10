@@ -15,7 +15,10 @@ function setup(url) {
   const result = spawnSync(
     process.execPath,
     ["node_modules/tsx/dist/cli.mjs", "scripts/setup.ts"],
-    { env: { ...process.env, DATABASE_URL: url }, encoding: "utf8" },
+    {
+      env: { ...process.env, DATABASE_URL: url, DATABASE_SETUP_URL: url },
+      encoding: "utf8",
+    },
   );
   assert.equal(
     result.status,
@@ -73,6 +76,9 @@ async function main() {
         );
         await pool.query(
           `INSERT INTO "Equipment" VALUES ('preserved-equipment','Station','Plant','Assembly','Packing','Line A')`,
+        );
+        await pool.query(
+          `INSERT INTO "Equipment" VALUES ('variant-equipment','Legacy variant',' plant ',' assembly ',' packing ',' line a ')`,
         );
         await pool.query(
           `INSERT INTO "Photo" (id,"userId") VALUES ('preserved-photo','preserved-user')`,
@@ -139,7 +145,7 @@ async function main() {
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "Migration"')).rows[0]
           .n,
-        8,
+        12,
       );
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "Problem"')).rows[0]
@@ -158,7 +164,13 @@ async function main() {
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "Equipment"')).rows[0]
           .n,
+        mode === "upgrade003" ? 2 : 1,
+      );
+      assert.equal(
+        (await pool.query('SELECT count(*)::int AS n FROM "Location"')).rows[0]
+          .n,
         1,
+        "Canonical catalog tolerates legacy whitespace/case variants without changing equipment history",
       );
       if (mode === "upgrade") {
         const grants = (
@@ -168,9 +180,12 @@ async function main() {
         ).rows[0].grants;
         assert.deepEqual([...grants].sort(), [
           "dashboard",
+          "defects",
           "downtime",
+          "fiveS",
           "ideas",
           "leadership",
+          "maintenance",
           "problems",
           "work",
         ]);
@@ -181,8 +196,11 @@ async function main() {
         ).rows[0].grants;
         assert.deepEqual([...operator].sort(), [
           "dashboard",
+          "defects",
           "downtime",
+          "fiveS",
           "ideas",
+          "maintenance",
           "problems",
           "studies",
         ]);

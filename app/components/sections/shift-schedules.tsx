@@ -163,7 +163,8 @@ export default function ShiftSchedules() {
                   <option value="">Choose standard work</option>
                   {data.standards.map((s: any) => (
                     <option key={s.family} value={s.family}>
-                      {s.title} · {s.equipmentName} / {s.department}
+                      {s.kind === "audit" ? "DL/TL" : "Operator"} · {s.title} ·{" "}
+                      {s.equipmentName} / {s.department}
                     </option>
                   ))}
                 </select>
