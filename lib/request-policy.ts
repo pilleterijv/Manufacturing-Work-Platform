@@ -41,7 +41,11 @@ export function requestAllowed(
     ["localhost:3000", "127.0.0.1:3000", "[::1]:3000"].includes(host || "")
   ) {
     const forwarded = headers.get("x-forwarded-host");
-    hostAllowed = !forwarded || forwarded.toLowerCase() === origin.host;
+    // Next.js fills X-Forwarded-Host from Host when the tunnel omits it.
+    hostAllowed =
+      !forwarded ||
+      forwarded.toLowerCase() === origin.host ||
+      forwarded.toLowerCase() === host;
   }
   if (!hostAllowed) return false;
   if (

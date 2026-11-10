@@ -72,7 +72,7 @@ test("Codespaces loopback forwarding requires the exact runtime preview and pres
   };
   const origin = configuredOrigin("https://pilot-example-3000.app.github.dev");
   for (const host of ["localhost:3000", "127.0.0.1:3000", "[::1]:3000"]) {
-    for (const forwarded of [undefined, origin.host]) {
+    for (const forwarded of [undefined, origin.host, host]) {
       const headers = new Headers({ host });
       if (forwarded) headers.set("x-forwarded-host", forwarded);
       assert(requestAllowed(headers, "/", origin, env));
@@ -108,7 +108,7 @@ test("Codespaces loopback forwarding requires the exact runtime preview and pres
   for (const forwarded of [
     "attacker.example",
     origin.host + ", attacker.example",
-    "localhost:3000",
+    "127.0.0.1:3000",
   ]) {
     assert(
       !requestAllowed(
