@@ -1,14 +1,22 @@
 "use client";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client-api";
+import {
+  dashboardPreferences,
+  type DashboardPreferences,
+} from "@/lib/dashboard-preferences";
 import { Field } from "../shared";
 export default function PersonalDashboard({
   go,
+  preferences,
 }: {
   go: (tab: string) => void;
+  preferences?: DashboardPreferences;
 }) {
   const [data, setData] = useState<any>(null),
-    [scope, setScope] = useState("personal"),
+    [scope, setScope] = useState(
+      dashboardPreferences(preferences).defaultScope,
+    ),
     [error, setError] = useState("");
   useEffect(() => {
     const c = new AbortController();
@@ -22,6 +30,7 @@ export default function PersonalDashboard({
       });
     return () => c.abort();
   }, [scope]);
+  const chosen = dashboardPreferences(preferences ?? data?.preferences).widgets;
   const due = (d: string) => (d < data.today ? " · OVERDUE" : ""),
     machine = (id: string) =>
       data.equipment.find((e: any) => e.id === id)?.name ?? id;
@@ -82,6 +91,11 @@ export default function PersonalDashboard({
           </div>
         </>
       )}
+      {!chosen.length && (
+        <p>
+          No assignment panels selected. Choose panels in Dashboard settings.
+        </p>
+      )}
       {data && (
         <>
           <div className="metrics assignment-metrics">
@@ -91,15 +105,29 @@ export default function PersonalDashboard({
               "PMs / CILs",
               "Open defects",
               "5S plans",
-            ].map((s, i) => (
-              <div className="metric" key={s}>
-                <strong>{data.counts[i]}</strong>
-                <span>{s}</span>
-              </div>
-            ))}
+            ]
+              .map((s, i) => ({
+                s,
+                i,
+                key: ["ideas", "problems", "maintenance", "defects", "fiveS"][
+                  i
+                ],
+              }))
+              .filter((x) => chosen.includes(x.key as any))
+              .sort(
+                (a, b) =>
+                  chosen.indexOf(a.key as any) - chosen.indexOf(b.key as any),
+              )
+              .map(({ s, i }) => (
+                <div className="metric" key={s}>
+                  <strong>{data.counts[i]}</strong>
+                  <span>{s}</span>
+                </div>
+              ))}
           </div>
           {[
             {
+              key: "ideas",
               title: "Improvement ideas",
               tab: "Improvement ideas",
               rows: data.ideas.map((i: any) => ({
@@ -109,6 +137,7 @@ export default function PersonalDashboard({
               })),
             },
             {
+              key: "problems",
               title: "Problem solving and actions",
               tab: "Problem solving",
               rows: data.problems.map((p: any) => ({
@@ -119,6 +148,7 @@ export default function PersonalDashboard({
               })),
             },
             {
+              key: "maintenance",
               title: "PM and CIL checks",
               tab: "Preventive maintenance",
               rows: data.maintenance.map((p: any) => ({
@@ -129,6 +159,7 @@ export default function PersonalDashboard({
               })),
             },
             {
+              key: "defects",
               title: "Open defects",
               tab: "Defect reporting",
               rows: data.defects.map((d: any) => ({
@@ -138,6 +169,7 @@ export default function PersonalDashboard({
               })),
             },
             {
+              key: "fiveS",
               title: "5S area audits",
               tab: "5S audits",
               rows: data.fiveS.map((p: any) => ({
@@ -148,31 +180,37 @@ export default function PersonalDashboard({
                   "",
               })),
             },
-          ].map((group) => (
-            <details key={group.title} open>
-              <summary>
-                {group.title} ({group.rows.length})
-              </summary>
-              {group.rows.map((r: any) => (
-                <article key={r.id} className="problem-action">
-                  <button
-                    className="outline"
-                    onClick={() => go(r.tab ?? group.tab)}
-                  >
-                    {r.title}
-                  </button>
-                  <p>{r.sub}</p>
-                  {r.actions?.map((a: any) => (
-                    <p key={a.id}>
-                      {a.type}: {a.title} · due {a.dueDate}
-                      {due(a.dueDate)}
-                    </p>
-                  ))}
-                </article>
-              ))}
-              {!group.rows.length && <p>No open items.</p>}
-            </details>
-          ))}
+          ]
+            .filter((group) => chosen.includes(group.key as any))
+            .sort(
+              (a, b) =>
+                chosen.indexOf(a.key as any) - chosen.indexOf(b.key as any),
+            )
+            .map((group) => (
+              <details key={group.title} open>
+                <summary>
+                  {group.title} ({group.rows.length})
+                </summary>
+                {group.rows.map((r: any) => (
+                  <article key={r.id} className="problem-action">
+                    <button
+                      className="outline"
+                      onClick={() => go(r.tab ?? group.tab)}
+                    >
+                      {r.title}
+                    </button>
+                    <p>{r.sub}</p>
+                    {r.actions?.map((a: any) => (
+                      <p key={a.id}>
+                        {a.type}: {a.title} · due {a.dueDate}
+                        {due(a.dueDate)}
+                      </p>
+                    ))}
+                  </article>
+                ))}
+                {!group.rows.length && <p>No open items.</p>}
+              </details>
+            ))}
         </>
       )}
     </section>

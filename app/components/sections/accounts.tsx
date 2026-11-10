@@ -1,4 +1,5 @@
 "use client";
+import DelegationEditor from "../delegation-editor";
 import { AccessRequests } from "../access-forms";
 import { LocationsEditor } from "../location-picker";
 import DowntimeAccessEditor from "../downtime-access-editor";
@@ -168,6 +169,7 @@ export default function Accounts({
           </Submit>
         </form>
       </section>
+      {admin && id && <DelegationEditor key={id} userId={id} />}
       {admin && id && (
         <section className="panel">
           <h2>Account password email and department dashboard</h2>

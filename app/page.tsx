@@ -3,6 +3,8 @@ import {
   PublicAccessForms,
   ResetPasswordForm,
 } from "./components/access-forms";
+import { canOpenSection } from "@/lib/navigation";
+import { dashboardPreferences } from "@/lib/dashboard-preferences";
 import CompanyBrand from "./components/company-brand";
 import SectionFiltersBar from "./components/section-filters";
 import { useEffect, useState, useRef } from "react";
@@ -18,6 +20,16 @@ import {
 } from "@/lib/client-api";
 import { Field, Submit, HistoryPagingContext } from "./components/shared";
 import { emptyOperations, type OperationsData } from "@/lib/operations-types";
+const Assistant = dynamic(() => import("./components/sections/assistant"));
+const DashboardSettings = dynamic(
+  () => import("./components/sections/dashboard-settings"),
+);
+const DepartmentAccounts = dynamic(
+  () => import("./components/sections/department-accounts"),
+);
+const LocationsEditor = dynamic(() =>
+  import("./components/location-picker").then((m) => m.LocationsEditor),
+);
 const PersonalDashboard = dynamic(
   () => import("./components/sections/personal-dashboard"),
 );
@@ -127,23 +139,35 @@ export default function Home() {
     [opsDepartment, setOpsDepartment] = useState(""),
     [opsLoading, setOpsLoading] = useState(false),
     [loadingMore, setLoadingMore] = useState(false);
+  const initialHome = useRef<string | null>(null);
   const refreshEpoch = useRef(0),
     currentView = useRef(tab);
   currentView.current = tab;
   async function refresh() {
+    let requestedTab = tab;
     const epoch = ++refreshEpoch.current,
-      requestedTab = tab,
       filterKey = JSON.stringify(getSectionFilters());
     const account = await api("/api/account");
     if (epoch !== refreshEpoch.current) return;
     setUser(account.user);
     if (account.user && !account.user.mustChange) {
+      if (initialHome.current !== account.user.id) {
+        initialHome.current = account.user.id;
+        const preferred = dashboardPreferences(
+          account.user.dashboardPreferences,
+        ).home;
+        requestedTab = canOpenSection(account.user, preferred)
+          ? preferred
+          : "Overview";
+        currentView.current = requestedTab;
+        setTab(requestedTab);
+      }
       const [platform, ops] = await Promise.all([
-        api(platformUrl(tab)),
+        api(platformUrl(requestedTab)),
         api(
           "/api/operations?" +
             new URLSearchParams({
-              view: operationsView(tab),
+              view: operationsView(requestedTab),
               department: opsDepartment,
             }),
         ),
@@ -157,11 +181,14 @@ export default function Home() {
         return;
       }
       setData(platform);
-      setPlatformTab(tab);
+      setPlatformTab(requestedTab);
       setPlatformReady(true);
       setOperations({ ...emptyOperations, ...ops });
-      setOperationsReady(["Downtime", "Improvement ideas"].includes(tab));
+      setOperationsReady(
+        ["Downtime", "Improvement ideas"].includes(requestedTab),
+      );
     } else {
+      initialHome.current = null;
       setData(empty);
       setOperations(emptyOperations);
       setOperationsReady(false);
@@ -495,8 +522,12 @@ export default function Home() {
       </main>
     );
   const g = user.grants;
+  const privileges = user.adminPrivileges ?? [];
+  const preferences = dashboardPreferences(user.dashboardPreferences);
   const nav: [string, Capability | null, string][] = [
     ["Overview", null, "◫"],
+    ["Dashboard settings", null, "⚙"],
+    ["Assistant", null, "?"],
     ["Standard work", "work", "☑"],
     ["Time studies", "studies", "◷"],
     ["Preventive maintenance", "maintenance", "⚒"],
@@ -514,6 +545,7 @@ export default function Home() {
     ["Problem solving", "problems", "◈"],
     ["Notifications", null, "✉"],
     ["Manage", "manage", "⊞"],
+    ["Locations", null, "⊞"],
     ["Shift requirements", "manage", "◷"],
     ["Accounts", "users", "♙"],
     ["Permissions", "permissions", "⚙"],
@@ -570,12 +602,7 @@ export default function Home() {
           <span className="nav-label">WORKSPACE</span>
           <nav>
             {nav
-              .filter(
-                ([, c]) =>
-                  (!c || g.includes(c)) &&
-                  (!(c === "users" || c === "permissions") ||
-                    user.role === "Admin"),
-              )
+              .filter(([name]) => canOpenSection(user, name))
               .map(([name, , icon]) => (
                 <button
                   key={name}
@@ -700,9 +727,16 @@ export default function Home() {
                 Loading section data…
               </p>
             )}
-            {tab === "Overview" && <PersonalDashboard go={setTab} />}
+            {tab === "Overview" && (
+              <PersonalDashboard
+                key={JSON.stringify(preferences)}
+                preferences={preferences}
+                go={setTab}
+              />
+            )}
             {tab === "Overview" && (
               <Overview
+                preferences={preferences}
                 data={data}
                 go={setTab}
                 grants={g}
@@ -717,6 +751,28 @@ export default function Home() {
                   />
                 )}
               </Overview>
+            )}
+            {tab === "Dashboard settings" && (
+              <DashboardSettings
+                saved={(value) =>
+                  setUser((u) =>
+                    u ? { ...u, dashboardPreferences: value } : u,
+                  )
+                }
+              />
+            )}
+            {tab === "Assistant" && (
+              <Assistant
+                go={(name) => {
+                  if (canOpenSection(user, name)) setTab(name);
+                }}
+              />
+            )}
+            {tab === "Locations" && sectionReady && (
+              <LocationsEditor data={data} save={save} busy={busy} />
+            )}
+            {tab === "Accounts" && user.role !== "Admin" && (
+              <DepartmentAccounts />
             )}
             {tab === "Problem solving" && (
               <Problems
@@ -747,7 +803,10 @@ export default function Home() {
               <Content
                 data={data}
                 kind="guide"
-                manage={g.includes("manage")}
+                manage={
+                  g.includes("manage") ||
+                  privileges.includes("resources.manage")
+                }
                 save={save}
                 busy={busy}
               />
@@ -822,20 +881,31 @@ export default function Home() {
                 canExport={g.includes("export")}
               />
             )}
-            {tab === "Shift requirements" && g.includes("manage") && (
-              <ShiftSchedules />
-            )}
+            {tab === "Shift requirements" &&
+              canOpenSection(user, "Shift requirements") && <ShiftSchedules />}
             {tab === "Integrations" && user.role === "Admin" && (
               <Integrations />
             )}
             {tab === "Manage" && sectionReady && (
-              <Manage data={data} save={save} busy={busy} />
+              <Manage
+                data={data}
+                save={save}
+                busy={busy}
+                canStandards={
+                  g.includes("manage") ||
+                  privileges.includes("standards.manage")
+                }
+                canEquipment={
+                  g.includes("manage") ||
+                  privileges.includes("equipment.manage")
+                }
+              />
             )}
             {tab === "Analytics" && sectionReady && <Analytics data={data} />}
             {tab === "Permissions" && sectionReady && (
               <Permissions data={data} save={save} busy={busy} />
             )}
-            {tab === "Accounts" && sectionReady && (
+            {tab === "Accounts" && user.role === "Admin" && sectionReady && (
               <Accounts
                 reload={() => void refresh()}
                 data={data}

@@ -1,3 +1,5 @@
+import { canAdminister } from "@/lib/capabilities";
+import { requireDelegated } from "@/lib/security";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import {
@@ -100,7 +102,9 @@ export async function GET(req: Request) {
       records,
       areas,
       people,
-      canManage: (await grants(u)).includes("manage"),
+      canManage:
+        (await grants(u)).includes("manage") ||
+        (await canAdminister(u, "fiveS.manage")),
     });
   } catch (e) {
     return failure(e);
@@ -112,7 +116,7 @@ export async function POST(req: Request) {
       b = await jsonBody(req),
       entry = { at: new Date().toISOString(), by: u.id, name: u.name };
     if (b.action === "save") {
-      await requireUser("manage");
+      await requireDelegated("fiveS.manage", "manage");
       const v = fiveSPlanSchema.parse(b),
         id = z.string().uuid().optional().parse(b.id),
         version = z.number().int().optional().parse(b.version);

@@ -1,3 +1,4 @@
+import { effectiveGrants } from "./delegation-rules";
 import { grants } from "./capabilities";
 import { db } from "./db";
 import { allowedDowntimeEquipment } from "./downtime-access-rules";
@@ -180,9 +181,11 @@ export async function queueOverdueReminders(
       if (personalOnly && p.id !== personalOnly) continue;
       if (
         p.role !== "Admin" &&
-        !(
-          (policies.find((q) => q.role === p.role)?.grants as
-            string[] | undefined) ?? []
+        !effectiveGrants(
+          p.role,
+          policies.find((q) => q.role === p.role)?.grants,
+          p.extraGrants,
+          p.adminPrivileges,
         ).includes(capFor(e.type))
       )
         continue;

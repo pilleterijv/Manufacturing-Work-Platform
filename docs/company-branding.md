@@ -16,14 +16,10 @@ Palette:
 
 White text on `#B83C00` is approximately 5.7:1 contrast. Bright orange presentation panels use large white text (approximately 3.7:1 on `#E85208`) and darker backplates for small labels. Small functional controls use the darker orange rather than bright-orange backgrounds. This is a focused color check, not a full accessibility certification.
 
-## Original logo still required
+## Neutral branding
 
-`public/company-logo.svg` currently contains a **temporary typed PHARMAVITE wordmark**, not the approved company emblem. An original SVG or transparent PNG was requested because the slide contains a small raster logo and is not a clean source asset. The logo has not been invented, traced or AI-regenerated.
+The platform now uses a neutral Manufacturing Work Platform wordmark and contains no named company branding in its interface or app icons. `CompanyBrand` supplies the visible heading; `public/company-logo.svg` supplies the neutral app-icon artwork. The earlier temporary company-specific wordmark has been removed at the user's request. Historical screenshot folders document earlier versions; new captures show the current interface.
 
-Replace the temporary asset with the company's approved SVG, preserving the full logo and its viewBox. If the supplied original is PNG instead, update `app/components/company-brand.tsx` to use that local file and adapt the icon export input. Review the logo's required clear space and minimum sizes with company brand guidelines.
+`node scripts/render-brand-icons.cjs` exports the local SVG onto white app/Apple icons. Rebuild after changing branding assets. Existing installed PWAs may need their icons refreshed/reinstalled through IT. Fonts and assets are local; no externally hosted branding resources load at runtime.
 
-`CompanyBrand` is the single visible brand component at sign-in and in the workspace. `scripts/render-brand-icons.cjs` deterministically exports app/Apple icons from the local SVG onto white backgrounds. Run `node scripts/render-brand-icons.cjs` in the build workspace after replacing the source logo, then rebuild and verify desktop/iPad layouts. An installed PWA may require an icon refresh or reinstall through IT to replace cached home-screen artwork.
-
-No externally hosted logo/fonts are loaded at runtime. The stylesheet uses installed Segoe UI/Arial fonts and all branding assets are local. The color values are sampled/approximated from the reference; company-approved brand tokens and logo artwork take precedence.
-
-Screenshots: [orange/white gallery](screenshots/orange-white). Company deployment steps: [ordered rollout guide](company-rollout-step-by-step.md).
+See the [company rollout guide](company-rollout-step-by-step.md) for hosting and operational ownership.

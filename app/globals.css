@@ -1895,3 +1895,5 @@ a:focus-visible {
   font-weight: 700;
   line-height: 1.5;
 }
+
+.company-brand > strong { color: var(--brand-orange-dark); font-size: 21px; font-weight: 500; letter-spacing: 1.2px; line-height: 1.3; }

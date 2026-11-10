@@ -1,3 +1,5 @@
+import type { AdminPrivilege } from "./delegation-rules";
+import type { DashboardPreferences } from "./dashboard-preferences";
 import type { Capability } from "./rules";
 export type User = {
   id: string;
@@ -6,6 +8,8 @@ export type User = {
   role: string;
   mustChange: boolean;
   grants: Capability[];
+  adminPrivileges?: AdminPrivilege[];
+  dashboardPreferences?: DashboardPreferences;
 };
 export type Step = {
   id: string;

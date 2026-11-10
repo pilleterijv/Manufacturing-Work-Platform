@@ -1,3 +1,4 @@
+import { effectiveGrants } from "./delegation-rules";
 import { assertEquipmentAccess, type ScopedUser } from "./location-access";
 import { db } from "./db";
 import { z } from "zod";
@@ -44,7 +45,12 @@ export async function submitMaintainx(
     await assertEquipmentAccess(actor, old.equipmentId, tx);
     const fresh = await tx.user.findUniqueOrThrow({ where: { id: actor.id } }),
       policy = await tx.policy.findUnique({ where: { role: fresh.role } }),
-      permissions = Array.isArray(policy?.grants) ? policy.grants : [];
+      permissions = effectiveGrants(
+        fresh.role,
+        policy?.grants,
+        fresh.extraGrants,
+        fresh.adminPrivileges,
+      );
     if (fresh.role !== "Admin" && !permissions.includes("defects"))
       throw Error("Defect permission was revoked");
     return tx.defect.updateMany({

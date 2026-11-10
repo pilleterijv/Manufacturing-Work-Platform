@@ -18,10 +18,14 @@ export default function Manage({
   data,
   save,
   busy,
+  canStandards = true,
+  canEquipment = true,
 }: {
   data: Data;
   save: Save;
   busy: boolean;
+  canStandards?: boolean;
+  canEquipment?: boolean;
 }) {
   const [fiveS, setFiveS] = useState<any>(null);
   useEffect(() => {
@@ -83,278 +87,291 @@ export default function Manage({
   }
   return (
     <>
-      <section className="panel">
-        <h2>Standard work editor</h2>
-        <p className="muted">
-          Publishing a change creates a new revision. Existing results retain
-          their original steps and timing criteria.
-        </p>
-        <Field label="Create or revise">
-          <select value={editing} onChange={(e) => load(e.target.value)}>
-            <option value="">New standard</option>
-            {data.standards.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.title} · revision {s.revision} ·{" "}
-                {(() => {
-                  const e = data.equipment.find((e) => e.id === s.equipmentId);
-                  return e
-                    ? [e.plant, e.department, e.area, e.line, e.name]
-                        .filter(Boolean)
-                        .join(" / ")
-                    : s.equipmentId;
-                })()}
-              </option>
-            ))}
-          </select>
-        </Field>
-        {editing && (
-          <div className="revision-history">
-            <button
-              className="outline"
-              type="button"
-              disabled={revisionLoading}
-              onClick={() => void history()}
-            >
-              View revision history
-            </button>
-            {revisionError && <p role="alert">{revisionError}</p>}
-            {revisions.map((revision) => (
-              <details key={revision.id}>
-                <summary>
-                  {revision.title} · revision {revision.revision}
-                </summary>
-                <p>
-                  Target {revision.target}s · tolerance {revision.tolerance}%
-                </p>
-                <ol>
-                  {revision.steps.map((step) => (
-                    <li key={step.id}>
-                      {step.text}
-                      {step.photo ? " (photo required)" : ""}
-                    </li>
-                  ))}
-                </ol>
-              </details>
-            ))}
-            {moreRevisions && (
+      {canStandards && (
+        <section className="panel">
+          <h2>Standard work editor</h2>
+          <p className="muted">
+            Publishing a change creates a new revision. Existing results retain
+            their original steps and timing criteria.
+          </p>
+          <Field label="Create or revise">
+            <select value={editing} onChange={(e) => load(e.target.value)}>
+              <option value="">New standard</option>
+              {data.standards.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.title} · revision {s.revision} ·{" "}
+                  {(() => {
+                    const e = data.equipment.find(
+                      (e) => e.id === s.equipmentId,
+                    );
+                    return e
+                      ? [e.plant, e.department, e.area, e.line, e.name]
+                          .filter(Boolean)
+                          .join(" / ")
+                      : s.equipmentId;
+                  })()}
+                </option>
+              ))}
+            </select>
+          </Field>
+          {editing && (
+            <div className="revision-history">
               <button
                 className="outline"
-                disabled={revisionLoading}
                 type="button"
-                onClick={() => void history(true)}
+                disabled={revisionLoading}
+                onClick={() => void history()}
               >
-                Load older revisions
+                View revision history
               </button>
-            )}
-          </div>
-        )}
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (
-              await save({
-                action: "standard",
-                kind,
-                assigneeIds: assignees,
-                title,
-                equipmentId: equipment,
-                target,
-                tolerance,
-                steps,
-                ...(editing
-                  ? {
-                      family: data.standards.find((s) => s.id === editing)
-                        ?.family,
-                    }
-                  : {}),
-              })
-            )
-              load("");
-          }}
-        >
-          <div className="form-grid">
-            <Field label="Task type">
-              <select
-                value={kind}
-                disabled={!!editing}
-                onChange={(e) => setKind(e.target.value)}
-              >
-                <option value="run">Operator Standard Work</option>
-                <option value="audit">DL/TL Standard Work</option>
-              </select>
-            </Field>
-            <Field label="Standard title">
-              <input
-                required
-                maxLength={150}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </Field>
-            <Field label="Equipment">
-              <EquipmentSelect
-                data={data}
-                value={equipment}
-                onChange={setEquipment}
-              />
-            </Field>
-            <Field label="Target cycle time (seconds)">
-              <input
-                type="number"
-                min="0.01"
-                max="86400"
-                step="0.01"
-                value={target}
-                onChange={(e) => setTarget(Number(e.target.value))}
-                required
-              />
-            </Field>
-            <Field label="Allowed tolerance (%)">
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={tolerance}
-                onChange={(e) => setTolerance(Number(e.target.value))}
-                required
-              />
-            </Field>
-          </div>
-          {kind === "audit" && (
-            <Field label="Assigned DL/TLs (optional; no selection means all permitted people in the area)">
-              <PersonSelect
-                aria-label="Assigned DL/TLs"
-                people={data.users.filter(
-                  (u) =>
-                    u.active && ["Admin", "Manager", "DL/TL"].includes(u.role),
-                )}
-                multiple
-                value={assignees}
-                onChange={(e) =>
-                  setAssignees(
-                    Array.from(e.target.selectedOptions, (o) => o.value),
-                  )
-                }
-              />
-            </Field>
+              {revisionError && <p role="alert">{revisionError}</p>}
+              {revisions.map((revision) => (
+                <details key={revision.id}>
+                  <summary>
+                    {revision.title} · revision {revision.revision}
+                  </summary>
+                  <p>
+                    Target {revision.target}s · tolerance {revision.tolerance}%
+                  </p>
+                  <ol>
+                    {revision.steps.map((step) => (
+                      <li key={step.id}>
+                        {step.text}
+                        {step.photo ? " (photo required)" : ""}
+                      </li>
+                    ))}
+                  </ol>
+                </details>
+              ))}
+              {moreRevisions && (
+                <button
+                  className="outline"
+                  disabled={revisionLoading}
+                  type="button"
+                  onClick={() => void history(true)}
+                >
+                  Load older revisions
+                </button>
+              )}
+            </div>
           )}
-          {steps.map((step, i) => (
-            <div className="editor-step" key={step.id}>
-              <Field label={`Step ${i + 1}`}>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (
+                await save({
+                  action: "standard",
+                  kind,
+                  assigneeIds: assignees,
+                  title,
+                  equipmentId: equipment,
+                  target,
+                  tolerance,
+                  steps,
+                  ...(editing
+                    ? {
+                        family: data.standards.find((s) => s.id === editing)
+                          ?.family,
+                      }
+                    : {}),
+                })
+              )
+                load("");
+            }}
+          >
+            <div className="form-grid">
+              <Field label="Task type">
+                <select
+                  value={kind}
+                  disabled={!!editing}
+                  onChange={(e) => setKind(e.target.value)}
+                >
+                  <option value="run">Operator Standard Work</option>
+                  <option value="audit">DL/TL Standard Work</option>
+                </select>
+              </Field>
+              <Field label="Standard title">
                 <input
                   required
-                  maxLength={500}
-                  value={step.text}
+                  maxLength={150}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+              </Field>
+              <Field label="Equipment">
+                <EquipmentSelect
+                  data={data}
+                  value={equipment}
+                  onChange={setEquipment}
+                />
+              </Field>
+              <Field label="Target cycle time (seconds)">
+                <input
+                  type="number"
+                  min="0.01"
+                  max="86400"
+                  step="0.01"
+                  value={target}
+                  onChange={(e) => setTarget(Number(e.target.value))}
+                  required
+                />
+              </Field>
+              <Field label="Allowed tolerance (%)">
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={tolerance}
+                  onChange={(e) => setTolerance(Number(e.target.value))}
+                  required
+                />
+              </Field>
+            </div>
+            {kind === "audit" && (
+              <Field label="Assigned DL/TLs (optional; no selection means all permitted people in the area)">
+                <PersonSelect
+                  aria-label="Assigned DL/TLs"
+                  people={data.users.filter(
+                    (u) =>
+                      u.active &&
+                      ["Admin", "Manager", "DL/TL"].includes(u.role),
+                  )}
+                  multiple
+                  value={assignees}
                   onChange={(e) =>
-                    setSteps(
-                      steps.map((s, j) =>
-                        j === i ? { ...s, text: e.target.value } : s,
-                      ),
+                    setAssignees(
+                      Array.from(e.target.selectedOptions, (o) => o.value),
                     )
                   }
                 />
               </Field>
-              {kind === "audit" && (
-                <Field label="Linked 5S area audit (optional)">
-                  <select
-                    value={step.fiveSPlanId ?? ""}
+            )}
+            {steps.map((step, i) => (
+              <div className="editor-step" key={step.id}>
+                <Field label={`Step ${i + 1}`}>
+                  <input
+                    required
+                    maxLength={500}
+                    value={step.text}
                     onChange={(e) =>
                       setSteps(
                         steps.map((s, j) =>
-                          i === j
-                            ? { ...s, fiveSPlanId: e.target.value || undefined }
-                            : s,
+                          j === i ? { ...s, text: e.target.value } : s,
                         ),
                       )
                     }
-                  >
-                    <option value="">No linked 5S audit</option>
-                    {fiveS?.plans
-                      .filter((p: any) => p.active)
-                      .map((p: any) => (
-                        <option key={p.id} value={p.id}>
-                          {p.title} ·{" "}
-                          {
-                            fiveS.areas.find((l: any) => l.id === p.locationId)
-                              ?.area
-                          }
-                        </option>
-                      ))}
-                  </select>
+                  />
                 </Field>
-              )}
-              <label className="check">
-                <input
-                  type="checkbox"
-                  checked={step.photo}
-                  onChange={(e) =>
-                    setSteps(
-                      steps.map((s, j) =>
-                        j === i ? { ...s, photo: e.target.checked } : s,
-                      ),
-                    )
-                  }
-                />
-                Photo required
-              </label>
+                {kind === "audit" && (
+                  <Field label="Linked 5S area audit (optional)">
+                    <select
+                      value={step.fiveSPlanId ?? ""}
+                      onChange={(e) =>
+                        setSteps(
+                          steps.map((s, j) =>
+                            i === j
+                              ? {
+                                  ...s,
+                                  fiveSPlanId: e.target.value || undefined,
+                                }
+                              : s,
+                          ),
+                        )
+                      }
+                    >
+                      <option value="">No linked 5S audit</option>
+                      {fiveS?.plans
+                        .filter((p: any) => p.active)
+                        .map((p: any) => (
+                          <option key={p.id} value={p.id}>
+                            {p.title} ·{" "}
+                            {
+                              fiveS.areas.find(
+                                (l: any) => l.id === p.locationId,
+                              )?.area
+                            }
+                          </option>
+                        ))}
+                    </select>
+                  </Field>
+                )}
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={step.photo}
+                    onChange={(e) =>
+                      setSteps(
+                        steps.map((s, j) =>
+                          j === i ? { ...s, photo: e.target.checked } : s,
+                        ),
+                      )
+                    }
+                  />
+                  Photo required
+                </label>
+                <button
+                  className="text-button"
+                  type="button"
+                  disabled={steps.length === 1}
+                  onClick={() => setSteps(steps.filter((_, j) => i !== j))}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            <div className="button-row">
               <button
-                className="text-button"
                 type="button"
-                disabled={steps.length === 1}
-                onClick={() => setSteps(steps.filter((_, j) => i !== j))}
+                className="outline"
+                disabled={steps.length >= 100}
+                onClick={() =>
+                  setSteps([
+                    ...steps,
+                    { id: crypto.randomUUID(), text: "", photo: false },
+                  ])
+                }
               >
-                Remove
+                + Add step
               </button>
+              <Submit busy={busy}>
+                {editing ? "Publish new revision" : "Publish standard"}
+              </Submit>
             </div>
-          ))}
-          <div className="button-row">
-            <button
-              type="button"
-              className="outline"
-              disabled={steps.length >= 100}
-              onClick={() =>
-                setSteps([
-                  ...steps,
-                  { id: crypto.randomUUID(), text: "", photo: false },
-                ])
-              }
-            >
-              + Add step
-            </button>
-            <Submit busy={busy}>
-              {editing ? "Publish new revision" : "Publish standard"}
-            </Submit>
+          </form>
+        </section>
+      )}
+      {canEquipment && (
+        <section className="panel">
+          <h2>Add equipment</h2>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const form = e.currentTarget;
+              const f = new FormData(form);
+              if (await save({ action: "equipment", ...Object.fromEntries(f) }))
+                form.reset();
+            }}
+          >
+            <div className="form-grid">
+              <Field label="Equipment name">
+                <input name="name" required maxLength={150} />
+              </Field>
+              <LocationPicker data={data} />
+            </div>
+            <Submit busy={busy}>Add equipment</Submit>
+          </form>
+          <div className="equipment-list">
+            {data.equipment.map((e) => (
+              <p key={e.id}>
+                <strong>{e.name}</strong>
+                <span>
+                  {[e.plant, e.department, e.area, e.line].join(" / ")}
+                </span>
+              </p>
+            ))}
           </div>
-        </form>
-      </section>
-      <section className="panel">
-        <h2>Add equipment</h2>
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            const form = e.currentTarget;
-            const f = new FormData(form);
-            if (await save({ action: "equipment", ...Object.fromEntries(f) }))
-              form.reset();
-          }}
-        >
-          <div className="form-grid">
-            <Field label="Equipment name">
-              <input name="name" required maxLength={150} />
-            </Field>
-            <LocationPicker data={data} />
-          </div>
-          <Submit busy={busy}>Add equipment</Submit>
-        </form>
-        <div className="equipment-list">
-          {data.equipment.map((e) => (
-            <p key={e.id}>
-              <strong>{e.name}</strong>
-              <span>{[e.plant, e.department, e.area, e.line].join(" / ")}</span>
-            </p>
-          ))}
-        </div>
-      </section>
+        </section>
+      )}
     </>
   );
 }

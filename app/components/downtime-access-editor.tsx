@@ -13,6 +13,7 @@ export default function DowntimeAccessEditor({
   busy,
   workspace = false,
   locations = [],
+  allowAll = true,
 }: {
   user: {
     id: string;
@@ -23,6 +24,7 @@ export default function DowntimeAccessEditor({
   };
   equipment: Equipment[];
   workspace?: boolean;
+  allowAll?: boolean;
   locations?: import("@/lib/workspace-types").Location[];
   save: (body: unknown) => Promise<boolean>;
   busy: boolean;
@@ -112,7 +114,9 @@ export default function DowntimeAccessEditor({
               }))
             }
           >
-            <option value="all">All locations and machines</option>
+            {allowAll && (
+              <option value="all">All locations and machines</option>
+            )}
             <option value="restricted">
               Only assigned locations and machines
             </option>

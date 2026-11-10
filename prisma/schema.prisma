@@ -9,6 +9,9 @@ datasource db {
 model User {
  id String @id @default(uuid())
  dashboardDepartment Json?
+ dashboardPreferences Json @default("{}")
+ extraGrants Json @default("[]")
+ adminPrivileges Json @default("[]")
  overdueInApp Boolean @default(true)
  overdueEmail Boolean @default(true)
  email String?
@@ -458,4 +461,14 @@ model PasswordReset {
  userVersion Int
  expires DateTime
  createdAt DateTime @default(now())
+}
+
+model AccountAudit {
+ id String @id @default(uuid())
+ actorId String
+ targetId String
+ action String
+ data Json
+ createdAt DateTime @default(now())
+ @@index([targetId,createdAt])
 }

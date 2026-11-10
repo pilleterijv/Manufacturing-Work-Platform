@@ -1,3 +1,4 @@
+import { dashboardPreferences } from "@/lib/dashboard-preferences";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import {
@@ -175,6 +176,7 @@ export async function GET(req: Request) {
         ]),
       ]);
     return Response.json({
+      preferences: dashboardPreferences(u.dashboardPreferences),
       ideas,
       problems,
       maintenance,

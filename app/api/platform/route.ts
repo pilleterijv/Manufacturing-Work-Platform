@@ -1,3 +1,6 @@
+import { adminPrivileges, canAdminister } from "@/lib/capabilities";
+import { requireDelegated } from "@/lib/security";
+import type { AdminPrivilege } from "@/lib/delegation-rules";
 import { localToday } from "@/lib/operations-rules";
 import { assertAreaAccess } from "@/lib/area-access";
 import { readFilters, recordFilters } from "@/lib/filters";
@@ -63,7 +66,7 @@ export async function GET(req: Request) {
       ])
       .parse(params.get("view") ?? "full");
     if (view === "revisions") {
-      await requireUser("manage");
+      await requireDelegated("standards.manage", "manage");
       const family = z.string().uuid().parse(params.get("family"));
       const before = z.coerce
         .number()
@@ -212,7 +215,9 @@ export async function GET(req: Request) {
             })
           : [],
         (["full", "users"].includes(view) && g.includes("users")) ||
-        (view === "manage" && g.includes("manage"))
+        (view === "manage" &&
+          (g.includes("manage") ||
+            (await adminPrivileges(u)).includes("standards.manage")))
           ? db.user.findMany({
               select: {
                 id: true,
@@ -313,13 +318,29 @@ export async function POST(req: Request) {
       } as const
     )[action as "standard"];
     if (!cap) throw new HttpError(400, "Unknown action");
-    const u = await requireUser(action === "archive" ? undefined : cap);
-    if (["user", "policy", "location"].includes(action) && u.role !== "Admin")
+    const actionPrivilege = (
+      {
+        standard: "standards.manage",
+        equipment: "equipment.manage",
+        guide: "resources.manage",
+        video: "training.manage",
+        location: "locations.manage",
+      } as Record<string, AdminPrivilege>
+    )[action];
+    const u = actionPrivilege
+      ? await requireDelegated(actionPrivilege, cap)
+      : await requireUser(action === "archive" ? undefined : cap);
+    if (["user", "policy"].includes(action) && u.role !== "Admin")
       throw new HttpError(
         403,
         "Only Admin can manage accounts, policies and locations",
       );
     if (action === "location") {
+      if (u.role !== "Admin" && !(await canAdminister(u, "locations.manage")))
+        throw new HttpError(
+          403,
+          "Location administration has not been delegated to you",
+        );
       const v = z
         .object({
           plant: z.string().trim().min(1).max(100),
@@ -359,6 +380,13 @@ export async function POST(req: Request) {
         )
       )
         throw new HttpError(409, "This location already exists");
+      if (
+        !allowedDowntimeEquipment(u.role, u.workspaceAccess, { ...v, id: "" })
+      )
+        throw new HttpError(
+          403,
+          "Location is outside your assigned departments/areas",
+        );
       await db.location.create({ data: v });
       return Response.json({ ok: true });
     }
@@ -598,7 +626,10 @@ export async function POST(req: Request) {
       const id = z.string().parse(b.id);
       const item = await db.content.findUnique({ where: { id } });
       if (!item) throw new HttpError(404, "Not found");
-      await requireUser(item.kind === "guide" ? "manage" : "training");
+      await requireDelegated(
+        item.kind === "guide" ? "resources.manage" : "training.manage",
+        item.kind === "guide" ? "manage" : "training",
+      );
       if (item.equipmentId) await assertEquipmentAccess(u, item.equipmentId);
       else if (u.role !== "Admin")
         throw new HttpError(403, "Only Admin can archive shared resources");

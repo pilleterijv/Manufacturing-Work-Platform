@@ -1,3 +1,4 @@
+import { requireDelegated } from "@/lib/security";
 import { readFilters } from "@/lib/filters";
 import {
   equipmentIds,
@@ -13,7 +14,7 @@ import { shiftConfigSchema } from "@/lib/operations-rules";
 import { smtpReady } from "@/lib/email-delivery";
 export async function GET(req: Request) {
   try {
-    const u = await requireUser("manage");
+    const u = await requireDelegated("schedules.manage", "manage");
     const ids = await equipmentIds(u);
     const { person, search } = readFilters(req.url);
     const [schedules, people, standards, setting, health, pending, failed] =
@@ -76,7 +77,7 @@ export async function GET(req: Request) {
 }
 export async function POST(req: Request) {
   try {
-    const u = await requireUser("manage"),
+    const u = await requireDelegated("schedules.manage", "manage"),
       b = await jsonBody(req);
     if (b.action === "create") {
       const v = workScheduleSchema.parse(b),

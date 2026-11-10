@@ -6,7 +6,7 @@ This update adds area-based **5S audits**, machine **TPM/CIL**, **defect reporti
 
 ## Orange / white company styling
 
-The interface now uses an orange/white company theme. [Screenshots and preview](docs/screenshots/orange-white) and [brand asset handover](docs/company-branding.md). The exact original logo is pending; a temporary company wordmark occupies its place until the approved SVG/PNG is supplied.
+The interface uses an orange/white theme with neutral Manufacturing Work Platform branding. Named company branding has been removed. See [brand asset handover](docs/company-branding.md).
 
 ## Company hosting, Windows and ownership
 
