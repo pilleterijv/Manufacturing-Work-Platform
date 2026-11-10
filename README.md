@@ -34,6 +34,10 @@ The main Overview now includes department section statistics; users with
 leadership access can also see the overall workspace. Improvement cards display
 their unique UUID, full equipment location and an optional process description.
 
+## Run in a browser without local installs
+
+Use [GitHub Codespaces setup](docs/codespaces.md). No Docker Desktop, Node or WSL is needed on your computer. Use the **codex/rebuild-floorwork** branch; start the app in the Codespace and open its private HTTPS preview. The same guide includes iPad, Android and desktop installation steps.
+
 ## Download and run on Windows
 
 **[Download the application source as one small ZIP](https://github.com/pilleterijv/Manufacturing-Work-Platform/archive/refs/heads/codex/rebuild-floorwork.zip)**. You do not need to open or download the files individually. Screenshots stay available in GitHub's docs/screenshots folder and are excluded from the ZIP.
