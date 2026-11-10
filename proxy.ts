@@ -10,7 +10,14 @@ export function proxy(req: NextRequest) {
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );
   }
-  if (!requestAllowed(req.headers, req.nextUrl.pathname, origin))
+  if (
+    !requestAllowed(req.headers, req.nextUrl.pathname, origin, {
+      CODESPACES: process.env.CODESPACES,
+      CODESPACE_NAME: process.env.CODESPACE_NAME,
+      GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN:
+        process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN,
+    })
+  )
     return NextResponse.json(
       { error: "Request host or site is not permitted" },
       { status: 403, headers: { "Cache-Control": "no-store" } },
