@@ -3,7 +3,8 @@ const fs = require("node:fs"),
   { spawn } = require("node:child_process");
 const root = path.join(__dirname, "..");
 process.chdir(root);
-if (fs.existsSync(".env")) process.loadEnvFile(".env");
+const envFile = process.env.FLOORWORK_ENV_FILE || ".env";
+if (fs.existsSync(envFile)) process.loadEnvFile(envFile);
 const serverPath = path.join(root, ".floorwork/runtime/server.js");
 if (!fs.existsSync(serverPath)) {
   console.error("Build the application first: npm run build");

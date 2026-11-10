@@ -29,7 +29,11 @@
     "test:locations": "node tests/location-workflows.cjs",
     "test:maintenance-data": "node tests/maintenance-data-reminders.cjs",
     "test:floor-expansion": "node tests/floor-expansion-browser.cjs",
-    "test:personal-access": "node tests/personal-access-assistant.cjs"
+    "test:personal-access": "node tests/personal-access-assistant.cjs",
+    "codespaces:setup": "node scripts/codespaces.cjs setup",
+    "codespaces:admin": "node scripts/codespaces.cjs admin",
+    "codespaces:start": "node scripts/codespaces.cjs start",
+    "test:install": "node tests/install-help.cjs"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.29.1",
