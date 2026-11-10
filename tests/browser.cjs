@@ -80,7 +80,15 @@ async function main() {
   await page.getByLabel("Username", { exact: true }).fill(users[0].username);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByText("Keep me signed in").click();
+  const browserLogin = page.waitForRequest(
+    (req) =>
+      new URL(req.url()).pathname === "/api/account" && req.method() === "POST",
+  );
   await page.getByRole("button", { name: "Sign in →", exact: true }).click();
+  assert.equal(
+    (await browserLogin).headers()["x-floorwork-origin"],
+    new URL(origin).origin,
+  );
   await page.getByRole("heading", { name: "Welcome, Jordan." }).waitFor();
   const cookies = await context.cookies();
   const cookie = cookies.find((c) => c.name === "floorwork");

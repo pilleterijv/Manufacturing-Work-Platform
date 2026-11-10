@@ -36,7 +36,10 @@ export async function api(path: string, body?: unknown, signal?: AbortSignal) {
     ...(body
       ? {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "X-Floorwork-Origin": window.location.origin,
+          },
           body: JSON.stringify(body),
         }
       : {}),
