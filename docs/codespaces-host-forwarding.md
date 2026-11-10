@@ -23,3 +23,9 @@ npm start
 Open port 3000 externally with HTTP as its internal protocol and Private visibility. APP_ORIGIN must still be the exact current HTTPS preview address. Do not recreate the database or rebuild the container for this patch.
 
 Validation covers accepted and rejected forwarding variants, non-Codespaces isolation, cross-site API guards and the production runtime. This simulates the forwarding behavior locally; the affected live user Codespace is separate and still needs verification. An upstream GitHub tunnel 401 is a separate failure from this application 403.
+
+## Sign-in Origin diagnostics
+
+A separate check rejects POST requests whose Origin differs from APP_ORIGIN. In Codespaces, rejected requests now print one `[origin-check]` line in the app terminal with expected/received/request origins and Fetch Metadata site classification. The diagnostic strips URL credentials, paths and queries and never reads the request body, password, cookies or authorization. It does not relax the Origin check. If the browser shows matching addresses but sign-in is still rejected, capture this terminal line to distinguish tunnel rewriting from runtime configuration differences.
+
+A request to `github.dev/pf-signin` is GitHub's private-port authorization flow. It can be triggered by loading the manifest and is separate from the app's account endpoint; it does not establish the Origin delivered to that endpoint.

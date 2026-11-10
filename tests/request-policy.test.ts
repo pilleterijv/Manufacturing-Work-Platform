@@ -1,6 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { configuredOrigin, requestAllowed } from "../lib/request-policy";
+import {
+  configuredOrigin,
+  requestAllowed,
+  originCheckDiagnostic,
+} from "../lib/request-policy";
 import { decodeCursor, pageInfo } from "../lib/pagination";
 import { randomUUID } from "node:crypto";
 test("public origins require HTTPS and reject credentials, paths and alternate hosts", () => {
@@ -127,4 +131,43 @@ test("Codespaces loopback forwarding requires the exact runtime preview and pres
       env,
     ),
   );
+});
+
+test("origin diagnostics expose address metadata without cookies, credentials, paths or query strings", () => {
+  const req = new Request("https://preview.example/private?token=secret", {
+    headers: {
+      origin: "http://localhost:3000",
+      cookie: "session=secret",
+      authorization: "Bearer secret",
+      "sec-fetch-site": "same-origin",
+    },
+  });
+  assert.deepEqual(
+    originCheckDiagnostic(
+      req,
+      "https://user:password@preview.example/path?key=secret",
+    ),
+    {
+      expectedOrigin: "https://preview.example",
+      receivedOrigin: "http://localhost:3000",
+      requestOrigin: "https://preview.example",
+      fetchSite: "same-origin",
+    },
+  );
+  const serialized = JSON.stringify(
+    originCheckDiagnostic(
+      req,
+      "https://user:password@preview.example/path?key=secret",
+    ),
+  );
+  for (const secret of ["password", "secret", "session", "Bearer", "private"])
+    assert(!serialized.includes(secret));
+  const invalid = originCheckDiagnostic(
+    new Request("https://preview.example", {
+      headers: { origin: "malformed secret" },
+    }),
+    undefined,
+  );
+  assert.equal(invalid.expectedOrigin, "<missing>");
+  assert.equal(invalid.receivedOrigin, "<invalid>");
 });
