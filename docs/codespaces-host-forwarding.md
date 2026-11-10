@@ -29,3 +29,11 @@ Validation covers accepted and rejected forwarding variants, non-Codespaces isol
 A separate check rejects POST requests whose Origin differs from APP_ORIGIN. In Codespaces, rejected requests now print one `[origin-check]` line in the app terminal with expected/received/request origins and Fetch Metadata site classification. The diagnostic strips URL credentials, paths and queries and never reads the request body, password, cookies or authorization. It does not relax the Origin check. If the browser shows matching addresses but sign-in is still rejected, capture this terminal line to distinguish tunnel rewriting from runtime configuration differences.
 
 A request to `github.dev/pf-signin` is GitHub's private-port authorization flow. It can be triggered by loading the manifest and is separate from the app's account endpoint; it does not establish the Origin delivered to that endpoint.
+
+## Confirmed Origin rewrite
+
+The affected live Codespace reported expected public HTTPS Origin, received `https://localhost:3000`, request URL at the same loopback address, and `Sec-Fetch-Site: same-origin`. Browser Network showed the correct public Origin before forwarding. This establishes Origin rewriting on that tunnel path.
+
+JSON browser requests now include `X-Floorwork-Origin: window.location.origin`. The normal exact Origin check remains the default. The Codespaces fallback requires the exact runtime preview, a permitted loopback Host with matching HTTP/HTTPS Origin, a matching browser-origin header, `Sec-Fetch-Site: same-origin`, and the existing forwarded-host policy. Missing/mismatched headers, same-site/cross-site Fetch Metadata, another Codespace, unrelated origins and non-Codespaces deployments cannot use the fallback. The custom header requires CORS preflight for foreign-origin JavaScript; the app grants no cross-origin access. JSON content-type enforcement and session/role checks remain in place.
+
+After pulling this change and rebuilding, refresh the page before signing in so the updated client sends the header. No database or account recreation is needed.

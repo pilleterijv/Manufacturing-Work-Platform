@@ -4,6 +4,7 @@ import {
   configuredOrigin,
   requestAllowed,
   originCheckDiagnostic,
+  requestOriginAllowed,
 } from "../lib/request-policy";
 import { decodeCursor, pageInfo } from "../lib/pagination";
 import { randomUUID } from "node:crypto";
@@ -170,4 +171,80 @@ test("origin diagnostics expose address metadata without cookies, credentials, p
   );
   assert.equal(invalid.expectedOrigin, "<missing>");
   assert.equal(invalid.receivedOrigin, "<invalid>");
+});
+
+test("rewritten Codespaces POST Origin requires browser origin proof and same-origin Fetch Metadata", () => {
+  const env = {
+    CODESPACES: "true",
+    CODESPACE_NAME: "pilot-example",
+    GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN: "app.github.dev",
+  };
+  const origin = configuredOrigin("https://pilot-example-3000.app.github.dev");
+  const valid = {
+    host: "localhost:3000",
+    origin: "https://localhost:3000",
+    "x-floorwork-origin": origin.origin,
+    "sec-fetch-site": "same-origin",
+  };
+  assert(requestOriginAllowed(new Headers(valid), origin, env));
+  assert(
+    requestOriginAllowed(
+      new Headers({ ...valid, origin: "http://localhost:3000" }),
+      origin,
+      env,
+    ),
+  );
+  assert(requestOriginAllowed(new Headers({ origin: origin.origin }), origin));
+  assert(!requestOriginAllowed(new Headers(valid), origin));
+  assert(
+    !requestOriginAllowed(new Headers(valid), origin, {
+      ...env,
+      CODESPACE_NAME: "other-space",
+    }),
+  );
+  for (const [key, value] of Object.entries({
+    host: "attacker.example",
+    origin: "https://attacker.example",
+    "x-floorwork-origin": "https://attacker.example",
+    "sec-fetch-site": "cross-site",
+  }))
+    assert(
+      !requestOriginAllowed(
+        new Headers({ ...valid, [key]: value }),
+        origin,
+        env,
+      ),
+    );
+  for (const value of ["same-site", "none", ""])
+    assert(
+      !requestOriginAllowed(
+        new Headers({ ...valid, "sec-fetch-site": value }),
+        origin,
+        env,
+      ),
+    );
+  for (const key of [
+    "origin",
+    "host",
+    "x-floorwork-origin",
+    "sec-fetch-site",
+  ]) {
+    const headers = new Headers(valid);
+    headers.delete(key);
+    assert(!requestOriginAllowed(headers, origin, env));
+  }
+  assert(
+    !requestOriginAllowed(
+      new Headers({ ...valid, "x-forwarded-host": "attacker.example" }),
+      origin,
+      env,
+    ),
+  );
+  assert(
+    !requestOriginAllowed(
+      new Headers(valid),
+      configuredOrigin("https://company.example"),
+      env,
+    ),
+  );
 });

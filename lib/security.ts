@@ -4,7 +4,11 @@ import { grants } from "./capabilities";
 export { grants } from "./capabilities";
 import { HttpError } from "./http-error";
 export { HttpError } from "./http-error";
-import { configuredOrigin, originCheckDiagnostic } from "./request-policy";
+import {
+  configuredOrigin,
+  originCheckDiagnostic,
+  requestOriginAllowed,
+} from "./request-policy";
 import { createHash } from "node:crypto";
 import { cookies } from "next/headers";
 import { db } from "./db";
@@ -46,7 +50,15 @@ export async function requireUser(cap?: Capability, allowChange = false) {
 }
 export async function jsonBody(req: Request, max = 256 * 1024) {
   const origin = process.env.APP_ORIGIN;
-  if (!origin || req.headers.get("origin") !== new URL(origin).origin) {
+  const allowed =
+    origin &&
+    requestOriginAllowed(req.headers, configuredOrigin(origin), {
+      CODESPACES: process.env.CODESPACES,
+      CODESPACE_NAME: process.env.CODESPACE_NAME,
+      GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN:
+        process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN,
+    });
+  if (!allowed) {
     if (process.env.CODESPACES === "true")
       console.warn(
         "[origin-check]",
@@ -54,7 +66,6 @@ export async function jsonBody(req: Request, max = 256 * 1024) {
       );
     throw new HttpError(403, "Request origin is not allowed");
   }
-  configuredOrigin(origin);
   return readJsonBody(req, max);
 }
 export async function readJsonBody(req: Request, max = 256 * 1024) {
