@@ -6,7 +6,7 @@ The host policy now permits `localhost:3000`, `127.0.0.1:3000` or `[::1]:3000` o
 
 - `CODESPACES=true`;
 - the validated Codespace name and forwarding domain construct exactly the configured HTTPS `APP_ORIGIN`;
-- any supplied `X-Forwarded-Host` equals that public hostname (multiple or unrelated values are rejected).
+- any supplied `X-Forwarded-Host` equals that public hostname or the same loopback Host (Next.js supplies the latter when the tunnel omits the header). Multiple or unrelated values are rejected.
 
 Non-Codespaces deployments retain the existing exact public Host check. Cross-site API requests remain blocked. Login still requires an exact browser Origin match, and HTTPS session cookies remain secure. No authentication, database schema, account or data changes are included.
 
