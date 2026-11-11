@@ -1,3 +1,4 @@
+import { referenceDepartments, referenceAreas } from "@/lib/reference-catalog";
 import { adminPrivileges, canAdminister } from "@/lib/capabilities";
 import { requireDelegated } from "@/lib/security";
 import type { AdminPrivilege } from "@/lib/delegation-rules";
@@ -67,6 +68,7 @@ export async function GET(req: Request) {
         "records",
         "work",
         "audits",
+        "leaders",
         "studies",
         "manage",
         "analytics",
@@ -101,17 +103,29 @@ export async function GET(req: Request) {
         hasMore: revisions.length > 100,
       });
     }
+    if (["audits", "leaders"].includes(view) && !g.includes("audits"))
+      throw new HttpError(
+        403,
+        "You do not have permission for leader work or process audits",
+      );
     const overview = view === "overview" || view === "equipment";
     const history = [
       "full",
       "overview",
       "work",
       "audits",
+      "leaders",
       "studies",
       "analytics",
       "records",
     ].includes(view);
-    const standardsNeeded = ["full", "work", "audits", "manage"].includes(view);
+    const standardsNeeded = [
+      "full",
+      "work",
+      "audits",
+      "leaders",
+      "manage",
+    ].includes(view);
     const contentNeeded = ["full", "training", "guides"].includes(view);
     const kinds = [
       ...(g.includes("work") || g.includes("analytics") ? ["run"] : []),
@@ -123,11 +137,26 @@ export async function GET(req: Request) {
     const scope = {
       AND: [recordScope(ids), recordFilters(person, search, matchingEquipment)],
       ...(g.includes("analytics") ? {} : { userId: u.id }),
+      ...(historyKind === "leaders"
+        ? { data: { path: ["snapshot", "workflow"], equals: "leader" } }
+        : historyKind === "audits"
+          ? {
+              OR: [
+                { data: { path: ["snapshot", "workflow"], equals: "process" } },
+                {
+                  data: {
+                    path: ["snapshot", "workflow"],
+                    equals: Prisma.AnyNull,
+                  },
+                },
+              ],
+            }
+          : {}),
       kind: {
         in:
           historyKind === "work"
             ? kinds.filter((k) => k === "run")
-            : historyKind === "audits"
+            : historyKind === "audits" || historyKind === "leaders"
               ? kinds.filter((k) => k === "audit")
               : historyKind === "studies"
                 ? kinds.filter((k) => k === "study")
@@ -159,7 +188,9 @@ export async function GET(req: Request) {
             _count: { _all: true },
           }),
           db.record.count({
-            where: { ...scope, data: { path: ["followUp"], equals: true } },
+            where: {
+              AND: [scope, { data: { path: ["followUp"], equals: true } }],
+            },
           }),
         ])
       : [[], 0];
@@ -176,8 +207,10 @@ export async function GET(req: Request) {
             SELECT family, max(revision) AS revision FROM "Standard" GROUP BY family
           ) latest ON s.family=latest.family AND s.revision=latest.revision
           WHERE s."equipmentId" = ANY(${assignmentIds}::text[])
-          AND (${view} NOT IN ('work','audits') OR s.kind=CASE WHEN ${view}='audits' THEN 'audit' ELSE 'run' END)
-          AND (${view}<>'audits' OR ${u.role}='Admin' OR s."assigneeIds"='[]'::jsonb OR s."assigneeIds" @> ${JSON.stringify([u.id])}::jsonb)
+          AND (NOT s.archived)
+          AND (${view} NOT IN ('work','audits','leaders') OR s.kind=CASE WHEN ${view} IN ('audits','leaders') THEN 'audit' ELSE 'run' END)
+          AND (${view} NOT IN ('audits','leaders') OR s.workflow=CASE WHEN ${view}='leaders' THEN 'leader' ELSE 'process' END)
+          AND (${view} NOT IN ('audits','leaders') OR ${u.role}='Admin' OR s."assigneeIds"='[]'::jsonb OR s."assigneeIds" @> ${JSON.stringify([u.id])}::jsonb)
           AND (${person ?? ""}='' OR s."assigneeIds"='[]'::jsonb OR s."assigneeIds" @> ${JSON.stringify(person ? [person] : [])}::jsonb)
           AND (${search}='' OR s.title ILIKE ${"%" + search + "%"} OR s."equipmentId"=ANY(${matchingEquipment}::text[]))
           ORDER BY s.title
@@ -258,6 +291,19 @@ export async function GET(req: Request) {
       overview: {
         runs: counts.find((c) => c.kind === "run")?._count._all ?? 0,
         studies: counts.find((c) => c.kind === "study")?._count._all ?? 0,
+        leaderWork: g.includes("audits")
+          ? await db.record.count({
+              where: {
+                AND: [
+                  recordScope(ids),
+                  recordFilters(person, search, matchingEquipment),
+                ],
+                kind: "audit",
+                data: { path: ["snapshot", "workflow"], equals: "leader" },
+                ...(g.includes("analytics") ? {} : { userId: u.id }),
+              },
+            })
+          : 0,
         audits: counts.find((c) => c.kind === "audit")?._count._all ?? 0,
         followUps,
       },
@@ -321,6 +367,8 @@ export async function POST(req: Request) {
         guide: "manage",
         video: "training",
         archive: "training",
+        "retire-standard": "manage",
+        "seed-catalog": "manage",
         run: "work",
         study: "studies",
         audit: "audits",
@@ -335,6 +383,8 @@ export async function POST(req: Request) {
     const actionPrivilege = (
       {
         standard: "standards.manage",
+        "retire-standard": "standards.manage",
+        "seed-catalog": "locations.manage",
         equipment: "equipment.manage",
         guide: "resources.manage",
         video: "training.manage",
@@ -349,6 +399,75 @@ export async function POST(req: Request) {
         403,
         "Only Admin can manage accounts, policies and locations",
       );
+    if (action === "seed-catalog") {
+      if (u.role !== "Admin" && !(await canAdminister(u, "locations.manage")))
+        throw new HttpError(
+          403,
+          "Location administration has not been delegated to you",
+        );
+      const plant = z.string().trim().min(1).max(100).parse(b.plant);
+      const existing = await db.location.findMany({
+        where: { plant: { equals: plant, mode: "insensitive" } },
+      });
+      const site = existing[0]?.plant || plant;
+      const rows = referenceDepartments.flatMap((department) => {
+        const canonical =
+          existing.find(
+            (l) =>
+              l.department.toLowerCase() === department.toLowerCase() ||
+              (department === "Maintenance/Facilities" &&
+                l.department.toLowerCase() === "maintenance"),
+          )?.department || department;
+        return ["", ...(referenceAreas[department] || [])].map((area) => ({
+          plant: site,
+          department: canonical,
+          area:
+            existing.find(
+              (l) =>
+                l.department === canonical &&
+                l.area.toLowerCase() === area.toLowerCase() &&
+                l.line === "",
+            )?.area || area,
+          line: "",
+        }));
+      });
+      await db.location.createMany({ data: rows, skipDuplicates: true });
+    }
+    if (action === "retire-standard") {
+      const id = z.string().uuid().parse(b.id);
+      await db.$transaction(async (tx) => {
+        const item = await tx.standard.findUnique({ where: { id } });
+        if (!item) throw new HttpError(404, "Standard not found");
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${item.family}))`;
+        await assertEquipmentAccess(u, item.equipmentId, tx);
+        await tx.standard.updateMany({
+          where: { family: item.family },
+          data: { archived: true },
+        });
+        await tx.setting.upsert({
+          where: { key: "standard-retired:" + item.family },
+          create: {
+            key: "standard-retired:" + item.family,
+            value: {
+              family: item.family,
+              by: u.id,
+              at: new Date().toISOString(),
+            },
+          },
+          update: {
+            value: {
+              family: item.family,
+              by: u.id,
+              at: new Date().toISOString(),
+            },
+          },
+        });
+        await tx.workSchedule.updateMany({
+          where: { family: item.family },
+          data: { active: false, version: { increment: 1 } },
+        });
+      });
+    }
     if (action === "location") {
       if (u.role !== "Admin" && !(await canAdminister(u, "locations.manage")))
         throw new HttpError(
@@ -531,10 +650,16 @@ export async function POST(req: Request) {
       const family = v.family ?? crypto.randomUUID();
       await db.$transaction(
         async (tx) => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${family}))`;
           const last = await tx.standard.findFirst({
             where: { family },
             orderBy: { revision: "desc" },
           });
+          if (last?.archived)
+            throw new HttpError(
+              409,
+              "This standard family has been retired. Create a new standard instead.",
+            );
           if (
             last &&
             (last.equipmentId !== v.equipmentId || last.kind !== v.kind)
@@ -544,6 +669,21 @@ export async function POST(req: Request) {
               "Equipment and task type cannot change within a standard family",
             );
           await assertEquipmentAccess(u, v.equipmentId, tx);
+          for (const planId of new Set(
+            v.steps
+              .map((step) => step.fiveSPlanId)
+              .filter((id): id is string => !!id),
+          )) {
+            await tx.$queryRaw`SELECT id FROM "FiveSPlan" WHERE id=${planId} FOR SHARE`;
+            if (
+              !(await tx.fiveSPlan.findUnique({ where: { id: planId } }))
+                ?.active
+            )
+              throw new HttpError(
+                409,
+                "A linked 5S plan was retired. Reload and revise the checklist.",
+              );
+          }
           await tx.standard.create({
             data: {
               ...v,
@@ -553,7 +693,8 @@ export async function POST(req: Request) {
             },
           });
         },
-        { isolationLevel: "Serializable" },
+        // Family writers share the advisory lock; ReadCommitted observes the state after waiting.
+        { isolationLevel: "ReadCommitted" },
       );
     }
     if (action === "guide" || action === "video") {
@@ -669,13 +810,45 @@ export async function POST(req: Request) {
             )
             .max(100),
           cycles: cyclesSchema.optional(),
+          handoff: z
+            .object({
+              shift: z.string().max(100),
+              notes: z.string().max(10000),
+              rooms: z
+                .array(
+                  z.object({
+                    room: z.string().max(100),
+                    item: z.string().max(100),
+                    lot: z.string().max(100),
+                    targetSpeed: z.string().max(40),
+                    actualSpeed: z.string().max(40),
+                    remaining: z.string().max(150),
+                    issues: z.string().max(2000),
+                    nextOrder: z.enum(["", "Yes", "No", "Not applicable"]),
+                  }),
+                )
+                .max(30),
+            })
+            .optional(),
         })
         .parse(b);
       const standard = await db.standard.findUnique({
         where: { id: v.standardId },
       });
       if (!standard) throw new HttpError(404, "Standard not found");
+      if (standard.archived)
+        throw new HttpError(
+          409,
+          "This standard has been retired and is no longer available for new work.",
+        );
       await assertEquipmentAccess(u, standard.equipmentId);
+      if (standard.workflow === "leader" && !v.handoff?.shift.trim())
+        throw new HttpError(400, "Choose the leader-work shift");
+      if (v.handoff && standard.workflow !== "leader")
+        throw new HttpError(
+          400,
+          "Shift handoff fields belong to DL/TL leader work.",
+        );
       if (standard.kind !== action)
         throw new HttpError(400, "Choose the correct standard-work task type");
       if (
@@ -756,6 +929,12 @@ export async function POST(req: Request) {
           ),
       };
       await db.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "Standard" WHERE id=${standard.id} FOR SHARE`;
+        if (
+          (await tx.standard.findUniqueOrThrow({ where: { id: standard.id } }))
+            .archived
+        )
+          throw new HttpError(409, "This standard has been retired.");
         const machine = await assertEquipmentAccess(
           u,
           standard.equipmentId,

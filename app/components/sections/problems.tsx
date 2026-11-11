@@ -1,4 +1,5 @@
 "use client";
+import { referenceDepartments } from "@/lib/reference-catalog";
 import RefreshControl, { useSectionRefresh } from "../refresh-control";
 import PersonSelect from "../person-select";
 import EvidenceInput from "../evidence-input";
@@ -6,6 +7,7 @@ import { useEffect, useState, useRef } from "react";
 import { api, filterUrl } from "@/lib/client-api";
 import {
   methods,
+  secondCauseFields,
   defaultRequirements,
   actionTypes,
   methodology,
@@ -16,6 +18,21 @@ import {
   type ProblemInput,
 } from "@/lib/problem-rules";
 import { Field, Metric } from "../shared";
+function answerChoices(key: string): string[] {
+  if (key === "facilitatorDepartment") return referenceDepartments;
+  if (key === "severity") return ["Low", "High"];
+  if (key === "occurrence")
+    return ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10+"];
+  if (key === "internalExternal") return ["Internal", "External"];
+  if (
+    ["standardExists", "standardClear", "trained", "emergencyNeeded"].includes(
+      key,
+    ) ||
+    key.startsWith("prevention")
+  )
+    return ["Yes", "No", "Not applicable"];
+  return [];
+}
 type Person = { id: string; name: string };
 type Equipment = {
   id: string;
@@ -710,81 +727,126 @@ export default function Problems({
                           </label>
                         ))}
                     </fieldset>
-                    {methodology[draft.method].sections.map((section) => (
-                      <fieldset
-                        className="problem-discipline"
-                        key={section.title}
-                      >
-                        <legend>{section.title}</legend>
-                        <div className="form-grid">
-                          {section.fields.map(([key, label]) => (
-                            <Field key={key} label={label}>
-                              <label className="check">
-                                <input
-                                  type="checkbox"
-                                  checked={(
-                                    draft.requirements ??
-                                    defaultRequirements(draft.method)
-                                  ).fields.includes(key)}
-                                  onChange={(e) => {
-                                    const r = draft.requirements ?? {
-                                      ...defaultRequirements(draft.method),
-                                      actionTypes: [],
-                                    };
-                                    patch({
-                                      requirements: {
-                                        ...r,
-                                        fields: e.target.checked
-                                          ? [...r.fields, key]
-                                          : r.fields.filter((k) => k !== key),
-                                      },
-                                    });
-                                  }}
-                                />
-                                Required for closure
-                              </label>
-                              {[
-                                "standardExists",
-                                "standardClear",
-                                "trained",
-                              ].includes(key) ? (
-                                <select
-                                  value={draft.answers[key] ?? ""}
-                                  onChange={(e) =>
-                                    patch({
-                                      answers: {
-                                        ...draft.answers,
-                                        [key]: e.target.value,
-                                      },
-                                    })
-                                  }
-                                >
-                                  <option value="">Choose an answer</option>
-                                  <option>Yes</option>
-                                  <option>No</option>
-                                  <option>Not applicable</option>
-                                </select>
-                              ) : (
-                                <textarea
-                                  rows={3}
-                                  maxLength={5000}
-                                  value={draft.answers[key] ?? ""}
-                                  onChange={(e) =>
-                                    patch({
-                                      answers: {
-                                        ...draft.answers,
-                                        [key]: e.target.value,
-                                      },
-                                    })
-                                  }
-                                  placeholder={label}
-                                />
-                              )}
-                            </Field>
-                          ))}
-                        </div>
-                      </fieldset>
-                    ))}
+                    {draft.method !== "2D" && (
+                      <label className="check">
+                        <input
+                          type="checkbox"
+                          checked={
+                            draft.answers.secondRootCauseEnabled === "Yes"
+                          }
+                          onChange={(e) =>
+                            patch({
+                              answers: {
+                                ...draft.answers,
+                                secondRootCauseEnabled: e.target.checked
+                                  ? "Yes"
+                                  : "No",
+                              },
+                              requirements: {
+                                ...(draft.requirements ??
+                                  defaultRequirements(draft.method)),
+                                fields: e.target.checked
+                                  ? [
+                                      ...(
+                                        draft.requirements ??
+                                        defaultRequirements(draft.method)
+                                      ).fields,
+                                      "rootCause2",
+                                    ]
+                                  : (
+                                      draft.requirements ??
+                                      defaultRequirements(draft.method)
+                                    ).fields.filter(
+                                      (k) =>
+                                        !secondCauseFields.some(
+                                          ([field]) => field === k,
+                                        ),
+                                    ),
+                              },
+                            })
+                          }
+                        />
+                        Use a second 5-Why root cause path
+                      </label>
+                    )}
+                    {methodology[draft.method].sections
+                      .filter(
+                        (section) =>
+                          section.title !==
+                            "Second root cause path (optional)" ||
+                          draft.answers.secondRootCauseEnabled === "Yes",
+                      )
+                      .map((section) => (
+                        <fieldset
+                          className="problem-discipline"
+                          key={section.title}
+                        >
+                          <legend>{section.title}</legend>
+                          <div className="form-grid">
+                            {section.fields.map(([key, label]) => (
+                              <Field key={key} label={label}>
+                                <label className="check">
+                                  <input
+                                    type="checkbox"
+                                    checked={(
+                                      draft.requirements ??
+                                      defaultRequirements(draft.method)
+                                    ).fields.includes(key)}
+                                    onChange={(e) => {
+                                      const r = draft.requirements ?? {
+                                        ...defaultRequirements(draft.method),
+                                        actionTypes: [],
+                                      };
+                                      patch({
+                                        requirements: {
+                                          ...r,
+                                          fields: e.target.checked
+                                            ? [...r.fields, key]
+                                            : r.fields.filter((k) => k !== key),
+                                        },
+                                      });
+                                    }}
+                                  />
+                                  Required for closure
+                                </label>
+                                {answerChoices(key).length ? (
+                                  <select
+                                    value={draft.answers[key] ?? ""}
+                                    onChange={(e) =>
+                                      patch({
+                                        answers: {
+                                          ...draft.answers,
+                                          [key]: e.target.value,
+                                        },
+                                      })
+                                    }
+                                  >
+                                    <option value="">Choose an answer</option>
+                                    {answerChoices(key).map((value) => (
+                                      <option key={value}>{value}</option>
+                                    ))}
+                                  </select>
+                                ) : (
+                                  <textarea
+                                    rows={3}
+                                    maxLength={5000}
+                                    value={draft.answers[key] ?? ""}
+                                    onChange={(e) =>
+                                      patch({
+                                        answers: {
+                                          ...draft.answers,
+                                          [key]: e.target.value,
+                                        },
+                                      })
+                                    }
+                                    placeholder={label}
+                                  />
+                                )}
+                              </Field>
+                            ))}
+                          </div>
+                        </fieldset>
+                      ))}
                     <EvidenceInput
                       label="Problem photo or video evidence"
                       onBusy={setCaseUploading}

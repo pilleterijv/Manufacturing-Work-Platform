@@ -2054,3 +2054,5 @@ a:focus-visible {
 .status-bar meter::-moz-meter-bar {
   background: #e85208;
 }
+.metric-shortcut { width:100%; text-align:left; color:inherit; cursor:pointer; }
+.metric-shortcut:hover { border-color:#e85208; box-shadow:0 4px 14px #e8520818; }

@@ -1,4 +1,5 @@
 "use client";
+import LeaderHandoff, { type LeaderHandoffData } from "../leader-handoff";
 import EvidenceInput from "../evidence-input";
 import { useState, useEffect, useRef } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
@@ -19,15 +20,27 @@ export default function Work({
   save,
   busy,
   audit,
+  leader = false,
+  shiftNames = ["Day", "Night"],
 }: {
   data: Data;
   save: Save;
   busy: boolean;
   audit: boolean;
+  leader?: boolean;
+  shiftNames?: string[];
 }) {
   const uploads = useRef(0);
+  const [handoff, setHandoff] = useState<LeaderHandoffData>({
+    shift: "",
+    notes: "",
+    rooms: [],
+  });
   const latest = data.standards.filter(
-    (s) => s.kind === (audit ? "audit" : "run"),
+    (s) =>
+      !s.archived &&
+      s.kind === (audit ? "audit" : "run") &&
+      (audit ? (s.workflow === "leader") === leader : true),
   );
   const [id, setId] = useState(""),
     [responses, setResponses] = useState<
@@ -62,6 +75,7 @@ export default function Work({
     setCycles([]);
     setStarted(new Date().toISOString());
     setLocalError("");
+    setHandoff({ shift: "", notes: "", rooms: [] });
   }
   function update(step: string, patch: object) {
     setResponses((prev) => ({
@@ -78,11 +92,15 @@ export default function Work({
       <section className="panel">
         <div className="section-title">
           <h2>
-            {audit
+            {leader
               ? "Complete assigned DL/TL Standard Work"
-              : "Start a verification"}
+              : audit
+                ? "Complete a standard-work audit"
+                : "Start a verification"}
           </h2>
-          <span className="badge">{audit ? "DL/TL" : "STANDARD WORK"}</span>
+          <span className="badge">
+            {leader ? "DL/TL" : audit ? "PROCESS AUDIT" : "STANDARD WORK"}
+          </span>
         </div>
         <Field label="Standard work">
           <select
@@ -135,6 +153,7 @@ export default function Work({
                   standardId: id,
                   started,
                   operator,
+                  ...(leader ? { handoff } : {}),
                   responses: s.steps.map((step) => ({
                     stepId: step.id,
                     ...responses[step.id],
@@ -152,11 +171,11 @@ export default function Work({
                 ▦ {data.equipment.find((e) => e.id === s.equipmentId)?.name}
               </span>
               <span>Revision {s.revision}</span>
-              <span>Target {s.target}s</span>
+              {!leader && <span>Target {s.target}s</span>}
             </div>
-            <div className={audit ? "audit-grid" : ""}>
+            <div className={audit && !leader ? "audit-grid" : ""}>
               <div>
-                {audit && (
+                {audit && !leader && (
                   <Field label="Operator / context (optional)">
                     <input
                       value={operator}
@@ -168,6 +187,12 @@ export default function Work({
                 )}
                 {s.steps.map((step, i) => (
                   <section className="step" key={step.id}>
+                    {step.group && (
+                      <p className="eyebrow">
+                        {step.group}
+                        {step.timing ? " · " + step.timing : ""}
+                      </p>
+                    )}
                     <div className="step-heading">
                       <span className="step-number">
                         {String(i + 1).padStart(2, "0")}
@@ -287,7 +312,7 @@ export default function Work({
                   </section>
                 ))}
               </div>
-              {audit && (
+              {audit && !leader && (
                 <div>
                   <Timer
                     cycles={cycles}
@@ -303,22 +328,35 @@ export default function Work({
                 </div>
               )}
             </div>
+            {leader && (
+              <LeaderHandoff
+                value={handoff}
+                onChange={setHandoff}
+                shifts={shiftNames}
+              />
+            )}
             {localError && (
               <div className="error" role="alert">
                 {localError}
               </div>
             )}
             <Submit busy={busy || uploading}>
-              {audit
+              {leader
                 ? "Complete DL/TL Standard Work"
-                : "Complete standard work"}
+                : audit
+                  ? "Complete standard-work audit"
+                  : "Complete standard work"}
             </Submit>
           </form>
         )}
       </section>
       <div className="section-title">
         <h2>
-          {audit ? "DL/TL Standard Work history" : "Completed verifications"}
+          {leader
+            ? "DL/TL Standard Work history"
+            : audit
+              ? "Standard work audit history"
+              : "Completed verifications"}
         </h2>
         <span className="muted">Historical revisions preserved</span>
       </div>

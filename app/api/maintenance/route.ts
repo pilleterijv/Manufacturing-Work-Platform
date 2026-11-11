@@ -205,6 +205,30 @@ export async function POST(req: Request) {
     const u = await requireUser("maintenance"),
       b = await jsonBody(req),
       entry = { at: new Date().toISOString(), by: u.id, name: u.name };
+    if (b.action === "retire") {
+      await requireDelegated("maintenance.manage", "manage");
+      const id = z.string().uuid().parse(b.id),
+        version = z.number().int().positive().parse(b.version);
+      await db.$transaction(async (tx) => {
+        const plan = await tx.maintenancePlan.findUnique({ where: { id } });
+        if (!plan) throw new HttpError(404, "Task not found");
+        await assertEquipmentAccess(u, plan.equipmentId, tx);
+        const updated = await tx.maintenancePlan.updateMany({
+          where: { id, version },
+          data: {
+            active: false,
+            version: { increment: 1 },
+            history: [
+              ...(plan.history as any[]),
+              { ...entry, action: "retired" },
+            ],
+          },
+        });
+        if (!updated.count)
+          throw new HttpError(409, "Task changed; refresh before retiring");
+      });
+      return Response.json({ ok: true });
+    }
     if (b.action === "save") {
       await requireDelegated("maintenance.manage", "manage");
       const v = maintenanceSchema.parse(b),

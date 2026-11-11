@@ -52,11 +52,15 @@ export async function GET(req: Request) {
     const ids = await equipmentIds(u);
     const titleWhere = { contains: query, mode: "insensitive" as const };
     let tasks: { title: string }[] = [];
-    if (["Standard work", "DL/TL Standard Work"].includes(section))
+    if (
+      ["Standard work", "DL/TL Standard Work", "Standard work audits"].includes(
+        section,
+      )
+    )
       tasks = await db.$queryRaw<{ title: string }[]>`
       SELECT s.title FROM "Standard" s JOIN (SELECT family,max(revision) revision FROM "Standard" GROUP BY family) latest ON s.family=latest.family AND s.revision=latest.revision
-      WHERE s."equipmentId"=ANY(${ids}::text[]) AND s.kind=${section === "DL/TL Standard Work" ? "audit" : "run"}
-      AND (${section} <> 'DL/TL Standard Work' OR ${u.role}='Admin' OR s."assigneeIds"='[]'::jsonb OR s."assigneeIds" @> ${JSON.stringify([u.id])}::jsonb)
+      WHERE NOT s.archived AND (${section} NOT IN ('DL/TL Standard Work','Standard work audits') OR s.workflow=CASE WHEN ${section}='DL/TL Standard Work' THEN 'leader' ELSE 'process' END) AND s."equipmentId"=ANY(${ids}::text[]) AND s.kind=${section !== "Standard work" ? "audit" : "run"}
+      AND (${section} NOT IN ('DL/TL Standard Work','Standard work audits') OR ${u.role}='Admin' OR s."assigneeIds"='[]'::jsonb OR s."assigneeIds" @> ${JSON.stringify([u.id])}::jsonb)
       AND s.title ILIKE ${"%" + query + "%"} ORDER BY s.title LIMIT 60`;
     else if (section === "Preventive maintenance" || section === "TPM / CIL")
       tasks = await db.maintenancePlan.findMany({

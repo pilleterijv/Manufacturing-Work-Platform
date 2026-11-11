@@ -64,6 +64,8 @@ model Location {
  @@unique([plant,department,area,line])
 }
 model Standard {
+ archived Boolean @default(false)
+ workflow String @default("process")
  id String @id @default(uuid())
  family String
  revision Int

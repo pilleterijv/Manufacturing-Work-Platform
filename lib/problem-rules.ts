@@ -169,7 +169,127 @@ export const methodology: Record<
     ],
   },
 };
+export const secondCauseFields: [string, string][] = [
+  ...[1, 2, 3, 4, 5].map(
+    (i) => [`why${i}b`, `Root cause path 2 · Why ${i}`] as [string, string],
+  ),
+  ["rootCause2", "Root cause path 2 · Root cause summary"],
+];
+const newOptional = new Set([
+  "facilitatorDepartment",
+  "nccapa",
+  "sku",
+  "sponsor",
+  "severity",
+  "occurrence",
+  "internalExternal",
+  "emergencyNeeded",
+  "vagueProblem",
+  "whyCare",
+  "desiredDifference",
+  "why6",
+  "why7",
+  "why6b",
+  "why7b",
+  ...secondCauseFields.map(([k]) => k),
+]);
+for (const method of methods) {
+  methodology[method].sections[method === "8D" ? 1 : 0].fields.push([
+    "facilitatorDepartment",
+    "Facilitator department",
+  ]);
+  if (method === "2D") {
+    methodology[method].sections[0].title =
+      "D1 · Problem definition and standard check";
+    methodology[method].sections[0].fields.push(
+      ["standardExists", "Does a standard exist?"],
+      ["standardClear", "Is the standard clear and available?"],
+      ["trained", "Are people trained?"],
+    );
+    methodology[method].sections.at(-1)!.title =
+      "D2 · Actions and effectiveness";
+  }
+  if (method !== "2D")
+    methodology[method].sections.splice(
+      methodology[method].sections.findIndex((s) =>
+        s.fields.some(([key]) => key === "rootCause"),
+      ) + 1,
+      0,
+      {
+        title: "Second root cause path (optional)",
+        fields: [
+          ...secondCauseFields,
+          ...(method === "8D"
+            ? ([
+                ["why6b", "Root cause path 2 · Why 6 (optional)"],
+                ["why7b", "Root cause path 2 · Why 7 (optional)"],
+              ] as [string, string][])
+            : []),
+        ],
+      },
+    );
+}
+methodology["8D"].sections[1].fields.push(
+  ["nccapa", "NCCAPA number"],
+  ["sku", "Product SKU / item number"],
+  ["sponsor", "Champion / sponsor"],
+  ["severity", "Severity · low / high"],
+  ["occurrence", "Occurrence · 1–10+"],
+  ["internalExternal", "Internal / external problem"],
+  ["emergencyNeeded", "Emergency actions needed?"],
+);
+methodology["8D"].sections[2].fields.push(
+  ["vagueProblem", "Initial / vague problem statement"],
+  ["who", "Who is affected?"],
+  ["what", "What is the symptom?"],
+  ["when", "When did the symptom occur?"],
+  ["where", "Where did the symptom occur?"],
+  ["howMuch", "Cost or frequency"],
+  ["whyCare", "Why do we care?"],
+  ["desiredDifference", "How does this differ from the desired state?"],
+);
+for (const name of [
+  "People",
+  "Machine",
+  "Process",
+  "Material",
+  "Measurement",
+  "Environment",
+]) {
+  const key = "fishbone" + name;
+  newOptional.add(key);
+  methodology["8D"].sections[4].fields.push([key, `Fishbone · ${name}`]);
+}
+methodology["8D"].sections[4].fields.push(
+  ["why6", "Why 6 (optional)"],
+  ["why7", "Why 7 (optional)"],
+);
+for (const department of [
+  "Operations",
+  "Tech Ops",
+  "Warehouse",
+  "Quality Assurance",
+  "Safety",
+  "Quality Control",
+  "Planning",
+  "Engineering",
+  "Maintenance",
+]) {
+  const key = "prevention" + department.replace(/\s/g, "");
+  newOptional.add(key);
+  methodology["8D"].sections
+    .find((s) => s.title.startsWith("D7"))!
+    .fields.push([key, `${department} · preventive actions required?`]);
+}
+methodology["2D"].guidance =
+  "Document the factual problem and cause, check the standard and training, then assign correction/containment and corrective actions. Follow your site's escalation and due-date rules; the supplied leader-work example calls for a 2D after prolonged downtime.";
+methodology["2D"].sections[1].title = "D1 · Root cause";
+methodology["4D"].guidance =
+  "Department investigation with standard checks, a focused problem statement, one or two independent 5-Why paths, owned actions, checkpoints and effectiveness review. Follow your site's escalation and due-date rules.";
+methodology["8D"].guidance =
+  "Cross-functional D0–D8 investigation using severity/occurrence, emergency containment, verified root and escape causes, corrective implementation, system-level prevention and team recognition.";
 const allKeys = [
+  "secondRootCauseEnabled",
   ...new Set(
     Object.values(methodology).flatMap((m) =>
       m.sections.flatMap((s) => s.fields.map(([key]) => key)),
@@ -201,8 +321,27 @@ export const requirementsSchema = z
     "Unknown required field",
   );
 export const defaultRequirements = (method: Method) => ({
-  fields: methodology[method].sections.flatMap((s) => s.fields.map(([k]) => k)),
-  actionTypes: [] as string[],
+  fields: methodology[method].sections
+    .flatMap((s) => s.fields.map(([k]) => k))
+    .filter(
+      (k) =>
+        !newOptional.has(k) &&
+        !(
+          method === "2D" &&
+          [
+            "standardExists",
+            "standardClear",
+            "trained",
+            "preventive",
+            "recognition",
+          ].includes(k)
+        ) &&
+        !(
+          method === "8D" &&
+          ["who", "what", "when", "where", "howMuch"].includes(k)
+        ),
+    ),
+  actionTypes: [] as (typeof actionTypes)[number][],
   requireAction: true,
 });
 export const problemSchema = z.object({
@@ -244,7 +383,11 @@ export function closureErrors(
   method: Method,
   answers: Record<string, string>,
   actions: { status: string; required?: boolean; type?: string }[],
-  requirements = defaultRequirements(method),
+  requirements: {
+    fields: string[];
+    actionTypes: readonly string[];
+    requireAction: boolean;
+  } = defaultRequirements(method),
 ) {
   const errors = methodology[method].sections.flatMap((s) =>
     s.fields

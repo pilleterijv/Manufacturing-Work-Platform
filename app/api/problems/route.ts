@@ -331,7 +331,7 @@ export async function POST(req: Request) {
   try {
     const u = await requireUser("problems");
     await limit("problems:" + u.id, 120, 60);
-    const body = await jsonBody(req);
+    const body = await jsonBody(req, 1024 * 1024);
     const action = z
       .enum(["create", "update", "addAction", "updateAction", "editAction"])
       .parse(body.action);

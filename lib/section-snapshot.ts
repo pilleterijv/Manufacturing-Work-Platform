@@ -99,13 +99,14 @@ export function sectionSnapshot(section: string, d: any): SectionSnapshot {
       "Standard work",
       "Time studies",
       "DL/TL Standard Work",
+      "Standard work audits",
       "Analytics",
     ].includes(section)
   ) {
     const key =
       section === "Time studies"
         ? "studies"
-        : section === "DL/TL Standard Work"
+        : ["DL/TL Standard Work", "Standard work audits"].includes(section)
           ? "audits"
           : "runs";
     metrics = [
@@ -114,9 +115,12 @@ export function sectionSnapshot(section: string, d: any): SectionSnapshot {
           section === "Time studies"
             ? "Saved studies"
             : section === "DL/TL Standard Work"
-              ? "Completed audits"
+              ? "Completed leader checklists"
               : "Completed runs",
-        value: d.overview[key] || 0,
+        value:
+          section === "DL/TL Standard Work"
+            ? d.overview.leaderWork || 0
+            : d.overview[key] || 0,
         detail: "All matching records",
       },
       {
@@ -195,8 +199,11 @@ export function sectionSnapshot(section: string, d: any): SectionSnapshot {
         detail: "All matching records",
       },
       {
-        label: "DL/TL audits",
-        value: d.overview?.audits || 0,
+        label: "Standard-work audits",
+        value: Math.max(
+          0,
+          (d.overview?.audits || 0) - (d.overview?.leaderWork || 0),
+        ),
         detail: "All matching records",
       },
     ];
