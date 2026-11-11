@@ -145,8 +145,16 @@ async function main() {
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "Migration"')).rows[0]
           .n,
-        12,
+        13,
       );
+      const standardColumns = (
+        await pool.query(
+          `SELECT column_name, column_default FROM information_schema.columns WHERE table_name='Standard' AND column_name IN ('workflow','archived') ORDER BY column_name`,
+        )
+      ).rows;
+      assert.equal(standardColumns.length, 2);
+      assert.match(standardColumns[0].column_default, /false/);
+      assert.match(standardColumns[1].column_default, /process/);
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "Problem"')).rows[0]
           .n,

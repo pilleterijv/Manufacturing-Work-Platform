@@ -45,7 +45,7 @@ export const helpTopics: HelpTopic[] = [
     steps: [
       "Select the assigned DL/TL process.",
       "If a step links 5S, complete that plan for the same area today, then select your completed audit in the step.",
-      "Answer the remaining steps, stop any running timer and save the work.",
+      "Choose the leader-work shift, record room/machine pass-down notes, answer the assigned tasks and save.",
     ],
   },
   {
