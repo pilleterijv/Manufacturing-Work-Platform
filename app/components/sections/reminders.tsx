@@ -1,4 +1,5 @@
 "use client";
+import { useSectionRefresh } from "../refresh-control";
 import { useState, useEffect } from "react";
 import { api, getSectionFilters } from "@/lib/client-api";
 export default function Reminders({ admin }: { admin: boolean }) {
@@ -9,6 +10,10 @@ export default function Reminders({ admin }: { admin: boolean }) {
   async function load() {
     setData(await api("/api/reminders"));
   }
+  useSectionRefresh(
+    () => load(),
+    (e) => setError(e.message),
+  );
   useEffect(() => {
     load().catch((e) => setError(e.message));
   }, []);

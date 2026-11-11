@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+import RefreshControl, { useSectionRefresh } from "../refresh-control";
+import { useEffect, useState, useRef } from "react";
 import { api, filterUrl } from "@/lib/client-api";
 import EvidenceInput, { EvidenceView } from "../evidence-input";
 import { Field } from "../shared";
@@ -18,15 +19,22 @@ export default function Defects({
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
     [mapping, setMapping] = useState<Record<string, number>>({});
+  const loadSequence = useRef(0);
   async function load(more = false) {
+    const sequence = ++loadSequence.current;
     const d = await api(
       "/api/defects" + (more ? "?cursor=" + data.cursor : ""),
     );
+    if (sequence !== loadSequence.current) return;
     setData((old: any) =>
       more ? { ...d, defects: [...old.defects, ...d.defects] } : d,
     );
     setMapping(d.assets);
   }
+  useSectionRefresh(
+    () => load(),
+    (e) => setError(e.message),
+  );
   useEffect(() => {
     load().catch((e) => setError(e.message));
   }, []);
@@ -154,6 +162,7 @@ export default function Defects({
       )}
       <section className="panel">
         <h2>Defect register</h2>
+        <RefreshControl onRefresh={() => load()} />
         <a className="outline" href={filterUrl("/api/defects?format=xlsx")}>
           Export defects
         </a>

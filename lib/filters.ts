@@ -20,6 +20,7 @@ export const textFilter = (value: string, query: string) =>
 export function recordFilters(
   person: string | undefined,
   search: string,
+  matchingEquipmentIds: string[] = [],
 ): Prisma.RecordWhereInput {
   const fields = ["name", "plant", "department", "area", "line"];
   return {
@@ -27,6 +28,9 @@ export function recordFilters(
     ...(search
       ? {
           OR: [
+            ...matchingEquipmentIds.map((id) => ({
+              data: { path: ["equipmentId"], equals: id },
+            })),
             {
               user: {
                 OR: [

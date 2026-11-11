@@ -41,6 +41,19 @@ export async function GET(req: Request) {
     const ids = await equipmentIds(u);
     const { person, search } = readFilters(req.url);
     const assignmentIds = await assignedEquipmentIds(ids, person);
+    const matchingEquipment = search
+      ? (
+          await db.equipment.findMany({
+            where: {
+              id: { in: assignmentIds },
+              OR: ["name", "plant", "department", "area", "line"].map((k) => ({
+                [k]: { contains: search, mode: "insensitive" },
+              })),
+            },
+            select: { id: true },
+          })
+        ).map((e) => e.id)
+      : [];
     const params = new URL(req.url).searchParams;
     const cursor = z
       .string()
@@ -108,7 +121,7 @@ export async function GET(req: Request) {
     const requestedKind = params.get("kind");
     const historyKind = view === "records" ? requestedKind : view;
     const scope = {
-      AND: [recordScope(ids), recordFilters(person, search)],
+      AND: [recordScope(ids), recordFilters(person, search, matchingEquipment)],
       ...(g.includes("analytics") ? {} : { userId: u.id }),
       kind: {
         in:
@@ -166,7 +179,7 @@ export async function GET(req: Request) {
           AND (${view} NOT IN ('work','audits') OR s.kind=CASE WHEN ${view}='audits' THEN 'audit' ELSE 'run' END)
           AND (${view}<>'audits' OR ${u.role}='Admin' OR s."assigneeIds"='[]'::jsonb OR s."assigneeIds" @> ${JSON.stringify([u.id])}::jsonb)
           AND (${person ?? ""}='' OR s."assigneeIds"='[]'::jsonb OR s."assigneeIds" @> ${JSON.stringify(person ? [person] : [])}::jsonb)
-          AND (${search}='' OR s.title ILIKE ${"%" + search + "%"})
+          AND (${search}='' OR s.title ILIKE ${"%" + search + "%"} OR s."equipmentId"=ANY(${matchingEquipment}::text[]))
           ORDER BY s.title
         `
           : [],
@@ -188,6 +201,7 @@ export async function GET(req: Request) {
                       AND: [
                         {
                           OR: [
+                            { equipmentId: { in: matchingEquipment } },
                             {
                               title: {
                                 contains: search,

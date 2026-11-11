@@ -1927,3 +1927,130 @@ a:focus-visible {
 .install-help-dialog h3 {
   margin-top: 1.25rem;
 }
+
+.nav-group {
+  width: 100%;
+}
+.nav-submenu {
+  margin: 0.25rem 0 0.6rem 2rem;
+  border-left: 2px solid #f1c6ad;
+  padding-left: 0.5rem;
+  display: grid;
+  gap: 0.2rem;
+}
+.nav-submenu button {
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+  color: var(--ink);
+  min-height: 44px;
+}
+.nav-submenu button.active {
+  background: #fff0e5;
+  color: #a63b05;
+  font-weight: 600;
+}
+.section-view-switch {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+}
+.refresh-control {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+.refresh-control small {
+  color: #66584f;
+}
+.search-picker {
+  position: relative;
+  min-width: 0;
+}
+.search-suggestions {
+  position: absolute;
+  z-index: 45;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 320px;
+  overflow: auto;
+  background: white;
+  border: 1px solid #d8c5b8;
+  box-shadow: 0 8px 24px #0002;
+  border-radius: 8px;
+}
+.suggestion {
+  padding: 0.7rem 0.9rem;
+  cursor: pointer;
+  min-height: 48px;
+  display: grid;
+}
+.suggestion small {
+  color: #6a5346;
+}
+.suggestion:hover,
+.suggestion.active {
+  background: #fff0e5;
+}
+.search-suggestions p {
+  padding: 0.7rem;
+}
+.status-bar {
+  display: grid;
+  grid-template-columns: minmax(80px, 1fr) 3fr 3rem;
+  align-items: center;
+  gap: 1rem;
+  margin: 0.8rem 0;
+}
+.status-bar meter {
+  width: 100%;
+  height: 1.2rem;
+  accent-color: #e85208;
+}
+.section-dashboard {
+  display: grid;
+  gap: 1rem;
+}
+[hidden] {
+  display: none !important;
+}
+.search-picker input {
+  padding-right: 3rem;
+}
+.search-toggle {
+  position: absolute;
+  right: 0.4rem;
+  top: 1.8rem;
+  border: 0;
+  background: transparent;
+  min-width: 36px;
+  min-height: 36px;
+  color: #873700;
+}
+@media (max-width: 720px) {
+  .sidebar .nav-group {
+    width: auto;
+    flex: 0 0 auto;
+  }
+  .nav-submenu {
+    margin-left: 0;
+  }
+  .section-title {
+    flex-wrap: wrap;
+  }
+}
+.status-bar meter::-webkit-meter-bar {
+  background: #fff0e5;
+  border: 0;
+}
+.status-bar meter::-webkit-meter-optimum-value {
+  background: #e85208;
+}
+.status-bar meter::-moz-meter-bar {
+  background: #e85208;
+}

@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { serviceIssue } from "../lib/service-errors";
 import { pollExternalData } from "../lib/external-poller";
 import { queueOverdueReminders } from "../lib/reminders";
 import { db } from "../lib/db";
@@ -31,10 +32,11 @@ async function runJob(job: (typeof jobs)[number]) {
   try {
     await job.run();
     health[job.name] = { checkedAt: new Date().toISOString(), ok: true };
-  } catch {
+  } catch (error) {
+    const issue = serviceIssue(error);
     health[job.name] = { checkedAt: new Date().toISOString(), ok: false };
     console.error(
-      `Background ${job.name} service failed; check private settings and service availability. Other services continue.`,
+      `Background ${job.name} failed [${issue.code}]: ${issue.message} Other services continue.`,
     );
   }
 }

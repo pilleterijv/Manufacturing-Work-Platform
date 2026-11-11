@@ -1,10 +1,15 @@
+import { serviceIssue } from "./service-errors";
 import { canAdminister } from "./capabilities";
 import type { AdminPrivilege } from "./delegation-rules";
 import { grants } from "./capabilities";
 export { grants } from "./capabilities";
 import { HttpError } from "./http-error";
 export { HttpError } from "./http-error";
-import { configuredOrigin, originCheckDiagnostic } from "./request-policy";
+import {
+  configuredOrigin,
+  originCheckDiagnostic,
+  requestOriginAllowed,
+} from "./request-policy";
 import { createHash } from "node:crypto";
 import { cookies } from "next/headers";
 import { db } from "./db";
@@ -46,7 +51,15 @@ export async function requireUser(cap?: Capability, allowChange = false) {
 }
 export async function jsonBody(req: Request, max = 256 * 1024) {
   const origin = process.env.APP_ORIGIN;
-  if (!origin || req.headers.get("origin") !== new URL(origin).origin) {
+  const allowed =
+    origin &&
+    requestOriginAllowed(req.headers, configuredOrigin(origin), {
+      CODESPACES: process.env.CODESPACES,
+      CODESPACE_NAME: process.env.CODESPACE_NAME,
+      GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN:
+        process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN,
+    });
+  if (!allowed) {
     if (process.env.CODESPACES === "true")
       console.warn(
         "[origin-check]",
@@ -54,7 +67,6 @@ export async function jsonBody(req: Request, max = 256 * 1024) {
       );
     throw new HttpError(403, "Request origin is not allowed");
   }
-  configuredOrigin(origin);
   return readJsonBody(req, max);
 }
 export async function readJsonBody(req: Request, max = 256 * 1024) {
@@ -101,7 +113,23 @@ export function failure(e: unknown) {
       { error: "Check the entered values" },
       { status: 400 },
     );
-  console.error("Request failed", e instanceof Error ? e.name : "unknown");
+  const issue = serviceIssue(e);
+  if (issue.kind === "database") {
+    console.error(`Database request failed [${issue.code}]: ${issue.message}`);
+    return Response.json(
+      {
+        error:
+          "The database needs attention. Contact an administrator or retry after service is restored.",
+        code: issue.code,
+      },
+      { status: 503 },
+    );
+  }
+  console.error(
+    "Request failed",
+    e instanceof Error ? e.name : "unknown",
+    issue.code,
+  );
   return Response.json(
     { error: "Unable to complete the request" },
     { status: 500 },

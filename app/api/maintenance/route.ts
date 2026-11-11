@@ -108,7 +108,23 @@ export async function GET(req: Request) {
             db.record.findMany({
               where: {
                 kind,
-                AND: [recordScope(ids), recordFilters(person, search)],
+                AND: [
+                  recordScope(ids),
+                  recordFilters(
+                    person,
+                    search,
+                    search
+                      ? eq
+                          .filter((e) =>
+                            [e.name, e.plant, e.department, e.area, e.line]
+                              .join(" ")
+                              .toLowerCase()
+                              .includes(search.toLowerCase()),
+                          )
+                          .map((e) => e.id)
+                      : [],
+                  ),
+                ],
               },
               include: { user: { select: { name: true } } },
               take: 100,
@@ -143,7 +159,23 @@ export async function GET(req: Request) {
       db.record.findMany({
         where: {
           kind,
-          AND: [recordScope(ids), recordFilters(person, search)],
+          AND: [
+            recordScope(ids),
+            recordFilters(
+              person,
+              search,
+              search
+                ? eq
+                    .filter((e) =>
+                      [e.name, e.plant, e.department, e.area, e.line]
+                        .join(" ")
+                        .toLowerCase()
+                        .includes(search.toLowerCase()),
+                    )
+                    .map((e) => e.id)
+                : [],
+            ),
+          ],
         },
         include: { user: { select: { name: true } } },
         orderBy: [{ created: "desc" }, { id: "desc" }],
