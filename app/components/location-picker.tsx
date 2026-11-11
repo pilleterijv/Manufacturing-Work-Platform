@@ -138,8 +138,19 @@ export function LocationsEditor({
           }}
         >
           <Field label="Plant / site for reference catalog">
-            <input name="plant" required maxLength={100} />
+            <input
+              name="plant"
+              required
+              maxLength={100}
+              list="reference-catalog-sites"
+              aria-label="Plant / site for reference catalog"
+            />
           </Field>
+          <datalist id="reference-catalog-sites">
+            {[...new Set(rows.map((r) => r.plant))].map((plant) => (
+              <option key={plant} value={plant} />
+            ))}
+          </datalist>
           <button className="outline" disabled={busy}>
             Add reference department / area catalog
           </button>

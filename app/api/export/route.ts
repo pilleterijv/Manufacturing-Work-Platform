@@ -110,6 +110,10 @@ export async function GET(req: Request) {
           "Target seconds",
           "Tolerance percent",
           "Follow up",
+          "Checklist purpose",
+          "Shift",
+          "Pass-down",
+          "Room / machine handoff JSON",
         ]);
         await sheets["DL-TL cycles"].addRow([
           "Audit",
@@ -146,9 +150,15 @@ export async function GET(req: Request) {
               d.snapshot.revision,
               d.snapshot.equipmentId,
               ...locationValues(d.snapshot.equipment),
-              d.snapshot.target,
-              d.snapshot.tolerance,
+              d.snapshot.workflow === "leader" ? null : d.snapshot.target,
+              d.snapshot.workflow === "leader" ? null : d.snapshot.tolerance,
               d.followUp,
+              d.snapshot.workflow === "leader"
+                ? "DL/TL leader work"
+                : "Standard work audit",
+              d.handoff?.shift || "",
+              d.handoff?.notes || "",
+              d.handoff ? JSON.stringify(d.handoff.rooms) : "",
             ]);
             for (const c of d.cycles ?? [])
               await sheets["DL-TL cycles"].addRow([

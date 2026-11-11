@@ -569,10 +569,24 @@ const post = (c, path, data) =>
         exact: true,
       })
       .click();
-    await page
-      .getByRole("status")
-      .filter({ hasText: "Saved to the database" })
-      .waitFor();
+    try {
+      await page
+        .getByRole("status")
+        .filter({ hasText: "Saved to the database" })
+        .waitFor({ timeout: 10000 });
+    } catch (error) {
+      console.error(await page.locator("main").innerText());
+      console.error(
+        await page.locator(":invalid").evaluateAll((nodes) =>
+          nodes.map((n) => ({
+            tag: n.tagName,
+            name: n.getAttribute("aria-label"),
+            message: n.validationMessage,
+          })),
+        ),
+      );
+      throw error;
+    }
     const completed = await db.record.findFirst({
       where: { standardId: leader.id },
     });

@@ -231,7 +231,7 @@ async function main() {
   assert.equal(old.data.snapshot.steps[0].id, "inspection");
   r = await request(context, "/api/platform", {
     action: "video",
-    title: "Machine setup walkthrough",
+    title: `Machine setup walkthrough ${suffix}`,
     equipmentId: equipment.id,
     body: "https://youtu.be/dQw4w9WgXcQ",
   });
@@ -239,7 +239,7 @@ async function main() {
   contentIds.push(
     (
       await db.content.findFirst({
-        where: { title: "Machine setup walkthrough" },
+        where: { title: `Machine setup walkthrough ${suffix}` },
       })
     ).id,
   );
@@ -258,7 +258,7 @@ async function main() {
   await page.getByRole("button", { name: "▷ Training", exact: true }).click();
   await page
     .getByRole("button", {
-      name: "Play Machine setup walkthrough",
+      name: `Play Machine setup walkthrough ${suffix}`,
       exact: true,
     })
     .waitFor();
@@ -273,7 +273,7 @@ async function main() {
     }),
   );
   await page
-    .getByRole("button", { name: "Play Machine setup walkthrough" })
+    .getByRole("button", { name: `Play Machine setup walkthrough ${suffix}` })
     .click();
   await page.locator("iframe").waitFor();
   const exportResponse = await context.request.get(origin + "/api/export");

@@ -158,7 +158,7 @@ export default function Work({
                     stepId: step.id,
                     ...responses[step.id],
                   })),
-                  ...(audit ? { cycles } : {}),
+                  ...(audit && !leader && cycles.length ? { cycles } : {}),
                 })
               ) {
                 select("");
