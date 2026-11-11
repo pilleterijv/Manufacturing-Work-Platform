@@ -133,6 +133,39 @@ export async function POST(req: Request) {
     const u = await requireUser("fiveS"),
       b = await jsonBody(req),
       entry = { at: new Date().toISOString(), by: u.id, name: u.name };
+    if (b.action === "retire") {
+      await requireDelegated("fiveS.manage", "manage");
+      const id = z.string().uuid().parse(b.id),
+        version = z.number().int().positive().parse(b.version);
+      await db.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM "FiveSPlan" WHERE id=${id} FOR UPDATE`;
+        const plan = await tx.fiveSPlan.findUnique({ where: { id } });
+        if (!plan) throw new HttpError(404, "Plan not found");
+        await assertAreaAccess(u, plan.locationId, tx);
+        const links = await tx.$queryRaw<
+          { id: string }[]
+        >`SELECT s.id FROM "Standard" s JOIN (SELECT family,max(revision) revision FROM "Standard" GROUP BY family) latest ON s.family=latest.family AND s.revision=latest.revision WHERE NOT s.archived AND s.steps @> ${JSON.stringify([{ fiveSPlanId: id }])}::jsonb LIMIT 1`;
+        if (links.length)
+          throw new HttpError(
+            409,
+            "Remove this 5S link from active standard-work checklists before retiring the plan.",
+          );
+        const updated = await tx.fiveSPlan.updateMany({
+          where: { id, version },
+          data: {
+            active: false,
+            version: { increment: 1 },
+            history: [
+              ...(plan.history as any[]),
+              { ...entry, action: "retired" },
+            ],
+          },
+        });
+        if (!updated.count)
+          throw new HttpError(409, "Plan changed; refresh before retiring");
+      });
+      return Response.json({ ok: true });
+    }
     if (b.action === "save") {
       await requireDelegated("fiveS.manage", "manage");
       const v = fiveSPlanSchema.parse(b),

@@ -182,7 +182,7 @@ async function main() {
   });
   assert(study.data.cycles[0].seconds > 0.3);
   await page
-    .getByRole("button", { name: "◎ DL/TL Standard Work", exact: true })
+    .getByRole("button", { name: "◉ Standard work audits", exact: true })
     .click();
   await page
     .getByLabel("Standard work", { exact: true })
@@ -204,7 +204,7 @@ async function main() {
     fullPage: true,
   });
   await page
-    .getByRole("button", { name: "Complete DL/TL Standard Work", exact: true })
+    .getByRole("button", { name: "Complete standard-work audit", exact: true })
     .click();
   await page.getByRole("status").waitFor();
   const audit = await db.record.findFirst({
@@ -357,7 +357,7 @@ async function main() {
   const mp = await manager.newPage();
   await mp.goto(origin);
   await mp
-    .getByRole("button", { name: "◎ DL/TL Standard Work", exact: true })
+    .getByRole("button", { name: "◉ Standard work audits", exact: true })
     .click();
   await mp
     .getByLabel("Standard work", { exact: true })

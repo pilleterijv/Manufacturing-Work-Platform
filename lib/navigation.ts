@@ -10,6 +10,7 @@ export const sectionRules: Record<string, Capability | null> = {
   "Dashboard settings": null,
   "Standard work": "work",
   "DL/TL Standard Work": "audits",
+  "Standard work audits": "audits",
   "Time studies": "studies",
   "Preventive maintenance": "maintenance",
   "TPM / CIL": "maintenance",

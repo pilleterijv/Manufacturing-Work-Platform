@@ -65,6 +65,7 @@ export default function SectionDashboard({
             label={m.label}
             value={m.value}
             detail={m.detail}
+            onClick={openDetails}
           />
         ))}
       </div>

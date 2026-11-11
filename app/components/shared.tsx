@@ -42,17 +42,34 @@ export function Metric({
   value,
   detail,
   accent = false,
+  onClick,
 }: {
   label: string;
   value: number | string;
   detail: string;
   accent?: boolean;
+  onClick?: () => void;
 }) {
-  return (
-    <section className={"metric " + (accent ? "accent" : "")}>
+  const content = (
+    <>
       <span>{label}</span>
       <strong>{value}</strong>
       <small>{detail}</small>
+    </>
+  );
+  return onClick ? (
+    <button
+      type="button"
+      aria-label={`View ${label}`}
+      className={"metric metric-shortcut " + (accent ? "accent" : "")}
+      onClick={onClick}
+    >
+      {content}
+      <span className="small">View →</span>
+    </button>
+  ) : (
+    <section className={"metric " + (accent ? "accent" : "")}>
+      {content}
     </section>
   );
 }
@@ -96,7 +113,13 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
                           )?.name}
                     </small>
                   </td>
-                  <td>{r.kind === "audit" ? "DL/TL Standard Work" : r.kind}</td>
+                  <td>
+                    {r.kind === "audit"
+                      ? r.data.snapshot?.workflow === "leader"
+                        ? "DL/TL Standard Work"
+                        : "Standard work audit"
+                      : r.kind}
+                  </td>
                   <td>{r.user.name}</td>
                   <td>{new Date(r.created).toLocaleString()}</td>
                   <td>
@@ -110,12 +133,27 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
                     <details>
                       <summary>View record</summary>
                       {r.data.operator && <p>Operator: {r.data.operator}</p>}
-                      {r.data.snapshot && (
-                        <p>
-                          Target {r.data.snapshot.target}s · tolerance{" "}
-                          {r.data.snapshot.tolerance}%
-                        </p>
+                      {r.data.handoff && (
+                        <div>
+                          <p>Shift: {r.data.handoff.shift}</p>
+                          <p>Pass-down: {r.data.handoff.notes}</p>
+                          {r.data.handoff.rooms.map((room: any, i: number) => (
+                            <p key={i}>
+                              {room.room} · item {room.item} · lot {room.lot} ·
+                              target {room.targetSpeed} / actual{" "}
+                              {room.actualSpeed} · remaining {room.remaining} ·
+                              issues {room.issues} · next order {room.nextOrder}
+                            </p>
+                          ))}
+                        </div>
                       )}
+                      {r.data.snapshot &&
+                        r.data.snapshot.workflow !== "leader" && (
+                          <p>
+                            Target {r.data.snapshot.target}s · tolerance{" "}
+                            {r.data.snapshot.tolerance}%
+                          </p>
+                        )}
                       {r.data.responses?.map((a: any) => (
                         <div className="record-step" key={a.stepId}>
                           <strong>{a.answer ? "✓ Yes" : "✕ No"}</strong>{" "}

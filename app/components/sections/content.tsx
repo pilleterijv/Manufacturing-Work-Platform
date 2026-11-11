@@ -179,9 +179,16 @@ export default function Content({
             {manage && (
               <button
                 className="text-button"
-                onClick={() => void save({ action: "archive", id: c.id })}
+                onClick={() => {
+                  if (
+                    confirm(
+                      "Remove this resource from active use? Stored evidence and completed records will remain.",
+                    )
+                  )
+                    void save({ action: "archive", id: c.id });
+                }}
               >
-                Archive resource
+                Delete / retire resource
               </button>
             )}
           </article>

@@ -243,11 +243,19 @@ export default function Overview({
           </p>
           <div className="metrics">
             <Metric
+              onClick={
+                grants.includes("work") ? () => go("Standard work") : undefined
+              }
               label="Completed work"
               value={data.overview?.runs ?? runs.length}
               detail="Stored verification records"
             />
             <Metric
+              onClick={
+                grants.includes("studies")
+                  ? () => go("Time studies")
+                  : undefined
+              }
               label="Time studies"
               value={
                 data.overview?.studies ??
@@ -256,11 +264,19 @@ export default function Overview({
               detail="Raw observations preserved"
             />
             <Metric
+              onClick={
+                grants.includes("audits")
+                  ? () => go("DL/TL Standard Work")
+                  : undefined
+              }
               label="DL/TL Standard Work"
-              value={data.overview?.audits ?? audits.length}
-              detail="Timed process checks"
+              value={data.overview?.leaderWork ?? 0}
+              detail="Completed leader shift checklists"
             />
             <Metric
+              onClick={
+                grants.includes("analytics") ? () => go("Analytics") : undefined
+              }
               label="Follow-ups"
               value={
                 data.overview?.followUps ??

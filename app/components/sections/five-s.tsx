@@ -13,6 +13,7 @@ export default function FiveS({
   userId: string;
   admin: boolean;
 }) {
+  const [showRetired, setShowRetired] = useState(false);
   const [data, setData] = useState<any>(null),
     [draft, setDraft] = useState<any>(null),
     [selected, setSelected] = useState<any>(null),
@@ -264,52 +265,83 @@ export default function FiveS({
       )}
       <section className="panel">
         <h2>Area audit plans</h2>
-        {data?.plans.map((p: any) => (
-          <article className="problem-action" key={p.id}>
-            <h3>
-              {p.title} {!p.active && <span className="badge">Paused</span>}
-            </h3>
-            <p>
-              {area(p.locationId)} ·{" "}
-              {p.assigneeIds.length
-                ? p.assigneeIds
-                    .map(
-                      (id: string) =>
-                        data.people.find((x: any) => x.id === id)?.name ?? id,
-                    )
-                    .join(", ")
-                : "Any permitted auditor"}
-            </p>
-            <div className="button-row">
-              {p.active &&
-                (admin ||
-                  !p.assigneeIds.length ||
-                  p.assigneeIds.includes(userId)) && (
-                  <button
-                    className="primary"
-                    onClick={() => {
-                      setDraft(null);
-                      setSelected(p);
-                      setResponses({});
-                    }}
-                  >
-                    Perform 5S audit
-                  </button>
-                )}
-              {data.canManage && (
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={showRetired}
+            onChange={(e) => setShowRetired(e.target.checked)}
+          />
+          Show retired / inactive tasks
+        </label>
+        {data?.plans
+          .filter((p: any) => p.active || showRetired)
+          .map((p: any) => (
+            <article className="problem-action" key={p.id}>
+              {data.canManage && p.active && (
                 <button
+                  type="button"
                   className="outline"
+                  disabled={busy}
                   onClick={() => {
-                    setSelected(null);
-                    setDraft(p);
+                    if (
+                      confirm(
+                        "Retire this task? Its completed history and evidence will remain available.",
+                      )
+                    )
+                      void save({
+                        action: "retire",
+                        id: p.id,
+                        version: p.version,
+                      });
                   }}
                 >
-                  Edit 5S plan
+                  Delete / retire task
                 </button>
               )}
-            </div>
-          </article>
-        ))}
+              <h3>
+                {p.title} {!p.active && <span className="badge">Paused</span>}
+              </h3>
+              <p>
+                {area(p.locationId)} ·{" "}
+                {p.assigneeIds.length
+                  ? p.assigneeIds
+                      .map(
+                        (id: string) =>
+                          data.people.find((x: any) => x.id === id)?.name ?? id,
+                      )
+                      .join(", ")
+                  : "Any permitted auditor"}
+              </p>
+              <div className="button-row">
+                {p.active &&
+                  (admin ||
+                    !p.assigneeIds.length ||
+                    p.assigneeIds.includes(userId)) && (
+                    <button
+                      className="primary"
+                      onClick={() => {
+                        setDraft(null);
+                        setSelected(p);
+                        setResponses({});
+                      }}
+                    >
+                      Perform 5S audit
+                    </button>
+                  )}
+                {data.canManage && (
+                  <button
+                    className="outline"
+                    onClick={() => {
+                      setSelected(null);
+                      setDraft(p);
+                    }}
+                  >
+                    Edit 5S plan
+                  </button>
+                )}
+              </div>
+            </article>
+          ))}
         {data && !data.plans.length && <p>No 5S plans match these filters.</p>}
       </section>
       {selected && (

@@ -1,4 +1,5 @@
 "use client";
+import { leaderStarter } from "@/lib/reference-catalog";
 import PersonSelect from "../person-select";
 import { LocationPicker } from "../location-picker";
 import { useState, useEffect, useRef } from "react";
@@ -39,6 +40,7 @@ export default function Manage({
     [revisionError, setRevisionError] = useState(""),
     [revisionLoading, setRevisionLoading] = useState(false),
     [kind, setKind] = useState("run"),
+    [workflow, setWorkflow] = useState("process"),
     [assignees, setAssignees] = useState<string[]>([]),
     [title, setTitle] = useState(""),
     [equipment, setEquipment] = useState(""),
@@ -78,6 +80,7 @@ export default function Manage({
     setEditing(id);
     const s = data.standards.find((x) => x.id === id);
     setKind(s?.kind ?? "run");
+    setWorkflow(s?.workflow ?? "process");
     setAssignees(s?.assigneeIds ?? []);
     setTitle(s?.title ?? "");
     setEquipment(s?.equipmentId ?? "");
@@ -114,6 +117,25 @@ export default function Manage({
               ))}
             </select>
           </Field>
+          {editing && (
+            <button
+              className="outline"
+              type="button"
+              disabled={busy}
+              onClick={async () => {
+                if (
+                  confirm(
+                    "Remove this standard and its tasks from active use? Completed records and their original revisions will remain available.",
+                  )
+                ) {
+                  if (await save({ action: "retire-standard", id: editing }))
+                    load("");
+                }
+              }}
+            >
+              Delete / retire this standard and its tasks
+            </button>
+          )}
           {editing && (
             <div className="revision-history">
               <button
@@ -162,6 +184,7 @@ export default function Manage({
                 await save({
                   action: "standard",
                   kind,
+                  workflow,
                   assigneeIds: assignees,
                   title,
                   equipmentId: equipment,
@@ -182,14 +205,61 @@ export default function Manage({
             <div className="form-grid">
               <Field label="Task type">
                 <select
-                  value={kind}
+                  value={workflow === "leader" ? "leader" : kind}
                   disabled={!!editing}
-                  onChange={(e) => setKind(e.target.value)}
+                  onChange={(e) => {
+                    setKind(
+                      e.target.value === "leader" ? "audit" : e.target.value,
+                    );
+                    setWorkflow(
+                      e.target.value === "leader" ? "leader" : "process",
+                    );
+                  }}
                 >
                   <option value="run">Operator Standard Work</option>
-                  <option value="audit">DL/TL Standard Work</option>
+                  <option value="leader">DL/TL Standard Work</option>
+                  <option value="audit">
+                    Standard work audit (timed process check)
+                  </option>
                 </select>
               </Field>
+              {editing && kind === "audit" && (
+                <Field label="Checklist purpose for new revision">
+                  <select
+                    value={workflow}
+                    onChange={(e) => setWorkflow(e.target.value)}
+                  >
+                    <option value="process">Standard-work audit</option>
+                    <option value="leader">DL/TL leader shift work</option>
+                  </select>
+                </Field>
+              )}
+              {workflow === "leader" && (
+                <div>
+                  <button
+                    className="outline"
+                    type="button"
+                    onClick={() => {
+                      setTitle("Compressing leader standard work");
+                      setSteps(
+                        leaderStarter.map(([group, text, timing]) => ({
+                          id: crypto.randomUUID(),
+                          text,
+                          group,
+                          timing,
+                          photo: false,
+                        })),
+                      );
+                    }}
+                  >
+                    Use compressing leader-work starter
+                  </button>
+                  <p className="small muted">
+                    Review and edit the checklist against your approved local
+                    standard before publishing.
+                  </p>
+                </div>
+              )}
               <Field label="Standard title">
                 <input
                   required
@@ -205,27 +275,31 @@ export default function Manage({
                   onChange={setEquipment}
                 />
               </Field>
-              <Field label="Target cycle time (seconds)">
-                <input
-                  type="number"
-                  min="0.01"
-                  max="86400"
-                  step="0.01"
-                  value={target}
-                  onChange={(e) => setTarget(Number(e.target.value))}
-                  required
-                />
-              </Field>
-              <Field label="Allowed tolerance (%)">
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={tolerance}
-                  onChange={(e) => setTolerance(Number(e.target.value))}
-                  required
-                />
-              </Field>
+              {workflow !== "leader" && (
+                <>
+                  <Field label="Target cycle time (seconds)">
+                    <input
+                      type="number"
+                      min="0.01"
+                      max="86400"
+                      step="0.01"
+                      value={target}
+                      onChange={(e) => setTarget(Number(e.target.value))}
+                      required
+                    />
+                  </Field>
+                  <Field label="Allowed tolerance (%)">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={tolerance}
+                      onChange={(e) => setTolerance(Number(e.target.value))}
+                      required
+                    />
+                  </Field>
+                </>
+              )}
             </div>
             {kind === "audit" && (
               <Field label="Assigned DL/TLs (optional; no selection means all permitted people in the area)">
@@ -262,6 +336,38 @@ export default function Manage({
                     }
                   />
                 </Field>
+                {workflow === "leader" && (
+                  <div className="form-grid">
+                    <Field label={`Leader task section ${i + 1}`}>
+                      <input
+                        maxLength={100}
+                        value={step.group || ""}
+                        onChange={(e) =>
+                          setSteps(
+                            steps.map((old, j) =>
+                              j === i ? { ...old, group: e.target.value } : old,
+                            ),
+                          )
+                        }
+                      />
+                    </Field>
+                    <Field label={`When to complete task ${i + 1}`}>
+                      <input
+                        maxLength={150}
+                        value={step.timing || ""}
+                        onChange={(e) =>
+                          setSteps(
+                            steps.map((old, j) =>
+                              j === i
+                                ? { ...old, timing: e.target.value }
+                                : old,
+                            ),
+                          )
+                        }
+                      />
+                    </Field>
+                  </div>
+                )}
                 {kind === "audit" && (
                   <Field label="Linked 5S area audit (optional)">
                     <select

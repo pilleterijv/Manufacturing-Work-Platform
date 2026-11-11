@@ -54,5 +54,6 @@ test("closure distinguishes optional fields/actions and required action categori
       requireAction: false,
     }).length === 0,
   );
-  assert(defaultRequirements("2D").fields.includes("preventive"));
+  assert(!defaultRequirements("2D").fields.includes("preventive"));
+  assert(defaultRequirements("4D").fields.includes("preventive"));
 });

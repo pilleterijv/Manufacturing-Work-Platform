@@ -17,6 +17,7 @@ export default function Maintenance({
 }) {
   const label = kind === "cil" ? "CIL" : "PM";
   const uploads = useRef(0);
+  const [showRetired, setShowRetired] = useState(false);
   const [data, setData] = useState<any>(null),
     [draft, setDraft] = useState<any>(null),
     [selected, setSelected] = useState<any>(null),
@@ -279,57 +280,89 @@ export default function Maintenance({
       )}
       <section className="panel">
         <h2>{label} task list</h2>
-        {data?.plans.map((p: any) => (
-          <article className="problem-action" key={p.id}>
-            <h3>
-              {p.title}{" "}
-              <span
-                className={
-                  "badge " + (p.active && p.nextDue < data.today ? "warn" : "")
-                }
-              >
-                {!p.active
-                  ? "Paused"
-                  : p.nextDue < data.today
-                    ? "Overdue"
-                    : "Scheduled"}
-              </span>
-            </h3>
-            <p>
-              {location(p.equipmentId)} ·{" "}
-              {data.people.find((x: any) => x.id === p.assigneeId)?.name ??
-                p.assigneeId}{" "}
-              · due {p.nextDue} · every {p.intervalDays} days
-            </p>
-            <div className="button-row">
-              {p.active &&
-                p.nextDue <= data.today &&
-                (admin || p.assigneeId === userId) && (
-                  <button
-                    className="primary"
-                    onClick={() => {
-                      setDraft(null);
-                      setSelected(p);
-                      setResponses({});
-                    }}
-                  >
-                    Perform {label}
-                  </button>
-                )}
-              {data.canManage && (
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={showRetired}
+            onChange={(e) => setShowRetired(e.target.checked)}
+          />
+          Show retired / inactive tasks
+        </label>
+        {data?.plans
+          .filter((p: any) => p.active || showRetired)
+          .map((p: any) => (
+            <article className="problem-action" key={p.id}>
+              {data.canManage && p.active && (
                 <button
+                  type="button"
                   className="outline"
+                  disabled={busy}
                   onClick={() => {
-                    setSelected(null);
-                    setDraft(p);
+                    if (
+                      confirm(
+                        "Retire this task? Its completed history and evidence will remain available.",
+                      )
+                    )
+                      void save({
+                        action: "retire",
+                        id: p.id,
+                        version: p.version,
+                      });
                   }}
                 >
-                  Edit {label}
+                  Delete / retire task
                 </button>
               )}
-            </div>
-          </article>
-        ))}
+              <h3>
+                {p.title}{" "}
+                <span
+                  className={
+                    "badge " +
+                    (p.active && p.nextDue < data.today ? "warn" : "")
+                  }
+                >
+                  {!p.active
+                    ? "Paused"
+                    : p.nextDue < data.today
+                      ? "Overdue"
+                      : "Scheduled"}
+                </span>
+              </h3>
+              <p>
+                {location(p.equipmentId)} ·{" "}
+                {data.people.find((x: any) => x.id === p.assigneeId)?.name ??
+                  p.assigneeId}{" "}
+                · due {p.nextDue} · every {p.intervalDays} days
+              </p>
+              <div className="button-row">
+                {p.active &&
+                  p.nextDue <= data.today &&
+                  (admin || p.assigneeId === userId) && (
+                    <button
+                      className="primary"
+                      onClick={() => {
+                        setDraft(null);
+                        setSelected(p);
+                        setResponses({});
+                      }}
+                    >
+                      Perform {label}
+                    </button>
+                  )}
+                {data.canManage && (
+                  <button
+                    className="outline"
+                    onClick={() => {
+                      setSelected(null);
+                      setDraft(p);
+                    }}
+                  >
+                    Edit {label}
+                  </button>
+                )}
+              </div>
+            </article>
+          ))}
         {data && !data.plans.length && (
           <p>No {label} plans match these filters.</p>
         )}

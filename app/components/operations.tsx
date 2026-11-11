@@ -1,6 +1,6 @@
 "use client";
 import RefreshControl, { useSectionRefresh } from "./refresh-control";
-import { HistoryPagingContext } from "./shared";
+import { HistoryPagingContext, Metric } from "./shared";
 import PersonSelect from "./person-select";
 import { filterUrl } from "@/lib/client-api";
 import EvidenceInput, { EvidenceView } from "./evidence-input";
@@ -1031,11 +1031,15 @@ export function Leadership({
   canExport,
   endpoint = "/api/leadership",
   canOverall = true,
+  go,
+  canGo = () => true,
 }: {
   endpoint?: string;
   canOverall?: boolean;
   timezone: string;
   canExport: boolean;
+  go?: (section: string) => void;
+  canGo?: (section: string) => boolean;
 }) {
   const today = localToday(timezone);
   const [department, setDepartment] = useState(""),
@@ -1086,12 +1090,22 @@ export function Leadership({
     detail: string,
     accent = false,
   ) {
+    const target = (
+      {
+        "Completed standard work": "Standard work",
+        "Machine downtime": "Downtime",
+        "DL/TL Standard Work": "DL/TL Standard Work",
+        "Open improvement ideas": "Improvement ideas",
+      } as Record<string, string>
+    )[label];
     return (
-      <section className={"metric " + (accent ? "accent" : "")}>
-        <span>{label}</span>
-        <strong>{value}</strong>
-        <small>{detail}</small>
-      </section>
+      <Metric
+        label={label}
+        value={value}
+        detail={detail}
+        accent={accent}
+        onClick={go && target && canGo(target) ? () => go(target) : undefined}
+      />
     );
   }
   return (
@@ -1199,8 +1213,8 @@ export function Leadership({
             )}
             {metric(
               "DL/TL Standard Work",
-              s.audits,
-              `${s.auditFollowUps} require follow-up`,
+              s.leaderWork || 0,
+              `${s.leaderFollowUps || 0} require follow-up`,
             )}
             {metric(
               "Open improvement ideas",

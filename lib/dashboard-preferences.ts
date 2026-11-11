@@ -17,6 +17,7 @@ export const homeSections = [
   "Overview",
   "Standard work",
   "DL/TL Standard Work",
+  "Standard work audits",
   "Time studies",
   "Preventive maintenance",
   "TPM / CIL",

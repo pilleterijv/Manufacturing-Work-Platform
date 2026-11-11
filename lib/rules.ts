@@ -69,10 +69,13 @@ export const stepSchema = z.object({
   text: z.string().min(1).max(500),
   photo: z.boolean(),
   fiveSPlanId: z.string().uuid().optional(),
+  group: z.string().max(100).optional(),
+  timing: z.string().max(150).optional(),
 });
 export const standardSchema = z
   .object({
     kind: z.enum(["run", "audit"]).default("run"),
+    workflow: z.enum(["process", "leader"]).default("process"),
     assigneeIds: z.array(z.string().uuid()).max(1000).default([]),
     title: z.string().min(1).max(150),
     equipmentId: z.string(),
@@ -82,6 +85,11 @@ export const standardSchema = z
     family: z.string().optional(),
   })
   .superRefine((s, c) => {
+    if (s.workflow === "leader" && s.kind !== "audit")
+      c.addIssue({
+        code: "custom",
+        message: "Leader work uses the leader checklist task type",
+      });
     if (new Set(s.steps.map((x) => x.id)).size !== s.steps.length)
       c.addIssue({ code: "custom", message: "Step IDs must be unique" });
   });

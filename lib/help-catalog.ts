@@ -40,8 +40,8 @@ export const helpTopics: HelpTopic[] = [
   },
   {
     section: "DL/TL Standard Work",
-    keywords: "dl tl leader supervisor audit linked 5s shift",
-    text: "DL/TL tasks may require an assigned auditor and a linked 5S result.",
+    keywords: "dl tl leader supervisor linked 5s shift handoff",
+    text: "DL/TL leader work is an assigned shift checklist with optional linked 5S evidence and room/machine handoff notes. Timed process checks are in Standard work audits.",
     steps: [
       "Select the assigned DL/TL process.",
       "If a step links 5S, complete that plan for the same area today, then select your completed audit in the step.",
