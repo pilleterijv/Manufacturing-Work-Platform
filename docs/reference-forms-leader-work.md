@@ -41,3 +41,9 @@ npm start
 ```
 
 Use the corresponding branch when running codex/rebuild-floorwork. Keep the private environment file and database volume. After rebuilding, refresh the browser. Load the reference catalog for the intended site through Locations; no user accounts, roles or assignments are created automatically.
+
+## Verification
+
+Verified November 11, 2026 with synthetic local fixtures: production build/type checking; all 56 unit tests; fresh installation and upgrades from migrations 001/003; isolated packaged runtime; reference-catalog and leader-work workflow; core browser, location/task, problem-solving, floor expansion, personal-access and section-search/dashboard suites. This includes persisted leader handoff, independent 4D causes, scope checks, concurrent retirement/revision safety, preserved records, legacy audit history, dashboard navigation and tablet layout. Live company integrations and physical iPads were not exercised.
+
+Screenshots: [DL/TL leader work](screenshots/reference-forms/leader-work.png) and [second root-cause branch](screenshots/reference-forms/two-root-causes.png). These show synthetic examples rather than company case records.
