@@ -343,7 +343,10 @@ export default function Problems({
             <select
               aria-label="Problem department"
               value={department}
-              onChange={(e) => setDepartment(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (confirmDraftChange()) setDepartment(value);
+              }}
             >
               <option value="">All departments</option>
               {data?.departments.map((d) => (
@@ -355,7 +358,10 @@ export default function Problems({
             <select
               aria-label="Method filter"
               value={method}
-              onChange={(e) => setMethod(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (confirmDraftChange()) setMethod(value);
+              }}
             >
               <option value="">All methods</option>
               {methods.map((m) => (
@@ -367,7 +373,10 @@ export default function Problems({
             <select
               aria-label="Record status"
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (confirmDraftChange()) setStatus(value);
+              }}
             >
               <option value="">All statuses</option>
               {problemStatuses.map((s) => (
