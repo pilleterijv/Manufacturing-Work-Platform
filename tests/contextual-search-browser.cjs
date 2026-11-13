@@ -536,6 +536,9 @@ async function main() {
   await page.setViewportSize({ width: 820, height: 1180 });
   await nav("Downtime");
   await page
+    .getByRole("heading", { name: "Track a stoppage", exact: true })
+    .waitFor();
+  await page
     .getByRole("combobox", { name: "Search downtime", exact: true })
     .fill(equipment[0].name);
   await page
