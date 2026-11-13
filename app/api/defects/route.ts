@@ -43,6 +43,13 @@ export async function GET(req: Request) {
                 {
                   OR: [
                     {
+                      maintainxId: {
+                        contains: search,
+                        mode: "insensitive" as const,
+                      },
+                    },
+                    { id: { contains: search, mode: "insensitive" as const } },
+                    {
                       equipmentId: {
                         in: equipment
                           .filter((e) =>

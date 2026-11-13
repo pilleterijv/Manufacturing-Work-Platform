@@ -44,6 +44,19 @@ export async function leadershipReport(
   const { person, search } = readFilters("http://localhost/?" + params);
   const assignmentIds = await assignedEquipmentIds(ids, person);
   const permitted = { equipmentId: { in: ids } };
+  const matchingIds = search
+    ? (
+        await db.equipment.findMany({
+          where: {
+            id: { in: ids },
+            OR: ["name", "plant", "department", "area", "line"].map((k) => ({
+              [k]: { contains: search, mode: "insensitive" },
+            })),
+          },
+          select: { id: true },
+        })
+      ).map((e) => e.id)
+    : [];
   const problemFilter = {
     ...permitted,
     AND: [
@@ -59,7 +72,14 @@ export async function leadershipReport(
           ]
         : []),
       ...(search
-        ? [{ title: { contains: search, mode: "insensitive" as const } }]
+        ? [
+            {
+              OR: [
+                { title: { contains: search, mode: "insensitive" as const } },
+                { equipmentId: { in: matchingIds } },
+              ],
+            },
+          ]
         : []),
     ],
   };
@@ -96,10 +116,10 @@ export async function leadershipReport(
     WHERE r.created >= ${start} AND r.created < ${end}
     AND ${equipmentSql(ids, Prisma.sql`e.id`)}
     ${person ? Prisma.sql`AND r."userId"=${person}` : Prisma.empty}
-    ${search ? Prisma.sql`AND (r.data::text ILIKE ${"%" + search + "%"} OR e.name ILIKE ${"%" + search + "%"})` : Prisma.empty}
+    ${search ? Prisma.sql`AND (r.data::text ILIKE ${"%" + search + "%"} OR e.id=ANY(${matchingIds}::text[]))` : Prisma.empty}
     ${department ? Prisma.sql`AND COALESCE(r.data->'equipmentSnapshot'->>'department', r.data->'snapshot'->'equipment'->>'department', e.department) = ${department}` : Prisma.empty}`;
   const base = Prisma.sql`WITH scoped AS (SELECT r.kind, r.data ${recordScope})`;
-  const ideaScope = Prisma.sql`WHERE ${equipmentSql(ids, Prisma.sql`"equipmentId"`)} ${person ? Prisma.sql`AND ("pilotId"=${person} OR "validatorId"=${person} OR "submitterId"=${person} OR "createdBy"=${person} OR id IN (SELECT "ideaId" FROM "IdeaParticipant" WHERE "userId"=${person}))` : Prisma.empty} ${search ? Prisma.sql`AND title ILIKE ${"%" + search + "%"}` : Prisma.empty} ${department ? Prisma.sql`AND "equipmentSnapshot"->>'department'=${department}` : Prisma.empty}`;
+  const ideaScope = Prisma.sql`WHERE ${equipmentSql(ids, Prisma.sql`"equipmentId"`)} ${person ? Prisma.sql`AND ("pilotId"=${person} OR "validatorId"=${person} OR "submitterId"=${person} OR "createdBy"=${person} OR id IN (SELECT "ideaId" FROM "IdeaParticipant" WHERE "userId"=${person}))` : Prisma.empty} ${search ? Prisma.sql`AND (title ILIKE ${"%" + search + "%"} OR "equipmentId"=ANY(${matchingIds}::text[]))` : Prisma.empty} ${department ? Prisma.sql`AND "equipmentSnapshot"->>'department'=${department}` : Prisma.empty}`;
   const [
     countRows,
     responseRows,
@@ -210,10 +230,15 @@ export async function leadershipReport(
           ...(search
             ? [
                 {
-                  reasonName: {
-                    contains: search,
-                    mode: "insensitive" as const,
-                  },
+                  OR: [
+                    {
+                      reasonName: {
+                        contains: search,
+                        mode: "insensitive" as const,
+                      },
+                    },
+                    { equipmentId: { in: matchingIds } },
+                  ],
                 },
               ]
             : []),

@@ -681,11 +681,13 @@ async function main() {
     fullPage: true,
   });
   await page
-    .getByLabel("Find a person", { exact: true })
+    .getByLabel("PM assignee / recorder", { exact: true })
     .fill("Operator Alpha");
   await page
-    .getByLabel("Filter by person", { exact: true })
-    .selectOption(users[4].id);
+    .getByRole("listbox", { name: "PM assignee / recorder suggestions" })
+    .getByRole("option")
+    .filter({ hasText: users[4].username })
+    .click();
   await page
     .getByRole("button", { name: "Apply filters", exact: true })
     .click();

@@ -68,7 +68,12 @@ export async function GET(req: Request) {
     };
     const recordWhere: Prisma.RecordWhereInput = {
       kind: "centerline",
-      AND: [recordScope(ids), recordFilters(person, search, matches)],
+      AND: [
+        recordScope(ids),
+        recordFilters(person, search, matches, [
+          ["centerlineSnapshot", "setup"],
+        ]),
+      ],
     };
     if (p.get("format") === "xlsx") {
       await requireUser("export");

@@ -1,18 +1,18 @@
 "use client";
 import { useState, useEffect } from "react";
+import { searchSettings } from "@/lib/section-search";
 import SearchPicker, { type SearchChoice } from "./search-picker";
 import { api, type SectionFilters } from "@/lib/client-api";
 export default function SectionFiltersBar({
   value,
   section,
-  titles = [],
   onApply,
 }: {
   value: SectionFilters;
   section: string;
-  titles?: string[];
   onApply: (f: SectionFilters) => void;
 }) {
+  const settings = searchSettings(section);
   const [draft, setDraft] = useState(value),
     [people, setPeople] = useState<
       { id: string; name: string; username: string; active: boolean }[]
@@ -22,9 +22,15 @@ export default function SectionFiltersBar({
   const [options, setOptions] = useState<SearchChoice[]>([]);
   useEffect(() => setDraft(value), [value]);
   useEffect(() => {
-    api("/api/people")
-      .then((r) => setPeople(r.people))
-      .catch((e) => setError(e.message));
+    const controller = new AbortController();
+    api("/api/people", undefined, controller.signal)
+      .then((r) => {
+        if (!controller.signal.aborted) setPeople(r.people);
+      })
+      .catch((e) => {
+        if (!controller.signal.aborted) setError(e.message);
+      });
+    return () => controller.abort();
   }, []);
   useEffect(() => {
     const controller = new AbortController();
@@ -45,36 +51,40 @@ export default function SectionFiltersBar({
       controller.abort();
     };
   }, [section, draft.search]);
-  const choices = [
-    ...options,
-    ...[...new Set(titles)].map((value) => ({
-      value,
-      label: value,
-      kind: "Task / record",
-    })),
-  ];
+  if (!settings) return null;
+  const choices = options;
+  const selectedPerson = people.find((p) => p.id === draft.person);
   return (
     <section className="panel">
       <form
         className="form-grid"
+        aria-label={`${section} search filters`}
         onSubmit={(e) => {
           e.preventDefault();
           onApply(draft);
         }}
       >
         <SearchPicker
-          label="Search this section"
+          label={settings.label}
           value={draft.search}
           onChange={(v) => setDraft((d) => ({ ...d, search: v }))}
           onSelect={(c) => setDraft((d) => ({ ...d, search: c.value }))}
           choices={choices}
-          placeholder="Choose or type equipment, an area or a task"
+          placeholder={settings.placeholder}
         />
         <SearchPicker
-          label="Find a person"
+          label={settings.personLabel!}
           selection={draft.person}
-          value={name}
-          onChange={setName}
+          value={
+            name ||
+            (selectedPerson
+              ? `${selectedPerson.name} (${selectedPerson.username})`
+              : "")
+          }
+          onChange={(text) => {
+            setName(text);
+            setDraft((d) => ({ ...d, person: "" }));
+          }}
           onSelect={(c) => {
             setDraft((d) => ({ ...d, person: c.value }));
             setName(c.label);
@@ -84,35 +94,12 @@ export default function SectionFiltersBar({
             label: `${p.name} (${p.username})`,
             kind: p.active ? "Person" : "Inactive account",
           }))}
-          placeholder="Choose or type a name or username"
+          placeholder="Choose a name or username to apply"
         />
-        <label className="field">
-          <span>Filter by person</span>
-          <select
-            aria-label="Filter by person"
-            value={draft.person}
-            onChange={(e) =>
-              setDraft((d) => ({ ...d, person: e.target.value }))
-            }
-          >
-            <option value="">Anyone in my permitted scope</option>
-            {people
-              .filter(
-                (p) =>
-                  p.id === draft.person ||
-                  `${p.name} ${p.username}`
-                    .toLowerCase()
-                    .includes(name.toLowerCase()),
-              )
-              .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.username}){!p.active ? " · inactive" : ""}
-                </option>
-              ))}
-          </select>
-        </label>
         <div className="button-row">
-          <button className="primary">Apply filters</button>
+          <button className="primary" disabled={!!name.trim() && !draft.person}>
+            Apply filters
+          </button>
           <button
             type="button"
             className="outline"
@@ -128,10 +115,15 @@ export default function SectionFiltersBar({
       </form>
       {error && <p role="alert">{error}</p>}
       <p className="small muted">
-        Filters apply to this section’s records and exports within your
-        department/area permissions. Person means recorder or assigned owner;
-        for equipment and standard lists it means assignment.
+        {settings.help} {settings.personHelp} Filters and exports stay within
+        your permitted departments and areas.
       </p>
+      {!!name.trim() && !draft.person && (
+        <p className="small" role="status">
+          Choose a person from the suggestions, or clear the name to search
+          without a person filter.
+        </p>
+      )}
     </section>
   );
 }
