@@ -103,10 +103,34 @@ async function main() {
     "/api/related-open?equipment=" + equipment[0].id,
   );
   assert(related.defects.some((d) => d.id === a.id));
-  const problem={action:"create",requestKey:randomUUID(),title:"Floor problem "+suffix,method:"2D",equipmentId:equipment[0].id,occurredOn:"2026-11-13",reportedBy:users[3].name,ownerId:users[3].id,reviewerId:users[1].id,team:"Production",dueDate:"2027-01-01",previousId:null,answers:{problem:"Machine guard vibration"},media:[]};
-  const [p1,p2]=await Promise.all([req(operator,"/api/problems",problem),req(operator,"/api/problems",problem)]);
-  assert.equal(p1.id,p2.id);assert.equal(p1.reference,p2.reference);
-  await req(operator,"/api/problems",{...problem,title:"Different condition"},409);
+  const problem = {
+    action: "create",
+    requestKey: randomUUID(),
+    title: "Floor problem " + suffix,
+    method: "2D",
+    equipmentId: equipment[0].id,
+    occurredOn: "2026-11-13",
+    reportedBy: users[3].name,
+    ownerId: users[3].id,
+    reviewerId: users[1].id,
+    team: "Production",
+    dueDate: "2027-01-01",
+    previousId: null,
+    answers: { problem: "Machine guard vibration" },
+    media: [],
+  };
+  const [p1, p2] = await Promise.all([
+    req(operator, "/api/problems", problem),
+    req(operator, "/api/problems", problem),
+  ]);
+  assert.equal(p1.id, p2.id);
+  assert.equal(p1.reference, p2.reference);
+  await req(
+    operator,
+    "/api/problems",
+    { ...problem, title: "Different condition" },
+    409,
+  );
   await req(
     operator,
     "/api/related-open?equipment=" + equipment[1].id,
@@ -139,8 +163,59 @@ async function main() {
     selected.defects.map((d) => d.id),
     [a.id],
   );
+  for (const status of ["Open", "Completed"])
+    await db.idea.create({
+      data: {
+        title: "Floor idea " + status + suffix,
+        equipmentId: equipment[0].id,
+        equipmentSnapshot: equipment[0],
+        currentState: "Before",
+        proposal: "After",
+        dueDate: "2027-01-01",
+        status,
+        createdBy: users[3].id,
+        submitterId: users[3].id,
+        pilotId: users[3].id,
+        validatorId: users[1].id,
+      },
+    });
+  const ideas = await req(
+    operator,
+    "/api/operations?view=ideas&focus=personal-open",
+  );
+  assert(ideas.ideas.every((i) => i.status !== "Completed"));
+  assert(ideas.ideas.some((i) => i.title === "Floor idea Open" + suffix));
+  for (const kind of ["pm", "cil"])
+    await db.maintenancePlan.create({
+      data: {
+        title: "Floor " + kind,
+        equipmentId: equipment[0].id,
+        kind,
+        steps: [{ id: "guard", text: "Check", photo: false }],
+        assigneeId: users[3].id,
+        intervalDays: 7,
+        nextDue: "2027-01-01",
+        createdBy: users[0].id,
+        history: [],
+      },
+    });
+  const personal = await req(operator, "/api/personal-dashboard");
+  assert.deepEqual(personal.maintenanceCounts, { pm: 1, cil: 1 });
+  const pm = await req(
+    operator,
+    "/api/maintenance?kind=pm&focus=personal-open",
+  );
+  assert(
+    pm.plans.every((p) => p.kind === "pm" && p.assigneeId === users[3].id),
+  );
+  const dept = new URLSearchParams({
+    focus: "department-open",
+    plant: equipment[1].plant,
+    focusDepartment: equipment[1].department,
+  });
+  const cross = await req(operator, "/api/defects?" + dept);
+  assert.equal(cross.defects.length, 0);
   const errors = [],
-  // Validate the same open/assignment semantics used by dashboard shortcuts.
     page = await operator.newPage();
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(origin);
@@ -201,19 +276,52 @@ async function main() {
     .getByText("Machine not found in your assigned locations.", { exact: true })
     .waitFor();
   await fs.mkdir("docs/screenshots/floor-usability", { recursive: true });
-  await page.getByLabel("Defect machine",{exact:true}).selectOption(equipment[0].id);
-  await page.getByLabel("Defect title",{exact:true}).fill("Retry UI "+suffix);
-  await page.getByLabel("Defect description",{exact:true}).fill("Synthetic retry protection check");
-  await page.route("**/api/defects",route=>route.request().method()==="POST"?route.abort():route.continue());
-  await page.getByRole("button",{name:"Report defect",exact:true}).click();
-  await page.getByText("Save not confirmed. Your entries remain here; check the error before retrying.",{exact:true}).waitFor();
-  assert.equal(await page.getByLabel("Defect title",{exact:true}).inputValue(),"Retry UI "+suffix);
+  await page
+    .getByLabel("Defect machine", { exact: true })
+    .selectOption(equipment[0].id);
+  await page
+    .getByLabel("Defect title", { exact: true })
+    .fill("Retry UI " + suffix);
+  await page
+    .getByLabel("Defect description", { exact: true })
+    .fill("Synthetic retry protection check");
+  await page.route("**/api/defects", (route) =>
+    route.request().method() === "POST" ? route.abort() : route.continue(),
+  );
+  await page
+    .getByRole("button", { name: "Report defect", exact: true })
+    .click();
+  await page
+    .getByText(
+      "Save not confirmed. Your entries remain here; check the error before retrying.",
+      { exact: true },
+    )
+    .waitFor();
+  assert.equal(
+    await page.getByLabel("Defect title", { exact: true }).inputValue(),
+    "Retry UI " + suffix,
+  );
   await page.unroute("**/api/defects");
-  await page.route("**/api/defects",route=>route.request().method()==="GET"?route.abort():route.continue());
-  await page.getByRole("button",{name:"Report defect",exact:true}).click();
-  await page.getByText("Defect saved. Refresh the register before making another entry.",{exact:true}).waitFor();
-  assert.equal(await page.getByLabel("Defect title",{exact:true}).inputValue(),"");
-  assert.equal(await db.defect.count({where:{title:"Retry UI "+suffix}}),1);
+  await page.route("**/api/defects", (route) =>
+    route.request().method() === "GET" ? route.abort() : route.continue(),
+  );
+  await page
+    .getByRole("button", { name: "Report defect", exact: true })
+    .click();
+  await page
+    .getByText(
+      "Defect saved. Refresh the register before making another entry.",
+      { exact: true },
+    )
+    .waitFor();
+  assert.equal(
+    await page.getByLabel("Defect title", { exact: true }).inputValue(),
+    "",
+  );
+  assert.equal(
+    await db.defect.count({ where: { title: "Retry UI " + suffix } }),
+    1,
+  );
   await page.unroute("**/api/defects");
   await page.screenshot({
     path: "docs/screenshots/floor-usability/tablet-context-and-defects.png",
@@ -251,9 +359,19 @@ main()
     await db.defect.deleteMany({
       where: { equipmentId: { in: equipment.map((e) => e.id) } },
     });
-    await db.problemAction.deleteMany({where:{problem:{equipmentId:{in:equipment.map(e=>e.id)}}}});
-    await db.problem.deleteMany({where:{equipmentId:{in:equipment.map(e=>e.id)}}});
+    await db.problemAction.deleteMany({
+      where: { problem: { equipmentId: { in: equipment.map((e) => e.id) } } },
+    });
+    await db.problem.deleteMany({
+      where: { equipmentId: { in: equipment.map((e) => e.id) } },
+    });
     await db.session.deleteMany({ where: { userId: { in: ids } } });
+    await db.idea.deleteMany({
+      where: { equipmentId: { in: equipment.map((e) => e.id) } },
+    });
+    await db.maintenancePlan.deleteMany({
+      where: { equipmentId: { in: equipment.map((e) => e.id) } },
+    });
     await db.user.deleteMany({ where: { id: { in: ids } } });
     await db.equipment.deleteMany({
       where: { id: { in: equipment.map((e) => e.id) } },

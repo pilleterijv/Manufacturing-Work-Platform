@@ -52,189 +52,198 @@ export default function Overview({
       )}
       {preferences?.showLaunchpad !== false && (
         <section aria-labelledby="workspace-sections">
-          <div className="section-title">
-            <h2 id="workspace-sections">Explore your workspace</h2>
-            <span className="small muted">Sections available to your role</span>
-          </div>
-          <div className="module-grid">
-            {(
-              [
+          <details className="all-tools">
+            <summary>More tools and workspace settings</summary>
+            <div className="section-title">
+              <h2 id="workspace-sections">Explore your workspace</h2>
+              <span className="small muted">
+                Sections available to your role
+              </span>
+            </div>
+            <div className="module-grid">
+              {(
                 [
-                  "Dashboard settings",
-                  null,
-                  "⚙",
-                  "Choose your login section, panels and dashboard layout.",
-                ],
-                [
-                  "Assistant",
-                  null,
-                  "?",
-                  "Get navigation help for the sections available to you.",
-                ],
-                [
-                  "Standard work",
-                  "work",
-                  "☑",
-                  "Follow checklists and capture photo evidence.",
-                ],
-                [
-                  "Time studies",
-                  "studies",
-                  "◷",
-                  "Time work elements and review observations.",
-                ],
-                [
-                  "DL/TL Standard Work",
-                  "audits",
-                  "◎",
-                  "Verify standards and flag follow-ups.",
-                ],
-                [
-                  "Downtime",
-                  "downtime",
-                  "◷",
-                  "Start or stop a machine timer; review shift losses.",
-                ],
-                [
-                  "Improvement ideas",
-                  "ideas",
-                  "✧",
-                  "Assign pilots, track proposals and validate results.",
-                ],
-                [
-                  "Leadership dashboard",
-                  "leadership",
-                  "▥",
-                  "Compare overall and department performance.",
-                ],
-                [
-                  "Training",
-                  null,
-                  "▷",
-                  "Find equipment training and play linked videos.",
-                ],
-                [
-                  "Troubleshooting",
-                  null,
-                  "◇",
-                  "Find process guides and recovery instructions.",
-                ],
-                [
-                  "Analytics",
-                  "analytics",
-                  "▤",
-                  "Review checks, variation and detailed records.",
-                ],
-                [
-                  "Notifications",
-                  null,
-                  "✉",
-                  "Read your pilot assignments and messages.",
-                ],
-                [
-                  "Manage",
-                  "manage",
-                  "⊞",
-                  "Configure equipment and publish standard revisions.",
-                ],
-                [
-                  "Accounts",
-                  "users",
-                  "♙",
-                  "Create accounts and manage individual access.",
-                ],
-                [
-                  "Permissions",
-                  "permissions",
-                  "⚙",
-                  "Choose which workflows each role can use.",
-                ],
-                [
-                  "Preventive maintenance",
-                  "maintenance",
-                  "⚒",
-                  "Schedule machine PMs and retain completion evidence.",
-                ],
-                [
-                  "TPM / CIL",
-                  "maintenance",
-                  "⚒",
-                  "Clean, inspect and lubricate assigned machines.",
-                ],
-                [
-                  "5S audits",
-                  "fiveS",
-                  "◎",
-                  "Score area standards and record photo or video evidence.",
-                ],
-                [
-                  "Defect reporting",
-                  "defects",
-                  "◇",
-                  "Report abnormalities and submit MaintainX work orders.",
-                ],
-                [
-                  "Problem solving",
-                  "problems",
-                  "◈",
-                  "Investigate 2D, 4D and 8D issues; follow up actions.",
-                ],
-                [
-                  "Shift requirements",
-                  "manage",
-                  "◷",
-                  "Schedule work and switch missed-shift alerts on or off.",
-                ],
-                ...(admin
-                  ? [
-                      [
-                        "Integrations",
-                        null,
-                        "⇄",
-                        "Map machines and connect factory event sources.",
-                      ] as [string, Capability | null, string, string],
-                    ]
-                  : []),
-                [
-                  "My account",
-                  null,
-                  "○",
-                  "Update your password and revoke other sessions.",
-                ],
-              ] as [string, Capability | null, string, string][]
-            )
-              .filter(([name, capability]) =>
-                navigationUser
-                  ? canOpenSection(navigationUser, name)
-                  : !capability || grants.includes(capability),
+                  [
+                    "Dashboard settings",
+                    null,
+                    "⚙",
+                    "Choose your login section, panels and dashboard layout.",
+                  ],
+                  [
+                    "Assistant",
+                    null,
+                    "?",
+                    "Get navigation help for the sections available to you.",
+                  ],
+                  [
+                    "Standard work",
+                    "work",
+                    "☑",
+                    "Follow checklists and capture photo evidence.",
+                  ],
+                  [
+                    "Time studies",
+                    "studies",
+                    "◷",
+                    "Time work elements and review observations.",
+                  ],
+                  [
+                    "DL/TL Standard Work",
+                    "audits",
+                    "◎",
+                    "Verify standards and flag follow-ups.",
+                  ],
+                  [
+                    "Downtime",
+                    "downtime",
+                    "◷",
+                    "Start or stop a machine timer; review shift losses.",
+                  ],
+                  [
+                    "Improvement ideas",
+                    "ideas",
+                    "✧",
+                    "Assign pilots, track proposals and validate results.",
+                  ],
+                  [
+                    "Leadership dashboard",
+                    "leadership",
+                    "▥",
+                    "Compare overall and department performance.",
+                  ],
+                  [
+                    "Training",
+                    null,
+                    "▷",
+                    "Find equipment training and play linked videos.",
+                  ],
+                  [
+                    "Troubleshooting",
+                    null,
+                    "◇",
+                    "Find process guides and recovery instructions.",
+                  ],
+                  [
+                    "Analytics",
+                    "analytics",
+                    "▤",
+                    "Review checks, variation and detailed records.",
+                  ],
+                  [
+                    "Notifications",
+                    null,
+                    "✉",
+                    "Read your pilot assignments and messages.",
+                  ],
+                  [
+                    "Manage",
+                    "manage",
+                    "⊞",
+                    "Configure equipment and publish standard revisions.",
+                  ],
+                  [
+                    "Accounts",
+                    "users",
+                    "♙",
+                    "Create accounts and manage individual access.",
+                  ],
+                  [
+                    "Permissions",
+                    "permissions",
+                    "⚙",
+                    "Choose which workflows each role can use.",
+                  ],
+                  [
+                    "Preventive maintenance",
+                    "maintenance",
+                    "⚒",
+                    "Schedule machine PMs and retain completion evidence.",
+                  ],
+                  [
+                    "TPM / CIL",
+                    "maintenance",
+                    "⚒",
+                    "Clean, inspect and lubricate assigned machines.",
+                  ],
+                  [
+                    "5S audits",
+                    "fiveS",
+                    "◎",
+                    "Score area standards and record photo or video evidence.",
+                  ],
+                  [
+                    "Defect reporting",
+                    "defects",
+                    "◇",
+                    "Report abnormalities and submit MaintainX work orders.",
+                  ],
+                  [
+                    "Problem solving",
+                    "problems",
+                    "◈",
+                    "Investigate 2D, 4D and 8D issues; follow up actions.",
+                  ],
+                  [
+                    "Shift requirements",
+                    "manage",
+                    "◷",
+                    "Schedule work and switch missed-shift alerts on or off.",
+                  ],
+                  ...(admin
+                    ? [
+                        [
+                          "Integrations",
+                          null,
+                          "⇄",
+                          "Map machines and connect factory event sources.",
+                        ] as [string, Capability | null, string, string],
+                      ]
+                    : []),
+                  [
+                    "My account",
+                    null,
+                    "○",
+                    "Update your password and revoke other sessions.",
+                  ],
+                ] as [string, Capability | null, string, string][]
               )
-              .map(([name, , icon, detail]) => (
-                <button
-                  className="module-card"
-                  key={name}
-                  onClick={() => go(name)}
-                  aria-label={`Open ${name} section`}
-                >
-                  <span className="module-icon" aria-hidden="true">
-                    {icon}
-                  </span>
-                  <span>
-                    <strong>{name}</strong>
-                    <small>{detail}</small>
-                  </span>
-                  <span className="module-arrow" aria-hidden="true">
-                    ↗
-                  </span>
-                </button>
-              ))}
-          </div>
+                .filter(([name, capability]) =>
+                  navigationUser
+                    ? canOpenSection(navigationUser, name)
+                    : !capability || grants.includes(capability),
+                )
+                .map(([name, , icon, detail]) => (
+                  <button
+                    className="module-card"
+                    key={name}
+                    onClick={() => go(name)}
+                    aria-label={`Open ${name} section`}
+                  >
+                    <span className="module-icon" aria-hidden="true">
+                      {icon}
+                    </span>
+                    <span>
+                      <strong>{name}</strong>
+                      <small>{detail}</small>
+                    </span>
+                    <span className="module-arrow" aria-hidden="true">
+                      ↗
+                    </span>
+                  </button>
+                ))}
+            </div>
+          </details>
         </section>
       )}
       {preferences?.showPerformance !== false && children && (
-        <div className="dashboard-report">{children}</div>
+        <details className="panel">
+          <summary>Performance and department reports</summary>
+          <div className="dashboard-report">{children}</div>
+        </details>
       )}
       {preferences?.showHistory !== false && (
-        <>
+        <details className="panel">
+          <summary>Recent work and history</summary>
           <h2>Record overview</h2>
           <p className="small muted">
             These totals and recent activity cover records available to your
@@ -291,7 +300,7 @@ export default function Overview({
             <span className="muted">Latest activity</span>
           </div>
           <History data={data} records={data.records.slice(0, 8)} />
-        </>
+        </details>
       )}
     </>
   );
