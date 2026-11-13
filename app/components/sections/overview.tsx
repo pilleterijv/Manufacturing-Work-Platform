@@ -34,7 +34,7 @@ export default function Overview({
     audits = data.records.filter((r) => r.kind === "audit");
   return (
     <>
-      {preferences?.showLaunchpad !== false && (
+      {preferences?.showLaunchpad !== false && !navigationUser && (
         <div className="hero dashboard-hero">
           <div>
             <span className="eyebrow">YOUR FLOOR. ONE CONNECTED VIEW.</span>

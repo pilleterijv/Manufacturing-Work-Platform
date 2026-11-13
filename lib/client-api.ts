@@ -1,5 +1,13 @@
 "use client";
-export type SectionFilters = { person: string; search: string };
+export type SectionFilters = {
+  person: string;
+  search: string;
+  focus?: string;
+  item?: string;
+  equipment?: string;
+  plant?: string;
+  focusDepartment?: string;
+};
 let filters: SectionFilters = { person: "", search: "" };
 export function getSectionFilters() {
   return filters;
@@ -32,20 +40,33 @@ export function filterUrl(path: string) {
   return base + (p.size ? "?" + p : "");
 }
 export async function api(path: string, body?: unknown, signal?: AbortSignal) {
-  const r = await fetch(body ? path : filterUrl(path), {
-    signal,
-    ...(body
-      ? {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Floorwork-Origin": window.location.origin,
-          },
-          body: JSON.stringify(body),
-        }
-      : {}),
-  });
-  const data = await r.json();
-  if (!r.ok) throw Error(data.error ?? "Request failed");
-  return data;
+  const event = (state: string) => {
+    if (body)
+      window.dispatchEvent(
+        new CustomEvent("floorwork:mutation", { detail: { path, state } }),
+      );
+  };
+  event("saving");
+  try {
+    const r = await fetch(body ? path : filterUrl(path), {
+      signal,
+      ...(body
+        ? {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Floorwork-Origin": window.location.origin,
+            },
+            body: JSON.stringify(body),
+          }
+        : {}),
+    });
+    const data = await r.json();
+    if (!r.ok) throw Error(data.error ?? "Request failed");
+    event("saved");
+    return data;
+  } catch (e) {
+    event("failed");
+    throw e;
+  }
 }

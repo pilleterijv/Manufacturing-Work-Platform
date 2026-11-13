@@ -40,7 +40,9 @@ export async function GET(req: Request) {
   try {
     const u = await requireUser();
     const g = await grants(u);
-    const ids = await equipmentIds(u);
+    const permittedIds = await equipmentIds(u);
+    const focusedMachine=z.string().uuid().optional().parse(new URL(req.url).searchParams.get("equipment")||undefined);
+    const ids=focusedMachine?permittedIds.filter(id=>id===focusedMachine):permittedIds;
     const { person, search } = readFilters(req.url);
     const assignmentIds = await assignedEquipmentIds(ids, person);
     const matchingEquipment = search

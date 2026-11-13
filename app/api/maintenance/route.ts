@@ -1,6 +1,7 @@
 import { canAdminister } from "@/lib/capabilities";
 import { requireDelegated } from "@/lib/security";
 import { z } from "zod";
+import { workflowFocus } from "@/lib/workflow-focus";
 import { db } from "@/lib/db";
 import {
   requireUser,
@@ -36,6 +37,7 @@ export async function GET(req: Request) {
       orderBy: { name: "asc" },
     });
     const where = {
+      AND: [await workflowFocus(req.url, "maintenance", u.id)],
       kind,
       equipmentId: { in: ids },
       ...(person ? { assigneeId: person } : {}),

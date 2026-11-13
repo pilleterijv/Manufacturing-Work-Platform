@@ -43,8 +43,12 @@ export default function FiveS({
       const r = await api("/api/five-s", body);
       setDraft(null);
       setSelected(null);
-      await load();
       setNotice(r.id ? `5S audit saved. Reference: ${r.id}` : "5S plan saved.");
+      try {
+        await load();
+      } catch {
+        setNotice("5S saved. Refresh the list before another entry.");
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {

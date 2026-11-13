@@ -2,6 +2,8 @@
 import { referenceDepartments } from "@/lib/reference-catalog";
 import RefreshControl, { useSectionRefresh } from "../refresh-control";
 import PersonSelect from "../person-select";
+import RelatedOpen from "../related-open";
+import {confirmDraftChange} from "../floor-safety";
 import EvidenceInput from "../evidence-input";
 import { useEffect, useState, useRef } from "react";
 import { api, filterUrl } from "@/lib/client-api";
@@ -122,6 +124,7 @@ export default function Problems({
   canExport: boolean;
   searchKey?: string;
 }) {
+  const requestKey = useRef(crypto.randomUUID());
   const [data, setData] = useState<List | null>(null),
     [department, setDepartment] = useState(""),
     [method, setMethod] = useState(""),
@@ -200,6 +203,7 @@ export default function Problems({
     };
   }, [view, department, method, status, searchKey]);
   async function open(id: string) {
+    if(!confirmDraftChange())return;
     setError("");
     setNotice("");
     setBusy(true);
@@ -221,14 +225,19 @@ export default function Problems({
     setNotice("");
     try {
       const r = await api("/api/problems", body);
-      await load();
-      if (selected) {
-        const detail = await api("/api/problems?id=" + selected.id);
-        setSelected(detail);
-        setDraft(detail);
-        setCaseStatus(detail.status);
+      try {
+        await load();
+        if (selected) {
+          const detail = await api("/api/problems?id=" + selected.id);
+          setSelected(detail);
+          setDraft(detail);
+          setCaseStatus(detail.status);
+        }
+        if (view === "queue") await loadQueue();
+      } catch {
+        setNotice("Saved. Refresh the list before making another entry.");
+        return r;
       }
-      if (view === "queue") await loadQueue();
       setNotice("Saved to the database.");
       return r;
     } catch (e) {
@@ -239,6 +248,8 @@ export default function Problems({
     }
   }
   function create(m: Method, previous: Problem | null = null) {
+    if(!confirmDraftChange())return;
+    requestKey.current = crypto.randomUUID();
     setSelected(null);
     setCaseStatus("Open");
     setNotice("");
@@ -322,6 +333,7 @@ export default function Problems({
       </div>
       <section className="panel">
         <form
+          data-no-draft
           className="problem-filters"
           onSubmit={(e) => {
             e.preventDefault();
@@ -542,6 +554,9 @@ export default function Problems({
                       e.preventDefault();
                       const r = await post({
                         action: selected ? "update" : "create",
+                        ...(!selected
+                          ? { requestKey: requestKey.current }
+                          : {}),
                         ...draft,
                         ...(selected
                           ? {
@@ -554,6 +569,7 @@ export default function Problems({
                       if (r && !selected) await open(r.id);
                     }}
                   >
+                    {!selected && <RelatedOpen equipment={draft.equipmentId} />}
                     <div className="form-grid">
                       <Field label="Problem title">
                         <input

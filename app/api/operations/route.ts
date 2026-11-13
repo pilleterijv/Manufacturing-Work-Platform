@@ -1,4 +1,5 @@
 import { readFilters } from "@/lib/filters";
+import { workflowFocus } from "@/lib/workflow-focus";
 import { evidenceSchema, ownEvidence } from "@/lib/evidence";
 import {
   equipmentIds,
@@ -165,6 +166,7 @@ export async function GET(req: Request) {
                 ...location,
                 equipmentId: { in: ids },
                 AND: [
+                  await workflowFocus(req.url, "ideas", u.id),
                   ...(person
                     ? [
                         {
