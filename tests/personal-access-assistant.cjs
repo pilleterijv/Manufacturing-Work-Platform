@@ -738,6 +738,7 @@ main()
     await db.passwordReset.deleteMany({ where: { userId: { in: ids } } });
     await db.notification.deleteMany({ where: { userId: { in: ids } } });
     await db.session.deleteMany({ where: { userId: { in: ids } } });
+    await db.roleAudit.deleteMany({ where: { actorId: { in: ids } } });
     await db.user.deleteMany({ where: { id: { in: ids } } });
     await db.equipment.deleteMany({ where: { plant: prefix } });
     await db.location.deleteMany({ where: { plant: prefix } });

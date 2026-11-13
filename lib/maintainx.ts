@@ -1,5 +1,5 @@
 import { readBoundedResponseJson } from "./http-body";
-import { effectiveGrants } from "./delegation-rules";
+import { roleAuthority } from "./role-rules";
 import { assertEquipmentAccess, type ScopedUser } from "./location-access";
 import { db } from "./db";
 import { z } from "zod";
@@ -45,13 +45,10 @@ export async function submitMaintainx(
   const claimed = await db.$transaction(async (tx) => {
     await assertEquipmentAccess(actor, old.equipmentId, tx);
     const fresh = await tx.user.findUniqueOrThrow({ where: { id: actor.id } }),
-      policy = await tx.policy.findUnique({ where: { role: fresh.role } }),
-      permissions = effectiveGrants(
-        fresh.role,
-        policy?.grants,
-        fresh.extraGrants,
-        fresh.adminPrivileges,
-      );
+      policy = await tx.policy.findUnique({
+        where: { role: fresh.customRole || fresh.role },
+      }),
+      permissions = roleAuthority(fresh, policy ?? undefined).grants;
     if (fresh.role !== "Admin" && !permissions.includes("defects"))
       throw Error("Defect permission was revoked");
     return tx.defect.updateMany({

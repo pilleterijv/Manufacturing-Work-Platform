@@ -737,7 +737,7 @@ export default function Home() {
               </div>
               <div>
                 <strong>{user.name}</strong>
-                <small>{user.role}</small>
+                <small>{user.customRole || user.role}</small>
               </div>
               <button
                 aria-label="Sign out"
@@ -753,7 +753,7 @@ export default function Home() {
                 Workspace <span className="muted"> / {tab}</span>
               </span>
               <span className="status">
-                <i /> Signed in <span className="role-tag">{user.role}</span>
+                <i /> Signed in <span className="role-tag">{user.customRole || user.role}</span>
               </span>
             </header>
             <div

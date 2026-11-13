@@ -228,8 +228,16 @@ export default function DepartmentAccounts() {
                       setDraft({ ...draft, role: e.target.value })
                     }
                   >
-                    <option>Operator</option>
-                    <option>DL/TL</option>
+                    {(
+                      data.assignableRoles || [
+                        { name: "Operator" },
+                        { name: "DL/TL" },
+                      ]
+                    ).map((r: any) => (
+                      <option key={r.name} value={r.name}>
+                        {r.name}
+                      </option>
+                    ))}
                   </select>
                 </Field>
                 {!selected && (

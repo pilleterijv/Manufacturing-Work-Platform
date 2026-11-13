@@ -29,6 +29,7 @@ export async function GET() {
             name: u.name,
             username: u.username,
             role: u.role,
+            customRole: u.customRole,
             mustChange: u.mustChange,
             grants: await grants(u),
             adminPrivileges: await adminPrivileges(u),
