@@ -46,7 +46,7 @@ export async function GET(req: Request) {
       ? (
           await db.equipment.findMany({
             where: {
-              id: { in: assignmentIds },
+              id: { in: ids },
               OR: ["name", "plant", "department", "area", "line"].map((k) => ({
                 [k]: { contains: search, mode: "insensitive" },
               })),
@@ -198,7 +198,11 @@ export async function GET(req: Request) {
     const [equipment, standards, records, content, users, policies] =
       await Promise.all([
         db.equipment.findMany({
-          where: { id: { in: assignmentIds } },
+          where: {
+            id: {
+              in: ["training", "guides"].includes(view) ? ids : assignmentIds,
+            },
+          },
           orderBy: { name: "asc" },
         }),
         standardsNeeded

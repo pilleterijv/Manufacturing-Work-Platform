@@ -184,6 +184,7 @@ export default function Home() {
       setPlatformTab("");
       setOperationsReady(false);
       setOpsDepartment("");
+      setSectionMode("detail");
       setError("");
       setNotice("");
       setSearchRevision((v) => v + 1);

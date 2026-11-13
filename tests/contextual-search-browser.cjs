@@ -251,6 +251,7 @@ async function main() {
       equipmentSnapshot: equipment[0],
       occurredOn: "2026-11-13",
       reportedBy: users[0].name,
+      history: [],
       ownerId: users[0].id,
       reviewerId: users[0].id,
       team: "",
@@ -435,13 +436,7 @@ async function main() {
   await page
     .getByRole("heading", { name: "Machine centerlines", exact: true })
     .waitFor();
-  assert(
-    await page
-      .getByRole("row")
-      .filter({ hasText: centerline.title })
-      .first()
-      .isVisible(),
-  );
+  await page.getByRole("row").filter({hasText:centerline.title}).first().waitFor();
   await nav("Troubleshooting");
   const guideSearch = page.getByRole("combobox", {
     name: "Search troubleshooting",
@@ -468,7 +463,7 @@ async function main() {
     await page.getByLabel("Find a record", { exact: true }).count(),
     0,
   );
-  await page.getByLabel("Method filter",{exact:true}).selectOption("4D");
+  await page.getByLabel("Method filter", { exact: true }).selectOption("4D");
   const search = page.getByRole("combobox", {
     name: "Search problem solving",
     exact: true,
@@ -479,7 +474,10 @@ async function main() {
     .getByRole("button", { name: "Apply filters", exact: true })
     .click();
   await page.getByRole("row").filter({ hasText: problem.reference }).waitFor();
-  assert.equal(await page.getByLabel("Method filter",{exact:true}).inputValue(),"4D");
+  assert.equal(
+    await page.getByLabel("Method filter", { exact: true }).inputValue(),
+    "4D",
+  );
   await nav("Improvement ideas");
   await page
     .getByRole("combobox", { name: "Search improvement ideas", exact: true })

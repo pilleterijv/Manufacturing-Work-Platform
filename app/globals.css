@@ -1972,9 +1972,9 @@ a:focus-visible {
   min-width: 0;
 }
 .search-suggestions {
-  position: absolute;
-  z-index: 45;
-  top: 100%;
+  position: relative;
+  z-index: 1;
+  top: auto;
   left: 0;
   right: 0;
   max-height: 320px;

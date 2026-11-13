@@ -61,6 +61,9 @@ export default function SectionFiltersBar({
         aria-label={`${section} search filters`}
         onSubmit={(e) => {
           e.preventDefault();
+          if (name.trim() && !draft.person) return;
+          if (document.activeElement instanceof HTMLElement)
+            document.activeElement.blur();
           onApply(draft);
         }}
       >
