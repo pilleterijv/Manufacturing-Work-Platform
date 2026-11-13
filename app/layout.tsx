@@ -3,6 +3,7 @@ import InstallApp from "./components/install-app";
 export const viewport = {
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
   themeColor: "#e85208",
 };
 export const dynamic = "force-dynamic";

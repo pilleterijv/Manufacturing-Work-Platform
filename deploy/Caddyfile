@@ -15,7 +15,7 @@
     tls internal
     encode zstd gzip
     request_body {
-        max_size 12MB
+        max_size 48MB
     }
     reverse_proxy 127.0.0.1:3000 {
         transport http {

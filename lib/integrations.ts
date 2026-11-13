@@ -217,14 +217,14 @@ export async function annotateAutomaticTimers<
         Prisma.sql`SELECT b."equipmentId",b."sourceId" FROM "MachineBinding" b JOIN "IntegrationSource" s ON s.id=b."sourceId" WHERE b.active AND s.active AND b."equipmentId" IN (${Prisma.join(ids)})`,
       )
     : [];
+  const managed = new Set(
+    bindings.map((b) => `${b.equipmentId}:${b.sourceId}`),
+  );
   return events.map((e) => ({
     ...e,
     integrationManaged:
       !!e.externalSourceId &&
       !e.endedAt &&
-      bindings.some(
-        (b) =>
-          b.equipmentId === e.equipmentId && b.sourceId === e.externalSourceId,
-      ),
+      managed.has(`${e.equipmentId}:${e.externalSourceId}`),
   }));
 }

@@ -12,6 +12,7 @@ export async function ingestExternalRows(
 ) {
   if (rows.length > 1000)
     throw new HttpError(400, "Import at most 1000 rows per batch");
+  const allowed = allowedIds ? new Set(allowedIds) : undefined;
   const parsed = rows.map((r) => externalRowSchema.parse(r));
   if (new Set(parsed.map((r) => r.externalId)).size !== parsed.length)
     throw new HttpError(400, "External IDs must be unique within a batch");
@@ -36,7 +37,7 @@ export async function ingestExternalRows(
       if (sequence && BigInt(sequence) <= BigInt(feed.cursor))
         return { imported: 0 };
       for (const r of parsed) {
-        if (allowedIds && !allowedIds.includes(r.equipmentId))
+        if (allowed && !allowed.has(r.equipmentId))
           throw new HttpError(
             403,
             "Workbook contains equipment outside your assigned locations",
@@ -57,7 +58,7 @@ export async function ingestExternalRows(
         const old = await tx.externalRow.findUnique({
           where: { feedId_externalId: { feedId, externalId: r.externalId } },
         });
-        if (old && allowedIds && !allowedIds.includes(old.equipmentId))
+        if (old && allowed && !allowed.has(old.equipmentId))
           throw new HttpError(
             403,
             "This external ID belongs to equipment outside your assignments",

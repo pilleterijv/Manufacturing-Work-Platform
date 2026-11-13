@@ -6,15 +6,27 @@ type InstallEvent = Event & {
 };
 export default function InstallApp() {
   const banner = useRef<HTMLElement | null>(null);
+  const help = useRef<HTMLDialogElement | null>(null);
+  const [installError, setInstallError] = useState("");
+  const [connectionHelp, setConnectionHelp] = useState("");
   const [prompt, setPrompt] = useState<InstallEvent | null>(null);
   const [show, setShow] = useState(false);
   const [ios, setIos] = useState(false);
   useEffect(() => {
-    if (!window.isSecureContext) return;
+    if (!window.isSecureContext) {
+      setConnectionHelp(
+        "Installation and camera access need a trusted HTTPS address. Ask IT for the company app address; localhost is only for this computer.",
+      );
+      return;
+    }
     if ("serviceWorker" in navigator)
       void navigator.serviceWorker
         .register("/sw.js", { updateViaCache: "none" })
-        .catch(() => {});
+        .catch(() =>
+          setConnectionHelp(
+            "Offline reconnect support could not be registered. Check the trusted HTTPS address and browser policy with IT; the online app can still be used.",
+          ),
+        );
     const standalone =
       matchMedia("(display-mode: standalone)").matches ||
       (navigator as Navigator & { standalone?: boolean }).standalone;
@@ -53,38 +65,102 @@ export default function InstallApp() {
       document.documentElement.style.removeProperty("--install-banner-height");
     };
   }, [show]);
-  if (!show) return null;
   return (
-    <aside
-      ref={banner}
-      className="install-banner"
-      aria-label="Install Floorwork"
-    >
-      <span>
-        {ios
-          ? "Install on iPad or iPhone: open in Safari, tap Share, then Add to Home Screen."
-          : "Add Floorwork to your tablet or computer from your browser’s Install app or Add to Home Screen menu."}
-      </span>
-      {prompt && (
+    <>
+      {!show && (
         <button
-          className="primary"
-          onClick={async () => {
-            await prompt.prompt();
-            const choice = await prompt.userChoice;
-            setPrompt(null);
-            if (choice.outcome === "accepted") setShow(false);
-          }}
+          className="install-help-toggle outline"
+          onClick={() => help.current?.showModal()}
         >
-          Install app
+          Install app / Help
         </button>
       )}
-      <button
-        className="outline"
-        aria-label="Dismiss installation help"
-        onClick={() => setShow(false)}
+      {show && (
+        <aside
+          ref={banner}
+          className="install-banner"
+          aria-label="Install Floorwork"
+        >
+          <span>
+            {ios
+              ? "Install on iPad or iPhone: open in Safari, tap Share, then Add to Home Screen."
+              : "Add Floorwork to your tablet or computer from your browser’s Install app or Add to Home Screen menu."}
+          </span>
+          {prompt && (
+            <button
+              className="primary"
+              onClick={async () => {
+                const available = prompt;
+                setPrompt(null);
+                try {
+                  await available.prompt();
+                  const choice = await available.userChoice;
+                  if (choice.outcome === "accepted") setShow(false);
+                } catch {
+                  setInstallError(
+                    "The browser could not open installation. Use the instructions below.",
+                  );
+                  help.current?.showModal();
+                }
+              }}
+            >
+              Install app
+            </button>
+          )}
+          <button className="outline" onClick={() => help.current?.showModal()}>
+            Installation help
+          </button>
+          <button
+            className="outline"
+            aria-label="Dismiss installation help"
+            onClick={() => setShow(false)}
+          >
+            Dismiss
+          </button>
+        </aside>
+      )}
+      <dialog
+        ref={help}
+        className="install-help-dialog"
+        aria-labelledby="install-help-title"
       >
-        Dismiss
-      </button>
-    </aside>
+        <h2 id="install-help-title">Install on your device</h2>
+        {installError && <p role="status">{installError}</p>}
+        {connectionHelp && <p role="status">{connectionHelp}</p>}
+        <p>Open the app’s HTTPS web address on the device you want to use.</p>
+        <h3>iPad or iPhone</h3>
+        <p>
+          Open in Safari. Tap Share (the square with an arrow), then Add to Home
+          Screen. Scroll down in the Share menu if needed. Keep Open as Web App
+          enabled if offered, then tap Add.
+        </p>
+        <h3>Android tablet or phone</h3>
+        <p>
+          Open in Chrome. Tap the three-dot menu, then Install app or Add to
+          Home screen, and follow the prompts.
+        </p>
+        <h3>Windows or Mac</h3>
+        <p>
+          In Chrome, open the three-dot menu and look under Cast, save, and
+          share → Install page as app. In Edge, use the menu → Apps → Install
+          this site as an app. Menu names can vary.
+        </p>
+        <h3>If the install option is missing</h3>
+        <p>
+          Use a normal browser tab, check whether the app is already installed,
+          and refresh the page. Installation may be restricted by your company’s
+          browser policy. The browser controls whether an Install button is
+          offered; this help remains available.
+        </p>
+        <p>
+          The server must stay running to use the app. A Codespace must be
+          running too, and a private preview may require your GitHub sign-in. A
+          localhost address from a computer will not work on your tablet.
+        </p>
+        <form method="dialog">
+          <button className="primary">Close installation help</button>
+        </form>
+      </dialog>
+    </>
   );
 }
