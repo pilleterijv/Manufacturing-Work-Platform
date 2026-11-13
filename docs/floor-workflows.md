@@ -18,6 +18,8 @@ when available. Unsupported browsers offer manual entry; an iPad's normal camera
 can open a QR containing the HTTPS machine URL. Labels for unassigned machines
 are rejected. Camera access stops when scanning closes. No third-party scanner
 receives camera frames. Actual camera support requires testing on your devices.
+Use your stable company HTTPS address for printed QR links; Codespaces preview
+addresses can change when a Codespace is replaced.
 
 Dashboard assignment cards carry open-status and personal/department scope into
 the destination, with a visible filter and Clear dashboard filter button. PM and
