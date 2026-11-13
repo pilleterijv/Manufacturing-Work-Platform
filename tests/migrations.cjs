@@ -147,6 +147,11 @@ async function main() {
           .n,
         14,
       );
+      assert.equal(
+        (await pool.query('SELECT count(*)::int AS n FROM "Centerline"'))
+          .rows[0].n,
+        0,
+      );
       const standardColumns = (
         await pool.query(
           `SELECT column_name, column_default FROM information_schema.columns WHERE table_name='Standard' AND column_name IN ('workflow','archived') ORDER BY column_name`,

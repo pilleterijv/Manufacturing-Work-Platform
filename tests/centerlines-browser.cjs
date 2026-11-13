@@ -76,9 +76,14 @@ async function main() {
     contexts.push(c);
     const r = await c.request.post(origin + "/api/account", {
       headers: { Origin: origin },
-      data: { action: "login", username: u.username, password },
+      data: {
+        action: "login",
+        username: u.username,
+        password,
+        remember: false,
+      },
     });
-    assert.equal(r.status(), 200);
+    assert.equal(r.status(), 200, await r.text());
   }
   const [admin, manager, operator, other, delegate] = contexts;
   const parameter = {
@@ -431,6 +436,49 @@ async function main() {
   );
   await page.screenshot({ path: "docs/screenshots/centerlines/tablet.png" });
   assert.deepEqual(errors, []);
+  // Both lists paginate without losing tied-timestamp audit records.
+  const paginationTitle = prefix + " pagination";
+  await db.centerline.createMany({
+    data: Array.from({ length: 103 }, () => ({
+      id: randomUUID(),
+      title: paginationTitle,
+      equipmentId: equipment[0].id,
+      parameters: [parameter],
+      createdBy: users[1].id,
+    })),
+  });
+  const at = new Date("2026-11-13T12:00:00Z");
+  await db.record.createMany({
+    data: Array.from({ length: 103 }, () => ({
+      id: randomUUID(),
+      kind: "centerline",
+      userId: users[2].id,
+      created: at,
+      data: { ...record.data, title: paginationTitle },
+    })),
+  });
+  const path =
+    origin + "/api/centerlines?search=" + encodeURIComponent(paginationTitle);
+  const first = await (await manager.request.get(path)).json();
+  assert.equal(first.plans.length, 100);
+  assert.equal(first.records.length, 100);
+  assert.equal(first.summary.total, 103);
+  const nextPlans = await (
+    await manager.request.get(path + "&cursor=" + first.cursor)
+  ).json();
+  const nextRecords = await (
+    await manager.request.get(path + "&historyCursor=" + first.historyCursor)
+  ).json();
+  assert.equal(nextPlans.plans.length, 3);
+  assert.equal(nextRecords.records.length, 3);
+  assert.equal(
+    new Set([...first.plans, ...nextPlans.plans].map((x) => x.id)).size,
+    103,
+  );
+  assert.equal(
+    new Set([...first.records, ...nextRecords.records].map((x) => x.id)).size,
+    103,
+  );
   console.log(
     "PASS: centerline definitions, delegated editing, department isolation, numeric/text limits, required evidence, immutable revisions, stale writes, retry deduplication, filters/suggestions, scoped Excel/media, retirement, audit form, dashboard, refresh-preserved drafts and tablet layout.",
   );
