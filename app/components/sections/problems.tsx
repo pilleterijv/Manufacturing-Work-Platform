@@ -329,6 +329,7 @@ export default function Problems({
         >
           <Field label="Problem department">
             <select
+              aria-label="Problem department"
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
             >
@@ -339,7 +340,11 @@ export default function Problems({
             </select>
           </Field>
           <Field label="Method filter">
-            <select value={method} onChange={(e) => setMethod(e.target.value)}>
+            <select
+              aria-label="Method filter"
+              value={method}
+              onChange={(e) => setMethod(e.target.value)}
+            >
               <option value="">All methods</option>
               {methods.map((m) => (
                 <option key={m}>{m}</option>
@@ -347,7 +352,11 @@ export default function Problems({
             </select>
           </Field>
           <Field label="Record status">
-            <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            <select
+              aria-label="Record status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+            >
               <option value="">All statuses</option>
               {problemStatuses.map((s) => (
                 <option key={s}>{s}</option>
