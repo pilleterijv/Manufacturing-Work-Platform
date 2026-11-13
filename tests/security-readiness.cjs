@@ -178,13 +178,19 @@ async function main() {
   await page
     .getByRole("button", { name: "≋ Centerlines", exact: true })
     .click();
-  await page.getByText(marker, { exact: true }).first().waitFor();
+  const centerlineRow = page
+    .getByRole("row")
+    .filter({
+      has: page.getByRole("button", { name: "Audit centerline", exact: true }),
+    })
+    .filter({ hasText: marker });
+  await centerlineRow.waitFor();
   assert.equal(await page.locator('img[src="x"]').count(), 0);
   assert.equal(await page.evaluate(() => globalThis.pwned), undefined);
   await page
     .getByRole("button", { name: "Audit centerline", exact: true })
     .click();
-  await page.getByRole("group").filter({ hasText: param.name }).waitFor();
+  await page.getByRole("group", { name: param.name, exact: true }).waitFor();
   assert.equal(
     await page
       .locator("script")

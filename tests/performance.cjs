@@ -44,7 +44,7 @@ async function main() {
       username: "perf-" + randomUUID().slice(0, 8),
       name: "Performance fixture",
       password: await hashPassword(password),
-      role: "Admin",
+      role: "Manager",
       mustChange: false,
     },
   });
@@ -55,6 +55,16 @@ async function main() {
       department: "Performance fixture",
       area: "Test",
       line: "Test",
+    },
+  });
+  await db.user.update({
+    where: { id: user.id },
+    data: {
+      workspaceAccess: {
+        mode: "restricted",
+        locations: [],
+        equipmentIds: [equipment.id],
+      },
     },
   });
   standard = await db.standard.create({
