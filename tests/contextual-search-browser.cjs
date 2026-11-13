@@ -171,6 +171,10 @@ async function main() {
         data: {
           title: centerline.title,
           equipmentId: equipment[0].id,
+          equipmentSnapshot: equipment[0],
+          context: "Shift 1",
+          completed: new Date().toISOString(),
+          media: [],
           centerlineSnapshot: {
             ...JSON.parse(JSON.stringify(centerline)),
             setup: "Retired-SKU-105-" + prefix,
@@ -436,7 +440,17 @@ async function main() {
   await page
     .getByRole("heading", { name: "Machine centerlines", exact: true })
     .waitFor();
-  await page.getByRole("row").filter({hasText:centerline.title}).first().waitFor();
+  try {
+    await page
+      .getByRole("row")
+      .filter({ hasText: centerline.title })
+      .first()
+      .waitFor({ timeout: 10000 });
+  } catch (e) {
+    console.error("Browser errors:", errors);
+    throw e;
+  }
+
   await nav("Troubleshooting");
   const guideSearch = page.getByRole("combobox", {
     name: "Search troubleshooting",
@@ -463,7 +477,7 @@ async function main() {
     await page.getByLabel("Find a record", { exact: true }).count(),
     0,
   );
-  await page.getByLabel("Method filter", { exact: true }).selectOption("4D");
+  await page.getByLabel("Method filter").selectOption("4D");
   const search = page.getByRole("combobox", {
     name: "Search problem solving",
     exact: true,
@@ -474,10 +488,7 @@ async function main() {
     .getByRole("button", { name: "Apply filters", exact: true })
     .click();
   await page.getByRole("row").filter({ hasText: problem.reference }).waitFor();
-  assert.equal(
-    await page.getByLabel("Method filter", { exact: true }).inputValue(),
-    "4D",
-  );
+  assert.equal(await page.getByLabel("Method filter").inputValue(), "4D");
   await nav("Improvement ideas");
   await page
     .getByRole("combobox", { name: "Search improvement ideas", exact: true })
