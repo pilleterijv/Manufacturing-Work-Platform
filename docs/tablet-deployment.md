@@ -16,7 +16,7 @@ It is not an App Store/Play Store binary and does not bundle a database per tabl
 3. On iPad/iPhone, use **Safari → Share → Add to Home Screen** (Open as Web App
    when offered). On Android use **Chrome → menu → Install app / Add to Home Screen**.
    The app also displays **Installation help**; after dismissal use **Install app / Help**. Chromium can offer an Install app button when the browser permits it.
-   For a Codespaces preview, follow the [Codespaces and device setup guide](codespaces.md); the Codespace must stay running and its private preview requires GitHub authorization.
+   For a Codespaces preview, use the startup instructions for your branch in README; the Codespace must stay running and its private preview requires GitHub authorization.
 4. Open the home-screen icon. Use the device camera from a photo field as before.
 
 The service worker caches **only `/offline.html`**, a public reconnect notice.
