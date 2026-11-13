@@ -39,13 +39,13 @@ Send a later `running` event with a different stable event ID to end downtime. U
 1. Complete the same Floorwork source/machine mappings above. Copy the source UUID from Integrations.
 2. IT creates an approved read-only projection named, for example, `dbo.FloorworkDowntimeEvents`. Its columns must be:
 
-| Column | Contract |
-| --- | --- |
-| EventSequence | Positive bigint; committed publication order, strictly increasing |
-| EventID | Stable event ID, up to 150 characters |
-| MachineID | Exact mapped external machine ID, up to 150 characters |
-| State | `down` or `running` |
-| OccurredAt | UTC SQL timestamp or timestamp that the driver returns as a UTC Date |
+| Column        | Contract                                                             |
+| ------------- | -------------------------------------------------------------------- |
+| EventSequence | Positive bigint; committed publication order, strictly increasing    |
+| EventID       | Stable event ID, up to 150 characters                                |
+| MachineID     | Exact mapped external machine ID, up to 150 characters               |
+| State         | `down` or `running`                                                  |
+| OccurredAt    | UTC SQL timestamp or timestamp that the driver returns as a UTC Date |
 
 An IDENTITY allocated before a transaction commits does **not** guarantee committed order. IT should expose an ordered outbox/CDC projection and a committed publication watermark so a late commit cannot be skipped. The reader does not rescan old sequence numbers. Start the source cursor only after deciding whether existing history should be imported.
 
@@ -88,7 +88,7 @@ These feeds create **read-only connected-data rows**. They do not automatically 
   "title": "Production results",
   "details": "Approved shift result",
   "occurredAt": "2026-11-13T15:00:00.000Z",
-  "values": {"produced":100,"good":97,"rejects":3}
+  "values": { "produced": 100, "good": 97, "rejects": 3 }
 }
 ```
 
@@ -97,8 +97,8 @@ Use a stable externalId per source record so updates create revisions. Values ac
 4. Add private worker configuration, using real UUIDs:
 
 ```dotenv
-EXTERNAL_DATA_FEEDS_JSON=[{"feedId":"FEED-UUID","engine":"mssql","view":"dbo.FloorworkProductionFeed","connectionEnv":"FLOORWORK_PRODUCTION_CONNECTION"}]
-FLOORWORK_PRODUCTION_CONNECTION={"server":"pharmsql.database.windows.net","port":1433,"database":"IT_CONFIRMED_DATABASE_NAME","user":"READER","password":"SET_PRIVATELY"}
+EXTERNAL_DATA_FEEDS_JSON='[{"feedId":"FEED-UUID","engine":"mssql","view":"dbo.FloorworkProductionFeed","connectionEnv":"FLOORWORK_PRODUCTION_CONNECTION"}]'
+FLOORWORK_PRODUCTION_CONNECTION='{"server":"pharmsql.database.windows.net","port":1433,"database":"IT_CONFIRMED_DATABASE_NAME","user":"READER","password":"SET_PRIVATELY"}'
 ```
 
 These lines illustrate raw environment values. Use the deployment secret store; if using a dotenv file, quote/escape JSON and passwords according to that loader so `#`, quotes and backslashes remain intact. `EXTERNAL_DATA_FEEDS_JSON` holds only mappings; each `connectionEnv` points to a separate secret. A PostgreSQL feed uses `"engine":"postgres"`, a schema.view name and a PostgreSQL URL in the named variable. External PostgreSQL feeds require verified TLS too.
@@ -112,15 +112,15 @@ Open Production results → Connected data. Create an Excel-mode feed as Admin, 
 
 ## 5. Operational checks and troubleshooting
 
-| Symptom | First check |
-| --- | --- |
-| Azure SQL cannot connect | Server/database name, private DNS/routing/firewall, approved reader, trusted certificate and port 1433 |
-| SQL status configured but no data | Worker running, active source/feed/mapping, rows beyond saved cursor and correct view columns |
-| API 401 | Source key present, current, active; no cookies or employee password in the integration gateway |
-| API 403 | Source/feed ownership or machine scope; do not grant all departments to bypass it |
-| API 409 | Conflicting timer, stale event/order, changed duplicate or another source; reconcile the underlying state |
-| API 429 | Back off and reduce rate; retain events for retry |
-| Browser 401 at a Codespaces preview | GitHub preview authorization; use the company's stable HTTPS host for rollout |
+| Symptom                             | First check                                                                                                          |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Azure SQL cannot connect            | Server/database name, private DNS/routing/firewall, approved reader, trusted certificate and port 1433               |
+| SQL status configured but no data   | Worker running, active source/feed/mapping, rows beyond saved cursor and correct view columns                        |
+| API 401                             | Source key present, current, active; no cookies or employee password in the integration gateway                      |
+| API 403                             | Source/feed ownership or machine scope; do not grant all departments to bypass it                                    |
+| API 409                             | Conflicting timer, stale event/order, changed duplicate or another source; reconcile the underlying state            |
+| API 429                             | Back off and reduce rate; retain events for retry                                                                    |
+| Browser 401 at a Codespaces preview | GitHub preview authorization; use the company's stable HTTPS host for rollout                                        |
 | Worker shows a generic import error | Inspect approved settings and source data privately; application responses intentionally omit SQL/connection details |
 
 Log event identifiers, source/machine mapping IDs, timestamps and fixed status codes in the gateway. Redact Authorization headers, tokens, passwords, connection strings and payloads with personal/production data. Monitor cursor progress and queue age, not only whether the worker process exists. Back up the app database and media; test restore before production rollout.
