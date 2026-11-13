@@ -4,6 +4,7 @@ import { api } from "@/lib/client-api";
 import { sectionEndpoints } from "@/lib/section-views";
 import { sectionSnapshot } from "@/lib/section-snapshot";
 import { Metric } from "./shared";
+import { openWorkflow } from "@/lib/floor-navigation";
 import RefreshControl, { useSectionRefresh } from "./refresh-control";
 export default function SectionDashboard({
   section,
@@ -65,7 +66,15 @@ export default function SectionDashboard({
             label={m.label}
             value={m.value}
             detail={m.detail}
-            onClick={openDetails}
+            onClick={
+              m.label === "Overdue cases"
+                ? () =>
+                    openWorkflow({
+                      tab: section,
+                      filters: { focus: "overdue" },
+                    })
+                : openDetails
+            }
           />
         ))}
       </div>

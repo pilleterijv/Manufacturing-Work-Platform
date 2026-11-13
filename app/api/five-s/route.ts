@@ -1,6 +1,7 @@
 import { canAdminister } from "@/lib/capabilities";
 import { requireDelegated } from "@/lib/security";
 import { z } from "zod";
+import { workflowFocus } from "@/lib/workflow-focus";
 import { db } from "@/lib/db";
 import {
   requireUser,
@@ -27,6 +28,7 @@ export async function GET(req: Request) {
       params = new URL(req.url).searchParams;
     const plans = await db.fiveSPlan.findMany({
       where: {
+        AND: [await workflowFocus(req.url, "fiveS", u.id)],
         locationId: { in: ids },
         ...(person ? { assigneeIds: { array_contains: [person] } } : {}),
         ...(search

@@ -145,7 +145,7 @@ async function main() {
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "Migration"')).rows[0]
           .n,
-        15,
+        16,
       );
       const roleMetadata = await pool.query('SELECT role,"baseRole" FROM "Policy" ORDER BY role');
       for (const row of roleMetadata.rows) assert.equal(row.baseRole,row.role);

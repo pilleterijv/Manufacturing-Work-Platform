@@ -1,5 +1,6 @@
 "use client";
 import LeaderHandoff, { type LeaderHandoffData } from "../leader-handoff";
+import {confirmDraftChange} from "../floor-safety";
 import EvidenceInput from "../evidence-input";
 import { useState, useEffect, useRef } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
@@ -70,6 +71,7 @@ export default function Work({
   }, [audit, data.standards]);
   const s = data.standards.find((s) => s.id === id);
   function select(id: string) {
+    if(!confirmDraftChange())return;
     setId(id);
     setResponses({});
     setCycles([]);

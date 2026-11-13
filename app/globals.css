@@ -2089,3 +2089,14 @@ body {
     padding-bottom: max(28px, env(safe-area-inset-bottom));
   }
 }
+
+/* Floor workflows: visible location context and touch-friendly primary actions. */
+.floor-context { margin: 16px 32px 0; padding: 16px 20px; background: #fff7ef; border: 1px solid #edcbb6; border-left: 4px solid #e75a00; border-radius: 8px; }
+.floor-context .field { margin-bottom: 8px; }
+.floor-context p { margin: 8px 0; overflow-wrap: anywhere; }
+.floor-context video { display: block; width: min(100%,480px); max-height: 300px; }
+.floor-context details { margin-top: 8px; }
+.save-state { margin: 12px 32px 0; min-height: 24px; color: #65503c; font-size: 14px; }
+.shift-home .module-card { min-height: 76px; text-align: left; display: flex; justify-content: space-between; align-items: center; padding: 20px; }
+@media (pointer:coarse) { button,select,input:not([type=checkbox]):not([type=radio]),summary { min-height: 44px; } input[type=checkbox],input[type=radio] { min-width: 22px; min-height: 22px; } }
+@media (max-width: 800px) { .floor-context { margin: 12px 16px 0; padding: 12px; } .save-state { margin-left: 16px; margin-right: 16px; } }

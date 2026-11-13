@@ -95,7 +95,11 @@ export default function Centerlines() {
             ? "Centerline retired. Audit history preserved."
             : "Centerline settings saved.",
       );
-      await load();
+      try {
+        await load();
+      } catch {
+        setNotice("Saved. Refresh the list before another entry.");
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {

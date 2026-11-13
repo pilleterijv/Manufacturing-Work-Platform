@@ -6,6 +6,15 @@ datasource db {
  provider = "postgresql"
  url = env("DATABASE_URL")
 }
+model SubmissionReceipt {
+ id String @id
+ userId String
+ kind String
+ digest String
+ result Json
+ createdAt DateTime @default(now())
+ @@index([userId])
+}
 model User {
  customRole String?
  id String @id @default(uuid())

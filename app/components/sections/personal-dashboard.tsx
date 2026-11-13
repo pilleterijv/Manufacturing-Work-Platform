@@ -2,6 +2,7 @@
 import { useSectionRefresh } from "../refresh-control";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client-api";
+import { openWorkflow } from "@/lib/floor-navigation";
 import {
   dashboardPreferences,
   type DashboardPreferences,
@@ -40,6 +41,12 @@ export default function PersonalDashboard({
     return () => c.abort();
   }, [scope]);
   const chosen = dashboardPreferences(preferences ?? data?.preferences).widgets;
+  const focus = () => ({
+    focus: scope === "personal" ? "personal-open" : "department-open",
+    ...(scope === "department"
+      ? { plant: data.department.plant, department: data.department.department }
+      : {}),
+  });
   const due = (d: string) => (d < data.today ? " · OVERDUE" : ""),
     machine = (id: string) =>
       data.equipment.find((e: any) => e.id === id)?.name ?? id;
@@ -111,7 +118,7 @@ export default function PersonalDashboard({
             {[
               "Ideas",
               "Problem solvings",
-              "PMs / CILs",
+              "PM plans",
               "Open defects",
               "5S plans",
             ]
@@ -144,23 +151,42 @@ export default function PersonalDashboard({
                     )
                   }
                   onClick={() =>
-                    go(
-                      [
+                    openWorkflow({
+                      tab: [
                         "Improvement ideas",
                         "Problem solving",
                         "Preventive maintenance",
                         "Defect reporting",
                         "5S audits",
                       ][i],
-                    )
+                      filters: focus(),
+                    })
                   }
                   aria-label={`View ${s} assignments`}
                 >
-                  <strong>{data.counts[i]}</strong>
+                  <strong>
+                    {i === 2
+                      ? (data.maintenanceCounts?.pm ?? data.counts[i])
+                      : data.counts[i]}
+                  </strong>
                   <span>{s}</span>
                   <small>Open section →</small>
                 </button>
               ))}
+            {chosen.includes("maintenance") && (
+              <button
+                type="button"
+                className="metric metric-shortcut"
+                disabled={!canGo("TPM / CIL")}
+                onClick={() =>
+                  openWorkflow({ tab: "TPM / CIL", filters: focus() })
+                }
+              >
+                <strong>{data.maintenanceCounts?.cil ?? 0}</strong>
+                <span>CIL plans</span>
+                <small>Open assigned CILs →</small>
+              </button>
+            )}
           </div>
           {[
             {
@@ -232,7 +258,12 @@ export default function PersonalDashboard({
                   <article key={r.id} className="problem-action">
                     <button
                       className="outline"
-                      onClick={() => go(r.tab ?? group.tab)}
+                      onClick={() =>
+                        openWorkflow({
+                          tab: r.tab ?? group.tab,
+                          filters: { item: r.id },
+                        })
+                      }
                     >
                       {r.title}
                     </button>

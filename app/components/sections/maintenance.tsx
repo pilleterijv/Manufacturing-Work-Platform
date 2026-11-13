@@ -56,10 +56,14 @@ export default function Maintenance({
     setError("");
     try {
       await api("/api/maintenance", { ...body, kind });
-      await load();
       setSelected(null);
       setDraft(null);
       setNotice(`${label} saved.`);
+      try {
+        await load();
+      } catch {
+        setNotice(`${label} saved. Refresh the list before another entry.`);
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {

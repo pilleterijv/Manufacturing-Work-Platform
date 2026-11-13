@@ -57,6 +57,7 @@ export default function SectionFiltersBar({
   return (
     <section className="panel">
       <form
+        data-no-draft
         className="form-grid"
         aria-label={`${section} search filters`}
         onSubmit={(e) => {

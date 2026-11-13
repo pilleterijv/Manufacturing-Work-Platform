@@ -183,6 +183,16 @@ export async function GET(req: Request) {
       defects,
       fiveS,
       counts,
+      maintenanceCounts: g.includes("maintenance")
+        ? {
+            pm: await db.maintenancePlan.count({
+              where: { ...pmWhere, kind: "pm" },
+            }),
+            cil: await db.maintenancePlan.count({
+              where: { ...pmWhere, kind: "cil" },
+            }),
+          }
+        : { pm: 0, cil: 0 },
       department,
       departments,
       equipment,
