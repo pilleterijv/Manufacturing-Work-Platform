@@ -73,6 +73,13 @@ export async function GET(req: Request) {
         take: 60,
         orderBy: { title: "asc" },
       });
+    else if (section === "Centerlines")
+      tasks = await db.centerline.findMany({
+        where: { equipmentId: { in: ids }, active: true, title: titleWhere },
+        select: { title: true },
+        take: 60,
+        orderBy: { title: "asc" },
+      });
     else if (section === "5S audits")
       tasks = await db.fiveSPlan.findMany({
         where: {

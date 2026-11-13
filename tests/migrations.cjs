@@ -145,7 +145,7 @@ async function main() {
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "Migration"')).rows[0]
           .n,
-        13,
+        14,
       );
       const standardColumns = (
         await pool.query(
@@ -187,6 +187,7 @@ async function main() {
           ])
         ).rows[0].grants;
         assert.deepEqual([...grants].sort(), [
+          "centerlines",
           "dashboard",
           "defects",
           "downtime",

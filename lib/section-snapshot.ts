@@ -40,22 +40,30 @@ export function sectionSnapshot(section: string, d: any): SectionSnapshot {
       r.reason ||
       "Recorded work",
     status:
-      section === "Downtime"
-        ? r.endedAt
-          ? "Ended"
-          : "Active"
-        : r.status ||
-          (r.kind === "video"
-            ? "Training"
-            : r.kind === "guide"
-              ? "Guide"
-              : r.endedAt
-                ? "Stopped"
-                : r.startedAt
-                  ? "Running"
-                  : r.data?.followUp
-                    ? "Follow up"
-                    : "Recorded"),
+      section === "Centerlines"
+        ? r.kind === "centerline"
+          ? r.data?.followUp
+            ? "Follow up"
+            : "Within limits"
+          : r.active
+            ? "Active settings"
+            : "Retired"
+        : section === "Downtime"
+          ? r.endedAt
+            ? "Ended"
+            : "Active"
+          : r.status ||
+            (r.kind === "video"
+              ? "Training"
+              : r.kind === "guide"
+                ? "Guide"
+                : r.endedAt
+                  ? "Stopped"
+                  : r.startedAt
+                    ? "Running"
+                    : r.data?.followUp
+                      ? "Follow up"
+                      : "Recorded"),
     equipment:
       r.snapshot?.area?.area ||
       (d.areas || []).find((a: any) => a.id === r.locationId)?.area ||
@@ -135,6 +143,24 @@ export function sectionSnapshot(section: string, d: any): SectionSnapshot {
       },
     ];
   }
+  if (section === "Centerlines")
+    metrics = [
+      {
+        label: "Active centerlines",
+        value: d.summary?.active || 0,
+        detail: "All matching machine settings",
+      },
+      {
+        label: "Completed centerline audits",
+        value: d.summary?.total || 0,
+        detail: "All matching audits",
+      },
+      {
+        label: "Audits needing follow up",
+        value: d.summary?.followUps || 0,
+        detail: "Audits with out-of-limit readings",
+      },
+    ];
   if (section === "Time studies") {
     const seconds = (d.records || [])
       .flatMap((r: any) => r.data?.cycles || [])

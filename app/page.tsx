@@ -40,6 +40,7 @@ const PersonalDashboard = dynamic(
 );
 const FiveS = dynamic(() => import("./components/sections/five-s"));
 const Defects = dynamic(() => import("./components/sections/defects"));
+const Centerlines = dynamic(() => import("./components/sections/centerlines"));
 const Maintenance = dynamic(() => import("./components/sections/maintenance"));
 const Reminders = dynamic(() => import("./components/sections/reminders"));
 const ExternalData = dynamic(() => import("./components/external-data"));
@@ -560,6 +561,7 @@ export default function Home() {
     ["Standard work", "work", "☑"],
     ["Time studies", "studies", "◷"],
     ["Preventive maintenance", "maintenance", "⚒"],
+    ["Centerlines", "centerlines", "≋"],
     ["TPM / CIL", "maintenance", "⚒"],
     ["5S audits", "fiveS", "◎"],
     ["Defect reporting", "defects", "◇"],
@@ -583,6 +585,8 @@ export default function Home() {
   ];
   if (user.role === "Admin") nav.push(["Integrations", null, "⇄"]);
   const descriptions: Record<string, string> = {
+    Centerlines:
+      "Define machine settings and audit readings against approved limits.",
     "5S audits":
       "Audit area organization, cleanliness and sustained standards.",
     "TPM / CIL":
@@ -752,19 +756,21 @@ export default function Home() {
                   <a
                     className="outline"
                     href={filterUrl(
-                      tab === "5S audits"
-                        ? "/api/five-s?format=xlsx"
-                        : tab === "Defect reporting"
-                          ? "/api/defects?format=xlsx"
-                          : tab === "TPM / CIL"
-                            ? "/api/maintenance?kind=cil&format=xlsx"
-                            : tab === "Preventive maintenance"
-                              ? "/api/maintenance?format=xlsx"
-                              : tab === "Production results"
-                                ? "/api/external-data?section=Production%20results&format=xlsx"
-                                : tab === "Problem solving"
-                                  ? "/api/problems?format=xlsx"
-                                  : "/api/export",
+                      tab === "Centerlines"
+                        ? "/api/centerlines?format=xlsx"
+                        : tab === "5S audits"
+                          ? "/api/five-s?format=xlsx"
+                          : tab === "Defect reporting"
+                            ? "/api/defects?format=xlsx"
+                            : tab === "TPM / CIL"
+                              ? "/api/maintenance?kind=cil&format=xlsx"
+                              : tab === "Preventive maintenance"
+                                ? "/api/maintenance?format=xlsx"
+                                : tab === "Production results"
+                                  ? "/api/external-data?section=Production%20results&format=xlsx"
+                                  : tab === "Problem solving"
+                                    ? "/api/problems?format=xlsx"
+                                    : "/api/export",
                     )}
                   >
                     ↓ Export Excel
@@ -981,6 +987,7 @@ export default function Home() {
                     busy={busy}
                   />
                 )}
+                {tab === "Centerlines" && <Centerlines />}
                 {tab === "5S audits" && (
                   <FiveS userId={user.id} admin={user.role === "Admin"} />
                 )}

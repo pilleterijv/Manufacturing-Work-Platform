@@ -22,6 +22,7 @@ export async function POST(req: Request) {
         "standards.manage",
         "resources.manage",
         "training.manage",
+        "centerlines.manage",
         "maintenance.manage",
         "fiveS.manage",
       ].includes(p),
@@ -31,6 +32,7 @@ export async function POST(req: Request) {
       !g.includes("work") &&
       !g.includes("audits") &&
       !g.includes("manage") &&
+      !g.includes("centerlines") &&
       !g.includes("maintenance") &&
       !g.includes("training") &&
       !g.includes("problems") &&

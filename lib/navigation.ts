@@ -13,6 +13,7 @@ export const sectionRules: Record<string, Capability | null> = {
   "Standard work audits": "audits",
   "Time studies": "studies",
   "Preventive maintenance": "maintenance",
+  Centerlines: "centerlines",
   "TPM / CIL": "maintenance",
   "5S audits": "fiveS",
   "Defect reporting": "defects",

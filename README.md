@@ -1,5 +1,7 @@
 # Floorwork — Manufacturing Work Platform
 
+Machine **Centerlines** now support product/setup settings, numeric or text limits, photo/video audit evidence, permanent revision snapshots and follow-up results. **Apply migration 014 before starting this update.** See [Centerlines setup and usage](docs/centerlines.md).
+
 A browser application for standard work, photographic evidence, time studies, DL/TL Standard Work, troubleshooting, training, role permissions, downtime tracking, improvement ideas, leadership reporting, and Excel exports. PostgreSQL is the primary database; Excel is an export format.
 
 This update adds area-based **5S audits**, machine **TPM/CIL**, **defect reporting with optional MaintainX work-order submission**, personal/assigned-department dashboards, registration approval, password-recovery emails and searchable account pickers. See [setup and limits](docs/five-s-tpm-access.md) and [screenshots](docs/screenshots/five-s-tpm). Migration 011 preserves existing work. Live MaintainX/SMTP require private IT setup; no company work orders or emails have been sent by development tests.
