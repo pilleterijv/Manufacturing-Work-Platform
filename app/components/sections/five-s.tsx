@@ -6,6 +6,7 @@ import { fiveSPillars } from "@/lib/floor-rules";
 import EvidenceInput, { EvidenceView } from "../evidence-input";
 import { Field } from "../shared";
 import PersonSelect from "../person-select";
+import { confirmDraftChange } from "../floor-safety";
 export default function FiveS({
   userId,
   admin,
@@ -73,6 +74,7 @@ export default function FiveS({
           <button
             className="outline"
             onClick={() => {
+              if (!confirmDraftChange()) return;
               setSelected(null);
               setDraft({
                 title: "",
@@ -324,6 +326,7 @@ export default function FiveS({
                     <button
                       className="primary"
                       onClick={() => {
+                        if (!confirmDraftChange()) return;
                         setDraft(null);
                         setSelected(p);
                         setResponses({});
@@ -336,6 +339,7 @@ export default function FiveS({
                   <button
                     className="outline"
                     onClick={() => {
+                      if (!confirmDraftChange()) return;
                       setSelected(null);
                       setDraft(p);
                     }}

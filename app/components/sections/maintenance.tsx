@@ -1,6 +1,7 @@
 "use client";
 import RefreshControl, { useSectionRefresh } from "../refresh-control";
 import PersonSelect from "../person-select";
+import { confirmDraftChange } from "../floor-safety";
 import { useState, useEffect, useRef } from "react";
 import { api, filterUrl } from "@/lib/client-api";
 import EvidenceInput, { EvidenceView } from "../evidence-input";
@@ -97,6 +98,7 @@ export default function Maintenance({
           <button
             className="primary"
             onClick={() => {
+              if (!confirmDraftChange()) return;
               setSelected(null);
               setDraft({
                 title: "",
@@ -345,6 +347,7 @@ export default function Maintenance({
                     <button
                       className="primary"
                       onClick={() => {
+                        if (!confirmDraftChange()) return;
                         setDraft(null);
                         setSelected(p);
                         setResponses({});
@@ -357,6 +360,7 @@ export default function Maintenance({
                   <button
                     className="outline"
                     onClick={() => {
+                      if (!confirmDraftChange()) return;
                       setSelected(null);
                       setDraft(p);
                     }}

@@ -3,7 +3,7 @@ import { referenceDepartments } from "@/lib/reference-catalog";
 import RefreshControl, { useSectionRefresh } from "../refresh-control";
 import PersonSelect from "../person-select";
 import RelatedOpen from "../related-open";
-import {confirmDraftChange} from "../floor-safety";
+import { confirmDraftChange } from "../floor-safety";
 import EvidenceInput from "../evidence-input";
 import { useEffect, useState, useRef } from "react";
 import { api, filterUrl } from "@/lib/client-api";
@@ -203,7 +203,7 @@ export default function Problems({
     };
   }, [view, department, method, status, searchKey]);
   async function open(id: string) {
-    if(!confirmDraftChange())return;
+    if (!confirmDraftChange()) return;
     setError("");
     setNotice("");
     setBusy(true);
@@ -248,7 +248,7 @@ export default function Problems({
     }
   }
   function create(m: Method, previous: Problem | null = null) {
-    if(!confirmDraftChange())return;
+    if (!confirmDraftChange()) return;
     requestKey.current = crypto.randomUUID();
     setSelected(null);
     setCaseStatus("Open");

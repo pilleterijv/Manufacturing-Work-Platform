@@ -1,4 +1,5 @@
 "use client";
+import { confirmDraftChange } from "../floor-safety";
 import { useEffect, useRef, useState } from "react";
 import { api, filterUrl } from "@/lib/client-api";
 import {
@@ -147,6 +148,7 @@ export default function Centerlines() {
             className="primary"
             disabled={busy || uploading}
             onClick={() => {
+              if (!confirmDraftChange()) return;
               setSelected(null);
               setDraft({
                 title: "",
@@ -428,6 +430,7 @@ export default function Centerlines() {
                               className="primary"
                               disabled={busy || uploading}
                               onClick={() => {
+                                if (!confirmDraftChange()) return;
                                 setDraft(null);
                                 setSelected(c);
                                 setResponses({});
@@ -446,6 +449,7 @@ export default function Centerlines() {
                                 className="outline"
                                 disabled={busy || uploading}
                                 onClick={() => {
+                                  if (!confirmDraftChange()) return;
                                   setSelected(null);
                                   setDraft(structuredClone(c));
                                 }}
