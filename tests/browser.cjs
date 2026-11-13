@@ -659,6 +659,7 @@ main()
       where: { OR: [{ id: { in: contentIds } }, { createdBy: { in: ids } }] },
     });
     await db.standard.deleteMany({ where: { id: { in: standardIds } } });
+    await db.roleAudit.deleteMany({ where: { actorId: { in: ids } } });
     await db.user.deleteMany({ where: { id: { in: ids } } });
     await db.rate.deleteMany({
       where: { OR: ids.map((id) => ({ key: { contains: id } })) },

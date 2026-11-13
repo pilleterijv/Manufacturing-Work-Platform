@@ -7,6 +7,7 @@ datasource db {
  url = env("DATABASE_URL")
 }
 model User {
+ customRole String?
  id String @id @default(uuid())
  dashboardDepartment Json?
  dashboardPreferences Json @default("{}")
@@ -105,6 +106,20 @@ model Content {
 model Policy {
  role String @id
  grants Json
+ baseRole String @default("Operator")
+ adminPrivileges Json @default("[]")
+ description String @default("")
+ active Boolean @default(true)
+ version Int @default(1)
+}
+model RoleAudit {
+ id String @id @default(uuid())
+ actorId String
+ role String
+ action String
+ snapshot Json
+ createdAt DateTime @default(now())
+ @@index([role,createdAt])
 }
 model Photo {
  id String @id @default(uuid())

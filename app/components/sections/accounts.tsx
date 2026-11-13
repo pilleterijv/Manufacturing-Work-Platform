@@ -43,7 +43,7 @@ export default function Accounts({
     setUsername(u?.username ?? "");
     setName(u?.name ?? "");
     setEmail(u?.email ?? "");
-    setRole(u?.role ?? "Operator");
+    setRole(u?.customRole || u?.role || "Operator");
     setActive(u?.active ?? true);
     setPassword("");
   }
@@ -129,9 +129,13 @@ export default function Accounts({
             </Field>
             <Field label="Role">
               <select value={role} onChange={(e) => setRole(e.target.value)}>
-                {roles.map((r) => (
-                  <option key={r}>{r}</option>
-                ))}
+                {data.policies
+                  .filter((r) => r.active !== false)
+                  .map((r) => (
+                    <option key={r.role} value={r.role}>
+                      {r.role}
+                    </option>
+                  ))}
               </select>
             </Field>
             <Field
@@ -192,7 +196,9 @@ export default function Accounts({
           >
             Send password setup/reset email
           </button>
-          {["Admin", "Manager", "DL/TL"].includes(role) && (
+          {["Admin", "Manager", "DL/TL"].includes(
+            data.policies.find((p) => p.role === role)?.baseRole || role,
+          ) && (
             <Field label="Assign department dashboard">
               <select
                 key={
@@ -285,7 +291,7 @@ export default function Accounts({
               <tr key={u.id}>
                 <td>{u.name}</td>
                 <td>{u.username}</td>
-                <td>{u.role}</td>
+                <td>{u.customRole || u.role}</td>
                 <td>
                   <span className={"badge " + (!u.active ? "warn" : "")}>
                     {u.active ? "Active" : "Disabled"}

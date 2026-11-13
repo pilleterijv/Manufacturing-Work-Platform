@@ -10,8 +10,6 @@ import {
 } from "@/lib/security";
 import { adminPrivileges } from "@/lib/capabilities";
 import {
-  effectiveGrants,
-  effectivePrivileges,
   coversWorkspace,
   sharesWorkspace,
   protectedAccount,
@@ -25,12 +23,14 @@ import {
   allowedDowntimeEquipment,
 } from "@/lib/downtime-access-rules";
 import { sendRecovery } from "@/lib/account-recovery";
+import { roleAuthority } from "@/lib/role-rules";
+import { resolveRole } from "@/lib/role-assignment";
 const profile = z.object({
   name: z.string().trim().min(1).max(150),
   email: z
     .union([z.email().max(254), z.literal("")])
     .transform((v) => v || null),
-  role: z.enum(["Operator", "DL/TL", "Manager"]),
+  role: z.string().min(1).max(60),
 });
 const names = {
   create: "accounts.create",
@@ -46,7 +46,7 @@ export async function GET(req: Request) {
       privileges = await adminPrivileges(u);
     if (
       u.role !== "Admin" &&
-      u.role !== "Manager" &&
+      !(u.role === "Manager" && !u.customRole) &&
       !privileges.some((p) => p.startsWith("accounts."))
     )
       throw new HttpError(
@@ -59,13 +59,17 @@ export async function GET(req: Request) {
         db.location.findMany({ where: { active: true } }),
         db.policy.findMany(),
       ]),
-      policy = (role: string) => policies.find((p) => p.role === role)?.grants,
-      actorCaps = effectiveGrants(
-        u.role,
-        policy(u.role),
-        u.extraGrants,
-        u.adminPrivileges,
-      ),
+      authorityFor = (p: {
+        role: string;
+        customRole?: string | null;
+        extraGrants?: unknown;
+        adminPrivileges?: unknown;
+      }) =>
+        roleAuthority(
+          p,
+          policies.find((q) => q.role === (p.customRole || p.role)),
+        ),
+      actorCaps = authorityFor(u).grants,
       q =
         new URL(req.url).searchParams
           .get("search")
@@ -78,16 +82,14 @@ export async function GET(req: Request) {
           (!q || `${p.name} ${p.username}`.toLowerCase().includes(q)),
       )
       .map((p) => {
-        const caps = effectiveGrants(
-            p.role,
-            policy(p.role),
-            p.extraGrants,
-            p.adminPrivileges,
-          ),
+        const caps = authorityFor(p).grants,
           canManage =
             u.role === "Admin" ||
             (p.id !== u.id &&
-              !protectedAccount(p) &&
+              !protectedAccount({
+                ...p,
+                adminPrivileges: authorityFor(p).privileges,
+              }) &&
               coversWorkspace(u, p.workspaceAccess, equipment) &&
               caps.every((c) => actorCaps.includes(c)));
         const access = downtimeAccessSchema.safeParse(p.workspaceAccess),
@@ -128,7 +130,8 @@ export async function GET(req: Request) {
           username: p.username,
           name: p.name,
           email: p.email,
-          role: p.role,
+          role: p.customRole || p.role,
+          workflow: p.role,
           active: p.active,
           mustChange: p.mustChange,
           version: p.version,
@@ -138,7 +141,10 @@ export async function GET(req: Request) {
             ? ""
             : p.id === u.id
               ? "Use My account for your own password"
-              : protectedAccount(p)
+              : protectedAccount({
+                    ...p,
+                    adminPrivileges: authorityFor(p).privileges,
+                  })
                 ? "Protected role or individually privileged account; Admin manages this account"
                 : "Account has assignments or permissions beyond your authority",
           ...(u.role === "Admin"
@@ -158,6 +164,27 @@ export async function GET(req: Request) {
       privilegeDefinitions: u.role === "Admin" ? privilegeDefinitions : {},
       additionalCapabilities: u.role === "Admin" ? additionalCapabilities : [],
       canDelegate: u.role === "Admin",
+      assignableRoles: policies
+        .filter(
+          (p) =>
+            p.active &&
+            p.role !== "Admin" &&
+            (u.role === "Admin" ||
+              (p.baseRole !== "Manager" &&
+                !(p.adminPrivileges as unknown[]).length &&
+                roleAuthority(
+                  {
+                    role: p.baseRole,
+                    customRole: ["Operator", "DL/TL", "Manager"].includes(
+                      p.role,
+                    )
+                      ? null
+                      : p.role,
+                  },
+                  p,
+                ).grants.every((c) => actorCaps.includes(c)))),
+        )
+        .map((p) => ({ name: p.role, baseRole: p.baseRole })),
     });
   } catch (e) {
     return failure(e);
@@ -182,7 +209,7 @@ export async function POST(req: Request) {
         action === "create"
           ? crypto.randomUUID()
           : z.string().uuid().parse(b.id);
-    const initialPrivileges = effectivePrivileges(u.role, u.adminPrivileges);
+    const initialPrivileges = await adminPrivileges(u);
     if (
       action === "delegation"
         ? u.role !== "Admin"
@@ -210,7 +237,13 @@ export async function POST(req: Request) {
           403,
           "Your account permissions changed; sign in again",
         );
-      const privileges = effectivePrivileges(actor.role, actor.adminPrivileges);
+      const actorPolicy = await tx.policy.findUnique({
+        where: { role: actor.customRole || actor.role },
+      });
+      const privileges = roleAuthority(
+        actor,
+        actorPolicy ?? undefined,
+      ).privileges;
       if (
         action === "delegation"
           ? actor.role !== "Admin"
@@ -224,22 +257,29 @@ export async function POST(req: Request) {
         policies = await tx.policy.findMany(),
         caps = (p: {
           role: string;
-          extraGrants: unknown;
+          customRole?: string | null;
+          extraGrants?: unknown;
           adminPrivileges?: unknown;
         }) =>
-          effectiveGrants(
-            p.role,
-            policies.find((q) => q.role === p.role)?.grants,
-            p.extraGrants,
-            p.adminPrivileges,
-          ),
+          roleAuthority(
+            p,
+            policies.find((q) => q.role === (p.customRole || p.role)),
+          ).grants,
         actorCaps = caps(actor);
       if (action !== "create") {
         if (!target) throw new HttpError(404, "Account not found");
         if (
           actor.role !== "Admin" &&
           (target.id === actor.id ||
-            protectedAccount(target) ||
+            protectedAccount({
+              ...target,
+              adminPrivileges: roleAuthority(
+                target,
+                policies.find(
+                  (q) => q.role === (target.customRole || target.role),
+                ),
+              ).privileges,
+            }) ||
             !sharesWorkspace(actor, target, eq) ||
             !coversWorkspace(actor, target.workspaceAccess, eq) ||
             !caps(target).every((c) => actorCaps.includes(c)))
@@ -289,6 +329,7 @@ export async function POST(req: Request) {
       let audit: object = {};
       if (action === "create") {
         const v = profile.parse(b),
+          assignment = await resolveRole(v.role, tx),
           username = z
             .string()
             .trim()
@@ -296,10 +337,16 @@ export async function POST(req: Request) {
             .regex(/^[a-z0-9._-]{3,80}$/)
             .parse(b.username),
           access = await checkAccess(b.workspaceAccess);
+        if (assignment.role === "Admin")
+          throw new HttpError(400, "Use the protected Admin account editor");
         if (
           actor.role !== "Admin" &&
-          (v.role === "Manager" ||
-            !caps({ ...v, extraGrants: [] }).every((c) =>
+          (assignment.role === "Manager" ||
+            (
+              (policies.find((p) => p.role === v.role)
+                ?.adminPrivileges as unknown[]) || []
+            ).length > 0 ||
+            !caps({ ...v, ...assignment, extraGrants: [] }).every((c) =>
               actorCaps.includes(c),
             ))
         )
@@ -314,6 +361,7 @@ export async function POST(req: Request) {
             id,
             username,
             ...v,
+            ...assignment,
             password: password!,
             workspaceAccess: access,
             downtimeAccess: { mode: "all", locations: [], equipmentIds: [] },
@@ -340,7 +388,10 @@ export async function POST(req: Request) {
         });
         audit = v;
       } else if (action === "profile") {
-        const v = profile.parse(b);
+        const v = profile.parse(b),
+          assignment = await resolveRole(v.role, tx);
+        if (assignment.role === "Admin")
+          throw new HttpError(400, "Use the protected Admin account editor");
         if (target!.role === "Admin")
           throw new HttpError(
             400,
@@ -348,15 +399,21 @@ export async function POST(req: Request) {
           );
         if (
           actor.role !== "Admin" &&
-          (v.role === "Manager" ||
-            !caps({ ...v, extraGrants: target!.extraGrants }).every((c) =>
-              actorCaps.includes(c),
-            ))
+          (assignment.role === "Manager" ||
+            (
+              (policies.find((p) => p.role === v.role)
+                ?.adminPrivileges as unknown[]) || []
+            ).length > 0 ||
+            !caps({
+              ...v,
+              ...assignment,
+              extraGrants: target!.extraGrants,
+            }).every((c) => actorCaps.includes(c)))
         )
           throw new HttpError(403, "You cannot assign a more privileged role");
         await tx.user.update({
           where: { id },
-          data: { ...v, version: { increment: 1 } },
+          data: { ...v, ...assignment, version: { increment: 1 } },
         });
         audit = v;
       } else if (action === "active") {

@@ -2,6 +2,7 @@ import type { Capability } from "./rules";
 import type { AdminPrivilege } from "./delegation-rules";
 export type NavigationUser = {
   role: string;
+  customRole?: string | null;
   grants: Capability[];
   adminPrivileges?: AdminPrivilege[];
 };
@@ -41,7 +42,7 @@ export function canOpenSection(u: NavigationUser, name: string) {
   if (name === "Accounts")
     return (
       u.role === "Admin" ||
-      u.role === "Manager" ||
+      (u.role === "Manager" && !u.customRole) ||
       p.some((v) => v.startsWith("accounts."))
     );
   if (name === "Permissions" || name === "Integrations")
