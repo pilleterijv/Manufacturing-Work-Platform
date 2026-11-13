@@ -17,6 +17,7 @@ export function filterUrl(path: string) {
       "/api/leadership",
       "/api/dashboard",
       "/api/export",
+      "/api/centerlines",
       "/api/maintenance",
       "/api/five-s",
       "/api/defects",

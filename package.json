@@ -29,7 +29,8 @@
     "test:locations": "node tests/location-workflows.cjs",
     "test:maintenance-data": "node tests/maintenance-data-reminders.cjs",
     "test:floor-expansion": "node tests/floor-expansion-browser.cjs",
-    "test:personal-access": "node tests/personal-access-assistant.cjs"
+    "test:personal-access": "node tests/personal-access-assistant.cjs",
+    "test:centerlines": "node tests/centerlines-browser.cjs"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.29.1",

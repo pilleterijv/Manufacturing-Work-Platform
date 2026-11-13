@@ -14,6 +14,7 @@ export const capabilities = [
   "leadership",
   "dashboard",
   "problems",
+  "centerlines",
   "maintenance",
   "fiveS",
   "defects",
@@ -25,6 +26,7 @@ export const defaults: Record<string, Capability[]> = {
   Manager: [
     "fiveS",
     "defects",
+    "centerlines",
     "maintenance",
     "problems",
     "dashboard",
@@ -42,6 +44,7 @@ export const defaults: Record<string, Capability[]> = {
   "DL/TL": [
     "fiveS",
     "defects",
+    "centerlines",
     "maintenance",
     "problems",
     "dashboard",
@@ -55,6 +58,7 @@ export const defaults: Record<string, Capability[]> = {
   Operator: [
     "fiveS",
     "defects",
+    "centerlines",
     "maintenance",
     "problems",
     "dashboard",

@@ -7,6 +7,7 @@ export const sectionEndpoints: Record<string, string> = {
   Troubleshooting: "/api/platform?view=guides",
   Analytics: "/api/platform?view=analytics",
   "Preventive maintenance": "/api/maintenance?kind=pm",
+  Centerlines: "/api/centerlines",
   "TPM / CIL": "/api/maintenance?kind=cil",
   "5S audits": "/api/five-s",
   "Defect reporting": "/api/defects",

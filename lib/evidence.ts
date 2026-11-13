@@ -52,6 +52,7 @@ export async function canReadEvidence(
   const kinds = [
     ...(g.includes("work") || g.includes("analytics") ? ["run"] : []),
     ...(g.includes("audits") ? ["audit"] : []),
+    ...(g.includes("centerlines") ? ["centerline"] : []),
     ...(g.includes("maintenance") ? ["pm", "cil"] : []),
   ];
   if (kinds.length) {
@@ -60,7 +61,7 @@ export async function canReadEvidence(
       { id: string }[]
     >(Prisma.sql`SELECT r.id FROM "Record" r LEFT JOIN "Standard" s ON s.id=r."standardId"
  WHERE r.kind IN (${Prisma.join(kinds)}) AND COALESCE(s."equipmentId",r.data->>'equipmentId')=ANY(${ids}::text[])
- AND (r."userId"=${u.id} OR ${u.role === "Admin"} OR (r.kind='run' AND ${g.includes("analytics")}) OR (r.kind='audit' AND ${g.includes("audits")}) OR (r.kind IN ('pm','cil') AND ${g.includes("maintenance")}))
+ AND (r."userId"=${u.id} OR ${u.role === "Admin"} OR (r.kind='run' AND ${g.includes("analytics")}) OR (r.kind='audit' AND ${g.includes("audits")}) OR (r.kind='centerline' AND ${g.includes("centerlines")}) OR (r.kind IN ('pm','cil') AND ${g.includes("maintenance")}))
  AND ((r.data->'responses') @> ${JSON.stringify([{ [key]: id }])}::jsonb OR (r.data->'media') @> ${part}::jsonb) LIMIT 1`);
     if (rows.length) return true;
   }
