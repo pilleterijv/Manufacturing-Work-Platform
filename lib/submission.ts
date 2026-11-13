@@ -10,7 +10,6 @@ function canonical(value: any): any {
       ? Object.fromEntries(
           Object.keys(value)
             .sort()
-            .filter((k) => k !== "requestKey")
             .map((k) => [k, canonical(value[k])]),
         )
       : value;
@@ -24,9 +23,10 @@ export async function withSubmission<T extends { id: string }>(
   const key = z.string().uuid().optional().parse(body.requestKey);
   // Existing integration clients may omit a key; the floor forms always supply one.
   if (!key) return db.$transaction(work);
+  const { requestKey, ...payload } = body;
   const id = kind + ":" + userId + ":" + key,
     digest = createHash("sha256")
-      .update(JSON.stringify(canonical(body)))
+      .update(JSON.stringify(canonical(payload)))
       .digest("hex");
   return db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${id},0))`;

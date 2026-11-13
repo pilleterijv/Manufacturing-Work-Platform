@@ -1,6 +1,10 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-export function confirmDraftChange(){return window.dispatchEvent(new Event("floorwork:discard",{cancelable:true}));}
+export function confirmDraftChange() {
+  return window.dispatchEvent(
+    new Event("floorwork:discard", { cancelable: true }),
+  );
+}
 export function useFloorSafety() {
   const dirty = useRef(new Set<HTMLFormElement>()),
     pending = useRef(new Set<HTMLFormElement>());
@@ -61,20 +65,51 @@ export function useFloorSafety() {
       }
     };
     document.addEventListener("input", change, true);
-    const discard=(e:Event)=>{
-      const button=(e.target as HTMLElement)?.closest(".page button");
-      if(!button||!/^\s*(Cancel\b|Close editor\b)/i.test(button.textContent||""))return;
-      if([...dirty.current].some(f=>f.isConnected)){
-        if(!window.confirm("Discard your unsaved entries?")){e.preventDefault();e.stopPropagation();return;}
-        dirty.current.clear();pending.current.clear();update();setStatus("");
+    const discard = (e: Event) => {
+      const button = (e.target as HTMLElement)?.closest(".page button");
+      if (
+        !button ||
+        !/^\s*(Cancel\b|Close editor\b)/i.test(button.textContent || "")
+      )
+        return;
+      if ([...dirty.current].some((f) => f.isConnected)) {
+        if (!window.confirm("Discard your unsaved entries?")) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        dirty.current.clear();
+        pending.current.clear();
+        update();
+        setStatus("");
       }
     };
-    const discardRequest=(e:Event)=>{
-      if([...dirty.current].some(f=>f.isConnected)&&!window.confirm("Discard your unsaved entries?")){e.preventDefault();return;}
-      dirty.current.clear();pending.current.clear();update();setStatus("");
+    const discardRequest = (e: Event) => {
+      if (
+        [...dirty.current].some((f) => f.isConnected) &&
+        !window.confirm("Discard your unsaved entries?")
+      ) {
+        e.preventDefault();
+        return;
+      }
+      dirty.current.clear();
+      pending.current.clear();
+      update();
+      setStatus("");
     };
-    window.addEventListener("floorwork:discard",discardRequest);
-    document.addEventListener("click",discard,true);
+    window.addEventListener("floorwork:discard", discardRequest);
+    document.addEventListener("click", discard, true);
+    const buttonChange = (e: Event) => {
+      const b = (e.target as HTMLElement)?.closest(
+        "button",
+      ) as HTMLButtonElement | null;
+      if (
+        b?.type === "button" &&
+        !/^\s*(Cancel\b|Close\b|Refresh\b)/i.test(b.textContent || "")
+      )
+        change(e);
+    };
+    document.addEventListener("click", buttonChange, true);
     document.addEventListener("change", change, true);
     document.addEventListener("submit", submit, true);
     document.addEventListener("reset", reset, true);
@@ -82,8 +117,9 @@ export function useFloorSafety() {
     window.addEventListener("beforeunload", leave);
     return () => {
       document.removeEventListener("input", change, true);
-      document.removeEventListener("click",discard,true);
-      window.removeEventListener("floorwork:discard",discardRequest);
+      document.removeEventListener("click", discard, true);
+      document.removeEventListener("click", buttonChange, true);
+      window.removeEventListener("floorwork:discard", discardRequest);
       document.removeEventListener("change", change, true);
       document.removeEventListener("submit", submit, true);
       document.removeEventListener("reset", reset, true);

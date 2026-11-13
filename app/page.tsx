@@ -818,7 +818,7 @@ export default function Home() {
                 openTarget({
                   tab: "Troubleshooting",
                   filters: {
-                    equipment:id,
+                    equipment: id,
                   },
                 })
               }
