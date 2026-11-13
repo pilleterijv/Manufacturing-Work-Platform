@@ -532,9 +532,10 @@ async function main() {
   await page
     .locator(".personal-dashboard .metric")
     .first()
-    .getByText("PMs / CILs", { exact: true })
+    .getByText("PM plans", { exact: true })
     .waitFor();
-  assert.equal(await page.locator(".personal-dashboard .metric").count(), 2);
+  assert.equal(await page.locator(".personal-dashboard .metric").count(), 3);
+  await page.getByText("CIL plans", { exact: true }).waitFor();
   assert.equal(await page.locator(".personal-dashboard details").count(), 2);
   await page.screenshot({
     path: shots + "/custom-dashboard.png",

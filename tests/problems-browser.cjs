@@ -29,7 +29,7 @@ async function main() {
           role,
           password: hash,
           mustChange: false,
-          workspaceAccess:{mode:"all",locations:[],equipmentIds:[]},
+          workspaceAccess: { mode: "all", locations: [], equipmentIds: [] },
         },
       }),
     );
@@ -272,6 +272,9 @@ async function main() {
   assert.equal(book.getWorksheet("Actions and checkpoints").rowCount, 2);
   const page = await operator.newPage();
   await page.goto(origin);
+  await page
+    .getByText("More tools and workspace settings", { exact: true })
+    .click();
   await page
     .getByRole("button", { name: "Open Problem solving section", exact: true })
     .click();

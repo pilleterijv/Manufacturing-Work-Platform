@@ -1,4 +1,5 @@
 "use client";
+import { confirmDraftChange } from "../floor-safety";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client-api";
 import { capabilities, type Capability } from "@/lib/rules";
@@ -42,6 +43,7 @@ export default function Permissions(_props: {
     void load().catch((e) => setError(e.message));
   }, []);
   function select(r: any) {
+    if (!confirmDraftChange()) return;
     setCreating(false);
     setDraft({ name: r.role, ...r });
     setError("");
@@ -92,6 +94,7 @@ export default function Permissions(_props: {
             className="primary"
             disabled={busy}
             onClick={() => {
+              if (!confirmDraftChange()) return;
               setCreating(true);
               setError("");
               setNotice("");

@@ -1,4 +1,5 @@
 "use client";
+import { confirmDraftChange } from "../floor-safety";
 import DelegationEditor from "../delegation-editor";
 import { AccessRequests } from "../access-forms";
 import { LocationsEditor } from "../location-picker";
@@ -37,7 +38,8 @@ export default function Accounts({
     [role, setRole] = useState("Operator"),
     [active, setActive] = useState(true),
     [password, setPassword] = useState("");
-  function select(id: string) {
+  function select(id: string, check = true) {
+    if (check && !confirmDraftChange()) return;
     setId(id);
     const u = data.users.find((u) => u.id === id);
     setUsername(u?.username ?? "");
@@ -97,7 +99,7 @@ export default function Accounts({
                 ...(password ? { password } : {}),
               })
             )
-              select("");
+              select("", false);
           }}
         >
           <div className="form-grid">

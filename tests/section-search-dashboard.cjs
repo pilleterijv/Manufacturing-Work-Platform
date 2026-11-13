@@ -244,7 +244,7 @@ const check = async (r, status = 200) => {
     await person.fill("Morgan Search");
     await page
       .getByRole("listbox", { name: "Study recorder suggestions" })
-      .locator('[role="listbox"] [role="option"]')
+      .getByRole("option")
       .filter({ hasText: users[0].name })
       .click();
     assert((await person.inputValue()).includes(users[0].username));

@@ -327,6 +327,36 @@ async function main() {
     path: "docs/screenshots/floor-usability/tablet-context-and-defects.png",
     fullPage: true,
   });
+  await page
+    .locator("nav")
+    .getByRole("button", { name: "Problem solving", exact: false })
+    .click();
+  await page
+    .getByRole("button", { name: "New 2D record", exact: true })
+    .click();
+  await page
+    .getByLabel("Problem title", { exact: true })
+    .fill("Keep this investigation draft");
+  page.once("dialog", (d) => d.dismiss());
+  await page.getByLabel("Method filter", { exact: true }).selectOption("4D");
+  assert.equal(
+    await page.getByLabel("Problem title", { exact: true }).inputValue(),
+    "Keep this investigation draft",
+  );
+  assert.equal(
+    await page.getByLabel("Method filter", { exact: true }).inputValue(),
+    "",
+  );
+  page.once("dialog", (d) => d.accept());
+  await page
+    .locator("nav")
+    .getByRole("button", { name: "Overview", exact: false })
+    .click();
+  await page.getByRole("heading", { name: "My shift", exact: true }).waitFor();
+  await page.screenshot({
+    path: "docs/screenshots/floor-usability/operator-home.png",
+    fullPage: true,
+  });
   for (const [i, title] of [
     [0, "Administration"],
     [1, "Department review"],

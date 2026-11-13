@@ -519,7 +519,7 @@ async function main() {
       name: "Centerline auditor suggestions",
       exact: true,
     })
-    .locator('[role="listbox"] [role="option"]')
+    .getByRole("option")
     .filter({ hasText: users[0].username })
     .click();
   await page
