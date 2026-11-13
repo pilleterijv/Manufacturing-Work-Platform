@@ -268,7 +268,11 @@ export async function POST(req: Request) {
         try {
           await submitMaintainx(id, u);
         } catch (e) {
-          throw new HttpError(409, (e as Error).message);
+          if (e instanceof HttpError) throw e;
+          throw new HttpError(
+            409,
+            "Work order submission could not be confirmed. Check the machine mapping and MaintainX before retrying.",
+          );
         }
       }
     }

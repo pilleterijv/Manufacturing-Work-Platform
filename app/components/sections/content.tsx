@@ -1,5 +1,5 @@
 "use client";
-import { mediaMime, readMediaFile } from "@/lib/client-media";
+import { mediaMime, readMediaFile, uploadVideo } from "@/lib/client-media";
 import PhotoEditor from "../photo-editor";
 import { useState, useEffect, useRef } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
@@ -65,8 +65,7 @@ export default function Content({
     try {
       if (file.size > 32 * 1024 * 1024)
         throw Error("Video must be under 32 MB");
-      const value = await readMediaFile(file);
-      const r = await api("/api/guide-media", { video: value });
+      const r = await uploadVideo(file);
       setMedia((m) => [...m, { id: r.id, kind: "video", caption: "" }]);
     } catch (e) {
       setError((e as Error).message);

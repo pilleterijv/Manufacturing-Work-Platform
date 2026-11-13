@@ -2054,5 +2054,38 @@ a:focus-visible {
 .status-bar meter::-moz-meter-bar {
   background: #e85208;
 }
-.metric-shortcut { width:100%; text-align:left; color:inherit; cursor:pointer; }
-.metric-shortcut:hover { border-color:#e85208; box-shadow:0 4px 14px #e8520818; }
+.metric-shortcut {
+  width: 100%;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+.metric-shortcut:hover {
+  border-color: #e85208;
+  box-shadow: 0 4px 14px #e8520818;
+}
+
+/* Keep tablet controls clear of notches and prevent Safari form auto-zoom. */
+body {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+.install-banner {
+  padding-top: max(12px, env(safe-area-inset-top));
+}
+@media (pointer: coarse) {
+  button,
+  .outline,
+  .primary,
+  select {
+    min-height: 44px;
+  }
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  .page {
+    padding-bottom: max(28px, env(safe-area-inset-bottom));
+  }
+}

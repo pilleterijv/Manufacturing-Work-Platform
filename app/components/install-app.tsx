@@ -8,15 +8,25 @@ export default function InstallApp() {
   const banner = useRef<HTMLElement | null>(null);
   const help = useRef<HTMLDialogElement | null>(null);
   const [installError, setInstallError] = useState("");
+  const [connectionHelp, setConnectionHelp] = useState("");
   const [prompt, setPrompt] = useState<InstallEvent | null>(null);
   const [show, setShow] = useState(false);
   const [ios, setIos] = useState(false);
   useEffect(() => {
-    if (!window.isSecureContext) return;
+    if (!window.isSecureContext) {
+      setConnectionHelp(
+        "Installation and camera access need a trusted HTTPS address. Ask IT for the company app address; localhost is only for this computer.",
+      );
+      return;
+    }
     if ("serviceWorker" in navigator)
       void navigator.serviceWorker
         .register("/sw.js", { updateViaCache: "none" })
-        .catch(() => {});
+        .catch(() =>
+          setConnectionHelp(
+            "Offline reconnect support could not be registered. Check the trusted HTTPS address and browser policy with IT; the online app can still be used.",
+          ),
+        );
     const standalone =
       matchMedia("(display-mode: standalone)").matches ||
       (navigator as Navigator & { standalone?: boolean }).standalone;
@@ -116,6 +126,7 @@ export default function InstallApp() {
       >
         <h2 id="install-help-title">Install on your device</h2>
         {installError && <p role="status">{installError}</p>}
+        {connectionHelp && <p role="status">{connectionHelp}</p>}
         <p>Open the app’s HTTPS web address on the device you want to use.</p>
         <h3>iPad or iPhone</h3>
         <p>

@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { serviceIssue } from "../lib/service-errors";
-import { pollExternalData } from "../lib/external-poller";
+import { pollExternalData, closeExternalData } from "../lib/external-poller";
 import { queueOverdueReminders } from "../lib/reminders";
 import { db } from "../lib/db";
 import { checkShiftWork } from "../lib/shift-monitor";
@@ -76,6 +76,7 @@ async function main() {
       ]);
     }
   } finally {
+    await closeExternalData();
     await closeCompanySql();
     await db.$disconnect();
   }

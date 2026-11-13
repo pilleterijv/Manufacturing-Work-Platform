@@ -1,3 +1,4 @@
+import { readBoundedResponseJson } from "./http-body";
 import type { HelpTopic } from "./help-catalog";
 // This adapter has no database/tool access and accepts only public help topics plus a typed question.
 export async function answerNavigationQuestion(
@@ -27,9 +28,7 @@ export async function answerNavigationQuestion(
     }),
   });
   if (!response.ok) throw Error("AI service unavailable");
-  const raw = await response.text();
-  if (raw.length > 100000) throw Error("AI response too large");
-  const body = JSON.parse(raw),
+  const body = await readBoundedResponseJson(response),
     answer = body.output
       ?.filter((o: any) => o.type === "message")
       .flatMap((o: any) => o.content ?? [])

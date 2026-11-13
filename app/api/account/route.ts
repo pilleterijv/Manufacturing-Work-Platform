@@ -1,3 +1,4 @@
+import { securityEvent } from "@/lib/security-events";
 import { adminPrivileges } from "@/lib/capabilities";
 import { dashboardPreferences } from "@/lib/dashboard-preferences";
 import { randomBytes } from "node:crypto";
@@ -56,8 +57,10 @@ export async function POST(req: Request) {
       const u = await db.user.findUnique({ where: { username } });
       const fake = "0123456789abcdef0123456789abcdef:" + "0".repeat(128);
       const valid = await verifyPassword(input.password, u?.password ?? fake);
-      if (!u || !u.active || !valid)
+      if (!u || !u.active || !valid) {
+        securityEvent("login_failed", { subjectHash: digest(username) });
         throw new HttpError(401, "Invalid username or password");
+      }
       const token = randomBytes(32).toString("hex");
       await db.$transaction(
         async (tx) => {
@@ -88,6 +91,7 @@ export async function POST(req: Request) {
         path: "/",
         ...(input.remember ? { maxAge: 30 * 86400 } : {}),
       });
+      securityEvent("login_succeeded", { actorId: u.id });
       return Response.json({ ok: true });
     }
     const u = await requireUser(undefined, true);
@@ -99,6 +103,9 @@ export async function POST(req: Request) {
         await db.session.deleteMany({
           where: { token: digest(jar.get(cookieName())?.value ?? "") },
         });
+      securityEvent(b.action === "logoutAll" ? "sessions_revoked" : "logout", {
+        actorId: u.id,
+      });
       jar.set(cookieName(), "", {
         httpOnly: true,
         secure: secure(),
@@ -112,6 +119,7 @@ export async function POST(req: Request) {
       const input = z
         .object({ current: z.string().max(128), password: z.string().max(128) })
         .parse(b);
+      await limit(`password-change:${u.id}`, 5, 900);
       if (!(await verifyPassword(input.current, u.password)))
         throw new HttpError(400, "Current password is incorrect");
       if (input.current === input.password)
@@ -126,6 +134,7 @@ export async function POST(req: Request) {
           throw new HttpError(409, "Account changed. Sign in again");
         await tx.session.deleteMany({ where: { userId: u.id } });
       });
+      securityEvent("password_changed", { actorId: u.id });
       jar.set(cookieName(), "", {
         httpOnly: true,
         secure: secure(),

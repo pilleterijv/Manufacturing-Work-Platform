@@ -1404,14 +1404,14 @@
     },
     {
       "path": "node_modules/fast-xml-builder",
-      "version": "1.3.1",
+      "version": "1.3.2",
       "license": "MIT",
       "development": false,
       "optional": false
     },
     {
       "path": "node_modules/fast-xml-parser",
-      "version": "5.11.2",
+      "version": "5.12.1",
       "license": "MIT",
       "development": false,
       "optional": false
@@ -1796,7 +1796,7 @@
     },
     {
       "path": "node_modules/is-unsafe",
-      "version": "2.0.2",
+      "version": "2.0.3",
       "license": "MIT",
       "development": false,
       "optional": false

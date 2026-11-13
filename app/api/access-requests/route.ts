@@ -1,3 +1,4 @@
+import { securityEvent } from "@/lib/security-events";
 import { z } from "zod";
 import { randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
@@ -136,6 +137,7 @@ export async function POST(req: Request) {
         await tx.passwordReset.deleteMany({ where: { userId: reset.userId } });
         await tx.session.deleteMany({ where: { userId: reset.userId } });
       });
+      securityEvent("password_reset");
       return Response.json({
         ok: true,
         message: "Password saved. Sign in with your new password.",
