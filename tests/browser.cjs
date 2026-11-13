@@ -156,7 +156,10 @@ async function main() {
   await page
     .getByRole("button", { name: "Complete standard work", exact: true })
     .click();
-  await page.getByRole("status").waitFor();
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Saved to the database." })
+    .waitFor();
   assert.equal(
     await db.record.count({ where: { userId: users[0].id, kind: "run" } }),
     1,
@@ -176,7 +179,10 @@ async function main() {
   await page
     .getByRole("button", { name: "Save time study", exact: true })
     .click();
-  await page.getByRole("status").waitFor();
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Saved to the database." })
+    .waitFor();
   const study = await db.record.findFirst({
     where: { userId: users[0].id, kind: "study" },
   });
@@ -206,7 +212,10 @@ async function main() {
   await page
     .getByRole("button", { name: "Complete standard-work audit", exact: true })
     .click();
-  await page.getByRole("status").waitFor();
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Saved to the database." })
+    .waitFor();
   const audit = await db.record.findFirst({
     where: { userId: users[0].id, kind: "audit" },
   });
@@ -478,7 +487,10 @@ async function main() {
   await page
     .getByRole("button", { name: "Create account", exact: true })
     .click();
-  await page.getByRole("status").waitFor();
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Saved to the database." })
+    .waitFor();
   const created = await db.user.findUnique({
     where: { username: "new-" + suffix },
   });

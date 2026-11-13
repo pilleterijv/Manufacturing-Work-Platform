@@ -685,7 +685,7 @@ async function main() {
     .fill("Operator Alpha");
   await page
     .getByRole("listbox", { name: "PM assignee / recorder suggestions" })
-    .getByRole("option")
+    .locator('[role="listbox"] [role="option"]')
     .filter({ hasText: users[4].username })
     .click();
   await page

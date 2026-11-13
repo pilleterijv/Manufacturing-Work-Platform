@@ -631,7 +631,10 @@ async function main() {
   await mp
     .getByRole("button", { name: "Save guide changes", exact: true })
     .click();
-  await mp.getByRole("status").waitFor();
+  await mp
+    .getByRole("status")
+    .filter({ hasText: "Saved to the database." })
+    .waitFor();
   const edited = await db.content.findUniqueOrThrow({
     where: { id: guide.id },
   });

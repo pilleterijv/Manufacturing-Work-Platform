@@ -106,7 +106,10 @@ async function main() {
   await ap
     .getByRole("button", { name: "Add downtime reason", exact: true })
     .click();
-  await ap.getByRole("status").waitFor();
+  await ap
+    .getByRole("status")
+    .filter({ hasText: "Saved to the database." })
+    .waitFor();
   const reason = await db.downtimeReason.findUnique({
     where: { name: "Tool adjustment " + suffix },
   });
@@ -298,7 +301,10 @@ async function main() {
   await op
     .getByRole("button", { name: "Submit idea & notify pilot", exact: true })
     .click();
-  await op.getByRole("status").waitFor();
+  await op
+    .getByRole("status")
+    .filter({ hasText: "Saved to the database." })
+    .waitFor();
   const idea = await db.idea.findFirst({ where: { createdBy: users[3].id } });
   assert(idea);
   assert.equal(idea.process, "Packing changeover");
@@ -343,7 +349,10 @@ async function main() {
     fullPage: true,
   });
   await mp.getByRole("button", { name: "Mark as read", exact: true }).click();
-  await mp.getByRole("status").waitFor();
+  await mp
+    .getByRole("status")
+    .filter({ hasText: "Saved to the database." })
+    .waitFor();
   assert(
     (await db.notification.findUnique({ where: { id: notification.id } }))
       .readAt,
@@ -354,7 +363,10 @@ async function main() {
   await mp
     .getByLabel("Progress for " + idea.title, { exact: true })
     .selectOption("Piloting");
-  await mp.getByRole("status").waitFor();
+  await mp
+    .getByRole("status")
+    .filter({ hasText: "Saved to the database." })
+    .waitFor();
   let current = await db.idea.findUnique({ where: { id: idea.id } });
   assert.equal(current.status, "Piloting");
   assert.equal(

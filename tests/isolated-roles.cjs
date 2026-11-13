@@ -10,7 +10,9 @@ const name = "floorwork_roles_" + randomUUID().replaceAll("-", "");
 assert(/^floorwork_roles_[a-f0-9]{32}$/.test(name));
 const url = new URL(parentUrl);
 url.pathname = "/" + name;
-const origin = "http://localhost:3107";
+const port = process.env.FLOORWORK_TEST_PORT || "3107";
+assert(/^\d{4,5}$/.test(port) && Number(port) >= 1024 && Number(port) <= 65535);
+const origin = "http://localhost:" + port;
 const env = {
   ...process.env,
   DATABASE_URL: url.toString(),
@@ -18,7 +20,7 @@ const env = {
   APP_ORIGIN: origin,
   APP_URL: origin,
   HOSTNAME: "127.0.0.1",
-  PORT: "3107",
+  PORT: port,
   FLOORWORK_WORKER_MODE: "external",
   SMTP_HOST: "",
   COMPANY_SQL_SERVER: "",
