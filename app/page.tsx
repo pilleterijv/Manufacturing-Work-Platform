@@ -130,6 +130,7 @@ const empty: Data = {
 export default function Home() {
   const safety = useFloorSafety();
   const contextEquipment = useRef<Data["equipment"]>([]);
+  const contextOwner = useRef<string | null>(null);
   const [resetMode, setResetMode] = useState(false);
   useEffect(() => {
     setResetMode(location.hash.startsWith("#reset="));
@@ -158,6 +159,10 @@ export default function Home() {
     [expanded, setExpanded] = useState<Record<string, boolean>>({}),
     [refreshRevision, setRefreshRevision] = useState(0),
     [searchRevision, setSearchRevision] = useState(0);
+  if (contextOwner.current !== (user?.id ?? null)) {
+    contextOwner.current = user?.id ?? null;
+    contextEquipment.current = [];
+  }
   if (platformReady) contextEquipment.current = data.equipment;
   async function refreshSection() {
     setError("");
@@ -235,6 +240,14 @@ export default function Home() {
       filterKey = JSON.stringify(getSectionFilters());
     const account = await api("/api/account");
     if (epoch !== refreshEpoch.current) return;
+    if (initialHome.current && initialHome.current !== account.user?.id) {
+      contextEquipment.current = [];
+      setData(empty);
+      setPlatformReady(false);
+      setOperations(emptyOperations);
+      setOperationsReady(false);
+      safety.clear();
+    }
     setUser(account.user);
     if (account.user && !account.user.mustChange) {
       if (initialHome.current !== account.user.id) {

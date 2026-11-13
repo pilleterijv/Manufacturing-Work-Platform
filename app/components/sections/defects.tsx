@@ -99,6 +99,7 @@ export default function Defects({
         >
           <Field label="Defect machine">
             <select
+              aria-label="Defect machine"
               name="equipmentId"
               required
               value={equipmentId}

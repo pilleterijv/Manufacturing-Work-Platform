@@ -1,5 +1,6 @@
 "use client";
 import { roleHome } from "@/lib/floor-navigation";
+import { canOpenSection } from "@/lib/navigation";
 import type { NavigationUser } from "@/lib/navigation";
 export default function ShiftHome({
   user,
@@ -22,6 +23,16 @@ export default function ShiftHome({
               ? "Complete leader work, check missed tasks and pass important conditions to the next shift."
               : "Choose your assigned work. Confirm the machine, complete the checks and wait for the saved confirmation."}
       </p>
+      {canOpenSection(user, "Standard work") &&
+        !home.primary.includes("Standard work") && (
+          <button
+            type="button"
+            className="primary"
+            onClick={() => go("Standard work")}
+          >
+            Start standard work →
+          </button>
+        )}
       <div className="module-grid">
         {home.primary.map((name) => (
           <button
@@ -30,7 +41,9 @@ export default function ShiftHome({
             key={name}
             onClick={() => go(name)}
           >
-            <strong>{name}</strong>
+            <strong>
+              {name === "Standard work" ? "Start standard work" : name}
+            </strong>
             <span>Open →</span>
           </button>
         ))}

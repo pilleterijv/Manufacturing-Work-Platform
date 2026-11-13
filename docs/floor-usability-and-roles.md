@@ -1,5 +1,12 @@
 # Floor usability review and custom roles
 
+Update: the role-focused home panels, expandable secondary tools/reports,
+machine/shift context, machine-label entry, draft warnings, filtered assignment
+shortcuts and report retry protection are now implemented. See
+[the current floor workflow guide](floor-workflows.md) for behavior and limits.
+The recommendations below remain the original review; formal document approval,
+device-specific pilot validation and per-location role differences remain future work.
+
 The app covers the main manufacturing workflows, but it still presents many tools
 at the same level. The next usability priority is reducing decisions during a
 shift. This is a code/workflow review, not a claim that operators have completed
