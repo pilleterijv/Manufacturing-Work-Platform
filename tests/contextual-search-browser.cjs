@@ -458,10 +458,13 @@ async function main() {
   });
   await guideSearch.fill("rollerwear");
   await page
-    .getByRole("option")
+    .locator('[role="listbox"] [role="option"]')
     .filter({ hasText: contents[1].title })
     .waitFor();
-  await page.getByRole("option").filter({ hasText: contents[1].title }).click();
+  await page
+    .locator('[role="listbox"] [role="option"]')
+    .filter({ hasText: contents[1].title })
+    .click();
   await page
     .getByRole("button", { name: "Apply filters", exact: true })
     .click();
@@ -483,7 +486,10 @@ async function main() {
     exact: true,
   });
   await search.fill(problem.reference);
-  await page.getByRole("option").filter({ hasText: problem.reference }).click();
+  await page
+    .locator('[role="listbox"] [role="option"]')
+    .filter({ hasText: problem.reference })
+    .click();
   await page
     .getByRole("button", { name: "Apply filters", exact: true })
     .click();
@@ -493,7 +499,10 @@ async function main() {
   await page
     .getByRole("combobox", { name: "Search improvement ideas", exact: true })
     .fill("guardrailrevision");
-  await page.getByRole("option").filter({ hasText: idea.title }).waitFor();
+  await page
+    .locator('[role="listbox"] [role="option"]')
+    .filter({ hasText: idea.title })
+    .waitFor();
   await nav("Centerlines");
   const person = page.getByRole("combobox", {
     name: "Centerline auditor",
@@ -510,7 +519,7 @@ async function main() {
       name: "Centerline auditor suggestions",
       exact: true,
     })
-    .getByRole("option")
+    .locator('[role="listbox"] [role="option"]')
     .filter({ hasText: users[0].username })
     .click();
   await page
@@ -542,7 +551,7 @@ async function main() {
     .getByRole("combobox", { name: "Search downtime", exact: true })
     .fill(equipment[0].name);
   await page
-    .getByRole("option")
+    .locator('[role="listbox"] [role="option"]')
     .filter({ hasText: equipment[0].name })
     .first()
     .waitFor();

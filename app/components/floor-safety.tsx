@@ -64,7 +64,8 @@ export function useFloorSafety() {
         e.returnValue = "";
       }
     };
-    document.addEventListener("input", change, true);
+    // Observe after React's controlled-input handlers have read the new value.
+    document.addEventListener("input", change);
     const discard = (e: Event) => {
       const button = (e.target as HTMLElement)?.closest(".page button");
       if (
@@ -109,18 +110,18 @@ export function useFloorSafety() {
       )
         change(e);
     };
-    document.addEventListener("click", buttonChange, true);
-    document.addEventListener("change", change, true);
+    document.addEventListener("click", buttonChange);
+    document.addEventListener("change", change);
     document.addEventListener("submit", submit, true);
     document.addEventListener("reset", reset, true);
     window.addEventListener("floorwork:mutation", mutation);
     window.addEventListener("beforeunload", leave);
     return () => {
-      document.removeEventListener("input", change, true);
+      document.removeEventListener("input", change);
       document.removeEventListener("click", discard, true);
-      document.removeEventListener("click", buttonChange, true);
+      document.removeEventListener("click", buttonChange);
       window.removeEventListener("floorwork:discard", discardRequest);
-      document.removeEventListener("change", change, true);
+      document.removeEventListener("change", change);
       document.removeEventListener("submit", submit, true);
       document.removeEventListener("reset", reset, true);
       window.removeEventListener("floorwork:mutation", mutation);

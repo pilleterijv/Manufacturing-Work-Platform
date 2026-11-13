@@ -70,8 +70,8 @@ export default function Work({
         .catch((e) => setLocalError(e.message));
   }, [audit, data.standards]);
   const s = data.standards.find((s) => s.id === id);
-  function select(id: string) {
-    if (!confirmDraftChange()) return;
+  function select(id: string, check = true) {
+    if (check && !confirmDraftChange()) return;
     setId(id);
     setResponses({});
     setCycles([]);
@@ -163,7 +163,7 @@ export default function Work({
                   ...(audit && !leader && cycles.length ? { cycles } : {}),
                 })
               ) {
-                select("");
+                select("",false);
                 setOperator("");
               }
             }}

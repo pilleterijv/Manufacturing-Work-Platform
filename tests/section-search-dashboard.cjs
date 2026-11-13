@@ -217,7 +217,7 @@ const check = async (r, status = 200) => {
     });
     await search.fill(prefix);
     await page
-      .getByRole("option")
+      .locator('[role="listbox"] [role="option"]')
       .filter({ hasText: equipment[0].name })
       .first()
       .waitFor();
@@ -232,7 +232,7 @@ const check = async (r, status = 200) => {
     assert.equal(await search.getAttribute("aria-expanded"), "false");
     await search.fill(equipment[0].name);
     await page
-      .getByRole("option")
+      .locator('[role="listbox"] [role="option"]')
       .filter({ hasText: equipment[0].name })
       .first()
       .click();
@@ -244,7 +244,7 @@ const check = async (r, status = 200) => {
     await person.fill("Morgan Search");
     await page
       .getByRole("listbox", { name: "Study recorder suggestions" })
-      .getByRole("option")
+      .locator('[role="listbox"] [role="option"]')
       .filter({ hasText: users[0].name })
       .click();
     assert((await person.inputValue()).includes(users[0].username));
