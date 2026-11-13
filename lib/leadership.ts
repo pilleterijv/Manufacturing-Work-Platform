@@ -22,6 +22,8 @@ type Counts = {
   runs: number;
   studies: number;
   audits: number;
+  leaderWork: number;
+  leaderFollowUps: number;
   auditFollowUps: number;
   averageCompletionSeconds: number | null;
 };
@@ -115,6 +117,8 @@ export async function leadershipReport(
       (count(*) FILTER (WHERE kind='run'))::int AS runs,
       (count(*) FILTER (WHERE kind='study'))::int AS studies,
       (count(*) FILTER (WHERE kind='audit'))::int AS audits,
+      (count(*) FILTER (WHERE kind='audit' AND data#>>'{snapshot,workflow}'='leader'))::int AS "leaderWork",
+      (count(*) FILTER (WHERE kind='audit' AND data#>>'{snapshot,workflow}'='leader' AND data->>'followUp'='true'))::int AS "leaderFollowUps",
       (count(*) FILTER (WHERE kind='audit' AND data->>'followUp'='true'))::int AS "auditFollowUps",
       avg((data->>'durationSeconds')::double precision) FILTER (WHERE kind='run') AS "averageCompletionSeconds" FROM scoped`),
     db.$queryRaw<{ responses: number; noAnswers: number }[]>(Prisma.sql`${base}
@@ -142,7 +146,7 @@ export async function leadershipReport(
     db.$queryRaw<
       { total: number }[]
     >(Prisma.sql`SELECT count(*)::int AS total FROM (
-      SELECT DISTINCT ON (family) "equipmentId" FROM "Standard" ORDER BY family, revision DESC
+      SELECT DISTINCT ON (family) "equipmentId" FROM "Standard" WHERE NOT archived ORDER BY family, revision DESC
     ) s JOIN "Equipment" e ON e.id=s."equipmentId"
     WHERE ${equipmentSql(assignmentIds, Prisma.sql`e.id`)} ${department ? Prisma.sql`AND e.department=${department}` : Prisma.empty}`),
     db.equipment.count({

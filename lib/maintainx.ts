@@ -1,3 +1,4 @@
+import { readBoundedResponseJson } from "./http-body";
 import { effectiveGrants } from "./delegation-rules";
 import { assertEquipmentAccess, type ScopedUser } from "./location-access";
 import { db } from "./db";
@@ -92,7 +93,7 @@ export async function submitMaintainx(
       },
     );
     if (!response.ok) throw Error("Work order submission was not confirmed");
-    const body = await response.json(),
+    const body = await readBoundedResponseJson(response, 256 * 1024),
       orderId = z
         .number()
         .int()

@@ -10,7 +10,7 @@ import RefreshControl, {
   SectionRefreshContext,
 } from "./components/refresh-control";
 import SectionDashboard from "./components/section-dashboard";
-import { hasSectionViews } from "@/lib/section-views";
+import { hasSectionViews, hasSectionSearch } from "@/lib/section-views";
 import SectionFiltersBar from "./components/section-filters";
 import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
@@ -40,6 +40,7 @@ const PersonalDashboard = dynamic(
 );
 const FiveS = dynamic(() => import("./components/sections/five-s"));
 const Defects = dynamic(() => import("./components/sections/defects"));
+const Centerlines = dynamic(() => import("./components/sections/centerlines"));
 const Maintenance = dynamic(() => import("./components/sections/maintenance"));
 const Reminders = dynamic(() => import("./components/sections/reminders"));
 const ExternalData = dynamic(() => import("./components/external-data"));
@@ -96,7 +97,8 @@ const Leadership = dynamic(
 const platformViews: Record<string, string> = {
   Overview: "overview",
   "Standard work": "work",
-  "DL/TL Standard Work": "audits",
+  "DL/TL Standard Work": "leaders",
+  "Standard work audits": "audits",
   "Time studies": "studies",
   Training: "training",
   Troubleshooting: "guides",
@@ -159,6 +161,14 @@ export default function Home() {
     setRefreshRevision((v) => v + 1);
   }
   useEffect(() => setSuggestedTitles([]), [tab]);
+  useEffect(() => {
+    if (!hasSectionSearch(tab) && (filters.person || filters.search)) {
+      setSectionFilters({ person: "", search: "" });
+      setFilters({ person: "", search: "" });
+      setPlatformReady(false);
+      setPlatformTab("");
+    }
+  }, [tab]);
   const initialHome = useRef<string | null>(null);
   const refreshEpoch = useRef(0),
     currentView = useRef(tab);
@@ -551,11 +561,13 @@ export default function Home() {
     ["Standard work", "work", "☑"],
     ["Time studies", "studies", "◷"],
     ["Preventive maintenance", "maintenance", "⚒"],
+    ["Centerlines", "centerlines", "≋"],
     ["TPM / CIL", "maintenance", "⚒"],
     ["5S audits", "fiveS", "◎"],
     ["Defect reporting", "defects", "◇"],
     ["Production results", "analytics", "▥"],
     ["DL/TL Standard Work", "audits", "◎"],
+    ["Standard work audits", "audits", "◉"],
     ["Training", null, "▷"],
     ["Troubleshooting", null, "◇"],
     ["Analytics", "analytics", "▥"],
@@ -573,6 +585,8 @@ export default function Home() {
   ];
   if (user.role === "Admin") nav.push(["Integrations", null, "⇄"]);
   const descriptions: Record<string, string> = {
+    Centerlines:
+      "Define machine settings and audit readings against approved limits.",
     "5S audits":
       "Audit area organization, cleanliness and sustained standards.",
     "TPM / CIL":
@@ -593,7 +607,7 @@ export default function Home() {
       "Follow each step. Verify the result. Capture the evidence.",
     "Time studies": "Observe the process and turn raw timing into insight.",
     "DL/TL Standard Work":
-      "Verify the standard and measure actual operator cycle times.",
+      "Complete assigned leader shift tasks, room checks and pass-down notes.",
     Training: "Practical know-how, ready when your team needs it.",
     Troubleshooting: "Find the guidance to get your process back on track.",
     Analytics: "Understand variation, spot failures, and track performance.",
@@ -742,50 +756,54 @@ export default function Home() {
                   <a
                     className="outline"
                     href={filterUrl(
-                      tab === "5S audits"
-                        ? "/api/five-s?format=xlsx"
-                        : tab === "Defect reporting"
-                          ? "/api/defects?format=xlsx"
-                          : tab === "TPM / CIL"
-                            ? "/api/maintenance?kind=cil&format=xlsx"
-                            : tab === "Preventive maintenance"
-                              ? "/api/maintenance?format=xlsx"
-                              : tab === "Production results"
-                                ? "/api/external-data?section=Production%20results&format=xlsx"
-                                : tab === "Problem solving"
-                                  ? "/api/problems?format=xlsx"
-                                  : "/api/export",
+                      tab === "Centerlines"
+                        ? "/api/centerlines?format=xlsx"
+                        : tab === "5S audits"
+                          ? "/api/five-s?format=xlsx"
+                          : tab === "Defect reporting"
+                            ? "/api/defects?format=xlsx"
+                            : tab === "TPM / CIL"
+                              ? "/api/maintenance?kind=cil&format=xlsx"
+                              : tab === "Preventive maintenance"
+                                ? "/api/maintenance?format=xlsx"
+                                : tab === "Production results"
+                                  ? "/api/external-data?section=Production%20results&format=xlsx"
+                                  : tab === "Problem solving"
+                                    ? "/api/problems?format=xlsx"
+                                    : "/api/export",
                     )}
                   >
                     ↓ Export Excel
                   </a>
                 )}
               </div>
-              <SectionFiltersBar
-                key={tab}
-                section={tab}
-                titles={[
-                  ...data.standards.map((s) => s.title),
-                  ...data.records
-                    .map((r) => r.data?.title || r.data?.snapshot?.title)
-                    .filter(Boolean),
-                  ...data.content.map((c) => c.title),
-                  ...suggestedTitles,
-                ]}
-                value={filters}
-                onApply={(value) => {
-                  opsGeneration.current++;
-                  historyGeneration.current++;
-                  refreshEpoch.current++;
-                  setSectionFilters(value);
-                  setFilters(value);
-                  setPlatformReady(false);
-                  setPlatformTab("");
-                  setData(empty);
-                  setOperationsReady(false);
-                  setOperations(emptyOperations);
-                }}
-              />
+              {hasSectionSearch(tab) && (
+                <SectionFiltersBar
+                  key={tab}
+                  section={tab}
+                  titles={[
+                    ...data.standards.map((s) => s.title),
+                    ...data.records
+                      .map((r) => r.data?.title || r.data?.snapshot?.title)
+                      .filter(Boolean),
+                    ...data.content.map((c) => c.title),
+                    ...suggestedTitles,
+                  ]}
+                  value={filters}
+                  onApply={(value) => {
+                    opsGeneration.current++;
+                    historyGeneration.current++;
+                    refreshEpoch.current++;
+                    setSectionFilters(value);
+                    setFilters(value);
+                    setPlatformReady(false);
+                    setPlatformTab("");
+                    setData(empty);
+                    setOperationsReady(false);
+                    setOperations(emptyOperations);
+                  }}
+                />
+              )}
               {error && (
                 <div className="error" role="alert">
                   {error}
@@ -846,6 +864,7 @@ export default function Home() {
               <div hidden={hasSectionViews(tab) && sectionMode === "dashboard"}>
                 {tab === "Overview" && (
                   <PersonalDashboard
+                    canGo={(name) => canOpenSection(user, name)}
                     key={JSON.stringify(preferences)}
                     preferences={preferences}
                     go={setTab}
@@ -862,6 +881,8 @@ export default function Home() {
                   >
                     {(g.includes("dashboard") || g.includes("leadership")) && (
                       <Leadership
+                        go={setTab}
+                        canGo={(name) => canOpenSection(user, name)}
                         timezone={operations.config.timezone}
                         canExport={g.includes("export")}
                         endpoint="/api/dashboard"
@@ -903,6 +924,16 @@ export default function Home() {
                   <Work data={data} save={save} busy={busy} audit={false} />
                 )}
                 {tab === "DL/TL Standard Work" && sectionReady && (
+                  <Work
+                    data={data}
+                    save={save}
+                    busy={busy}
+                    audit
+                    leader
+                    shiftNames={operations.config.shifts.map((s) => s.name)}
+                  />
+                )}
+                {tab === "Standard work audits" && sectionReady && (
                   <Work data={data} save={save} busy={busy} audit />
                 )}
                 {tab === "Time studies" && sectionReady && (
@@ -956,6 +987,7 @@ export default function Home() {
                     busy={busy}
                   />
                 )}
+                {tab === "Centerlines" && <Centerlines />}
                 {tab === "5S audits" && (
                   <FiveS userId={user.id} admin={user.role === "Admin"} />
                 )}
@@ -995,6 +1027,8 @@ export default function Home() {
                 )}
                 {tab === "Leadership dashboard" && (
                   <Leadership
+                    go={setTab}
+                    canGo={(name) => canOpenSection(user, name)}
                     timezone={operations.config.timezone}
                     canExport={g.includes("export")}
                   />

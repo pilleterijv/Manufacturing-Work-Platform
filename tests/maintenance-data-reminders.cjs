@@ -813,8 +813,21 @@ async function cleanup() {
   await db.externalRow.deleteMany({ where: { feedId: { in: feedIds } } });
   await db.externalFeed.deleteMany({ where: { id: { in: feedIds } } });
   await db.integrationSource.deleteMany({ where: { id: { in: sourceIds } } });
-  await db.notification.deleteMany({ where: { userId: { in: ids } } });
-  await db.reminder.deleteMany({ where: { userId: { in: ids } } });
+  const fixtureIdeas = await db.idea.findMany({
+    where: { createdBy: { in: ids } },
+    select: { id: true },
+  });
+  await db.notification.deleteMany({
+    where: {
+      OR: [
+        { userId: { in: ids } },
+        { ideaId: { in: fixtureIdeas.map((x) => x.id) } },
+      ],
+    },
+  });
+  await db.reminder.deleteMany({
+    where: { OR: [{ userId: { in: ids } }, { equipmentId: { in: eq } }] },
+  });
   const cases = await db.problem.findMany({
     where: { createdBy: { in: ids } },
     select: { id: true },

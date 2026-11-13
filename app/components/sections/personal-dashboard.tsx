@@ -10,9 +10,11 @@ import { Field } from "../shared";
 export default function PersonalDashboard({
   go,
   preferences,
+  canGo = () => true,
 }: {
   go: (tab: string) => void;
   preferences?: DashboardPreferences;
+  canGo?: (name: string) => boolean;
 }) {
   const [data, setData] = useState<any>(null),
     [scope, setScope] = useState(
@@ -126,10 +128,38 @@ export default function PersonalDashboard({
                   chosen.indexOf(a.key as any) - chosen.indexOf(b.key as any),
               )
               .map(({ s, i }) => (
-                <div className="metric" key={s}>
+                <button
+                  type="button"
+                  className="metric metric-shortcut"
+                  key={s}
+                  disabled={
+                    !canGo(
+                      [
+                        "Improvement ideas",
+                        "Problem solving",
+                        "Preventive maintenance",
+                        "Defect reporting",
+                        "5S audits",
+                      ][i],
+                    )
+                  }
+                  onClick={() =>
+                    go(
+                      [
+                        "Improvement ideas",
+                        "Problem solving",
+                        "Preventive maintenance",
+                        "Defect reporting",
+                        "5S audits",
+                      ][i],
+                    )
+                  }
+                  aria-label={`View ${s} assignments`}
+                >
                   <strong>{data.counts[i]}</strong>
                   <span>{s}</span>
-                </div>
+                  <small>Open section →</small>
+                </button>
               ))}
           </div>
           {[

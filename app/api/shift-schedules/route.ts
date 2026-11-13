@@ -48,7 +48,7 @@ export async function GET(req: Request) {
         visiblePeople(u, ids),
         db.$queryRaw<
           any[]
-        >`SELECT DISTINCT ON (s.family) s.*,e.name AS "equipmentName",e.department FROM "Standard" s JOIN "Equipment" e ON e.id=s."equipmentId" WHERE e.id=ANY(${ids}::text[]) ORDER BY s.family,s.revision DESC`,
+        >`SELECT DISTINCT ON (s.family) s.*,e.name AS "equipmentName",e.department FROM "Standard" s JOIN "Equipment" e ON e.id=s."equipmentId" WHERE NOT s.archived AND e.id=ANY(${ids}::text[]) ORDER BY s.family,s.revision DESC`,
         db.setting.findUniqueOrThrow({ where: { key: "shifts" } }),
         db.setting.findUnique({ where: { key: "shift-monitor-health" } }),
         u.role === "Admin"
@@ -89,7 +89,8 @@ export async function POST(req: Request) {
         where: { family: v.family },
         orderBy: { revision: "desc" },
       });
-      if (!latest) throw new HttpError(400, "Choose a current standard");
+      if (!latest || latest.archived)
+        throw new HttpError(400, "Choose a current standard");
       await assertEquipmentAccess(u, latest.equipmentId);
       await eligiblePeople(latest.equipmentId, [
         ...v.assigneeIds,

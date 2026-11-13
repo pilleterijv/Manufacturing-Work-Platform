@@ -1,8 +1,16 @@
 # Floorwork — Manufacturing Work Platform
 
+Current hardening and device readiness: [security/resource review](docs/security-performance-review.md), [iPad/tablet/computer installation](docs/tablet-deployment.md), and [step-by-step TrakSYS/Azure SQL connections](docs/traksys-sql-connection-guide.md). Clients use the shared HTTPS app without Node or Docker. This release updates the vulnerable XML parser, streams video ranges, uploads video without base64 copies, bounds external responses and reuses limited SQL pools.
+
+Machine **Centerlines** now support product/setup settings, numeric or text limits, photo/video audit evidence, permanent revision snapshots and follow-up results. **Apply migration 014 before starting this update.** See [Centerlines setup and usage](docs/centerlines.md).
+
 A browser application for standard work, photographic evidence, time studies, DL/TL Standard Work, troubleshooting, training, role permissions, downtime tracking, improvement ideas, leadership reporting, and Excel exports. PostgreSQL is the primary database; Excel is an export format.
 
 This update adds area-based **5S audits**, machine **TPM/CIL**, **defect reporting with optional MaintainX work-order submission**, personal/assigned-department dashboards, registration approval, password-recovery emails and searchable account pickers. See [setup and limits](docs/five-s-tpm-access.md) and [screenshots](docs/screenshots/five-s-tpm). Migration 011 preserves existing work. Live MaintainX/SMTP require private IT setup; no company work orders or emails have been sent by development tests.
+
+## Reference forms, leader work and obsolete content
+
+The supplied department/area catalog, 2D/4D/8D form fields and optional second 5-Why path are available. DL/TL leader shift checklists are separate from timed process audits, dashboard cards open their sections, and obsolete standards/tasks/guides can be retired without deleting completed evidence. **Apply migration 013 before starting this version.** See [setup, catalog loading and migration instructions](docs/reference-forms-leader-work.md).
 
 ## Search, section dashboards and history refresh
 

@@ -1,3 +1,5 @@
+import { readBodyBytes } from "./http-body";
+import { securityEvent } from "./security-events";
 import { serviceIssue } from "./service-errors";
 import { canAdminister } from "./capabilities";
 import type { AdminPrivilege } from "./delegation-rules";
@@ -49,7 +51,7 @@ export async function requireUser(cap?: Capability, allowChange = false) {
     throw new HttpError(403, "You do not have permission for this action");
   return u;
 }
-export async function jsonBody(req: Request, max = 256 * 1024) {
+export function assertRequestOrigin(req: Request) {
   const origin = process.env.APP_ORIGIN;
   const allowed =
     origin &&
@@ -60,6 +62,7 @@ export async function jsonBody(req: Request, max = 256 * 1024) {
         process.env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN,
     });
   if (!allowed) {
+    securityEvent("origin_rejected");
     if (process.env.CODESPACES === "true")
       console.warn(
         "[origin-check]",
@@ -67,43 +70,32 @@ export async function jsonBody(req: Request, max = 256 * 1024) {
       );
     throw new HttpError(403, "Request origin is not allowed");
   }
+}
+export async function jsonBody(req: Request, max = 256 * 1024) {
+  assertRequestOrigin(req);
   return readJsonBody(req, max);
 }
 export async function readJsonBody(req: Request, max = 256 * 1024) {
   if (!(req.headers.get("content-type") ?? "").startsWith("application/json"))
     throw new HttpError(415, "Send JSON");
-  const reader = req.body?.getReader();
-  if (!reader) throw new HttpError(400, "Missing request body");
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  const timeout = setTimeout(() => void reader.cancel(), 15000);
   try {
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      size += value.length;
-      if (size > max) {
-        void reader.cancel();
-        throw new HttpError(413, "Request is too large");
-      }
-      chunks.push(value);
-    }
-    return JSON.parse(Buffer.concat(chunks).toString());
+    return JSON.parse((await readBodyBytes(req, max)).toString("utf8"));
   } catch (e) {
     if (e instanceof HttpError) throw e;
     throw new HttpError(400, "Invalid or incomplete JSON");
-  } finally {
-    clearTimeout(timeout);
-    reader.releaseLock();
   }
 }
+
 export async function limit(key: string, max: number, seconds: number) {
   const now = new Date();
   const rows = await db.$queryRaw<
     { count: number }[]
   >`INSERT INTO "Rate" (key,count,expires) VALUES (${key},1,${new Date(+now + seconds * 1000)}) ON CONFLICT (key) DO UPDATE SET count=CASE WHEN "Rate".expires < ${now} THEN 1 ELSE "Rate".count+1 END, expires=CASE WHEN "Rate".expires < ${now} THEN ${new Date(+now + seconds * 1000)} ELSE "Rate".expires END RETURNING count`;
-  if (rows[0].count > max)
+  if (rows[0].count > max) {
+    if (rows[0].count === max + 1)
+      securityEvent("rate_limited", { scope: key.split(":")[0] });
     throw new HttpError(429, "Too many requests. Try again later.");
+  }
 }
 export function failure(e: unknown) {
   if (e instanceof HttpError)
@@ -127,7 +119,9 @@ export function failure(e: unknown) {
   }
   console.error(
     "Request failed",
-    e instanceof Error ? e.name : "unknown",
+    e instanceof Error && /^[A-Za-z][A-Za-z0-9]{0,60}$/.test(e.name)
+      ? e.name
+      : "unknown",
     issue.code,
   );
   return Response.json(

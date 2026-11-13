@@ -44,6 +44,7 @@ export async function hashPassword(p: string) {
 }
 export async function verifyPassword(p: string, encoded: string) {
   if (p.length > 128) return false;
+  if (!/^[a-f0-9]{32}:[a-f0-9]{128}$/.test(encoded)) return false;
   const [salt, hash] = encoded.split(":");
   if (!salt || !hash || hash.length !== 128) return false;
   const key = await scrypt(p, salt);

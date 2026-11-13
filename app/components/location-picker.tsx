@@ -1,4 +1,5 @@
 "use client";
+import { referenceDepartments, referenceAreas } from "@/lib/reference-catalog";
 import { useState } from "react";
 import type { Data, Location } from "@/lib/workspace-types";
 import { Field } from "./shared";
@@ -112,6 +113,49 @@ export function LocationsEditor({
         Create the official names here, then use the dropdowns throughout the
         app. Existing equipment names and historical records are retained.
       </p>
+      <details>
+        <summary>
+          Load departments and known areas from the supplied forms
+        </summary>
+        <p>{referenceDepartments.join(" · ")}</p>
+        <p>
+          All departments use the area names you supplied.
+          Maintenance/Facilities is the maintenance department name retained
+          from your workbooks. Existing entries and access permissions are
+          preserved.
+        </p>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const f = e.currentTarget;
+            if (
+              await save({
+                action: "seed-catalog",
+                plant: new FormData(f).get("plant"),
+              })
+            )
+              f.reset();
+          }}
+        >
+          <Field label="Plant / site for reference catalog">
+            <input
+              name="plant"
+              required
+              maxLength={100}
+              list="reference-catalog-sites"
+              aria-label="Plant / site for reference catalog"
+            />
+          </Field>
+          <datalist id="reference-catalog-sites">
+            {[...new Set(rows.map((r) => r.plant))].map((plant) => (
+              <option key={plant} value={plant} />
+            ))}
+          </datalist>
+          <button className="outline" disabled={busy}>
+            Add reference department / area catalog
+          </button>
+        </form>
+      </details>
       <form
         onSubmit={async (e) => {
           e.preventDefault();

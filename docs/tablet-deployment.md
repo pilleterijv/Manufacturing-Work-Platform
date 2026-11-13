@@ -16,7 +16,7 @@ It is not an App Store/Play Store binary and does not bundle a database per tabl
 3. On iPad/iPhone, use **Safari → Share → Add to Home Screen** (Open as Web App
    when offered). On Android use **Chrome → menu → Install app / Add to Home Screen**.
    The app also displays **Installation help**; after dismissal use **Install app / Help**. Chromium can offer an Install app button when the browser permits it.
-   For a Codespaces preview, follow the [Codespaces and device setup guide](codespaces.md); the Codespace must stay running and its private preview requires GitHub authorization.
+   For a Codespaces preview, use the startup instructions for your branch in README; the Codespace must stay running and its private preview requires GitHub authorization.
 4. Open the home-screen icon. Use the device camera from a photo field as before.
 
 The service worker caches **only `/offline.html`**, a public reconnect notice.
@@ -119,14 +119,17 @@ requires its own grant. It defaults to the first equipment department when a
 non-leadership user has not selected one. Revoke `dashboard` to remove department
 report access, and `leadership` to remove the overall dashboard.
 
-Department filters are **reporting scope, not departmental tenant isolation**.
-Authorized dashboard users may select any department in the workspace. There is
-no user-to-department access assignment in this application. If departments must
-be prevented from seeing one another's aggregates or records, implement and test
-an explicit membership policy before rollout. The dashboard returns aggregates;
-it does not expose employee passwords, sessions, raw responses or photo contents.
+Department and area access is now explicitly assigned to each account. Reporting filters narrow the account's permitted machines; they do not grant access to another department. Managers receive assigned departments/areas, and direct machine assignments can be used where appropriate. Account and evidence access is rechecked server-side. Review assignments and custom permissions before rollout.
 
 Work/studies/audits/downtime and new ideas use the reporting date range. Equipment,
 current standards, libraries and the idea pipeline show their current state.
 Training/guide figures are library counts, not training completions/certifications.
 No scheduled-work completion percentage is claimed without a scheduling module.
+
+## Computer installation and company rollout
+
+Employees do not install Node, Docker or PostgreSQL. IT runs one shared server. Open its trusted HTTPS address in Edge or Chrome on Windows/macOS. In Edge use **menu → Apps → Install this site as an app**; in Chrome use **menu → Cast, save, and share → Install page as app** (names vary). It opens in a standalone window and can be pinned like other apps. Supported macOS Safari versions can also use File → Add to Dock. Installation help remains available after dismissing the banner. This is a PWA, not a new native MSI/EXE installer or App Store binary.
+
+Use a stable company subdomain and trusted certificate for iPads and PCs; no new domain purchase is necessary if IT supplies an existing subdomain. A Codespace is useful for pilot work but sleeps and requires GitHub preview authorization. It is not the always-on shared company service. Use company MDM to distribute the approved URL/home-screen shortcut and device trust; allow company network/VPN access and test camera/video permissions. The browser and company device policy control installation availability.
+
+Follow [company rollout steps](company-rollout-step-by-step.md), [TrakSYS/SQL connection instructions](traksys-sql-connection-guide.md), and [current security/resource review](security-performance-review.md). Test representative physical iPads and Windows computers before rollout; automated viewport/emulated-device tests cannot certify native OS behavior.

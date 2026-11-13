@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { mediaMime, readMediaFile } from "@/lib/client-media";
+import { mediaMime, readMediaFile, uploadVideo } from "@/lib/client-media";
 import { api } from "@/lib/client-api";
 import type { Evidence } from "@/lib/evidence";
 // This module imports only the erased type; all authorization stays on the server.
@@ -75,11 +75,9 @@ export default function EvidenceInput({
                     ? "Video must be under 32 MB"
                     : "Photo must be under 8 MB",
                 );
-              const data = await readMediaFile(f);
-              const r = await api(
-                video ? "/api/guide-media" : "/api/photos",
-                video ? { video: data } : { image: data },
-              );
+              const r = video
+                ? await uploadVideo(f)
+                : await api("/api/photos", { image: await readMediaFile(f) });
               onChange([
                 ...value,
                 {

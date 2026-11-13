@@ -16,8 +16,12 @@ export type Step = {
   text: string;
   photo: boolean;
   fiveSPlanId?: string;
+  group?: string;
+  timing?: string;
 };
 export type Standard = {
+  archived?: boolean;
+  workflow?: string;
   kind: string;
   assigneeIds: string[];
   id: string;
@@ -60,6 +64,7 @@ export type Data = {
     runs: number;
     studies: number;
     audits: number;
+    leaderWork?: number;
     followUps: number;
   };
   equipment: Equipment[];

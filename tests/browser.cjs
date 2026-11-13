@@ -182,7 +182,7 @@ async function main() {
   });
   assert(study.data.cycles[0].seconds > 0.3);
   await page
-    .getByRole("button", { name: "◎ DL/TL Standard Work", exact: true })
+    .getByRole("button", { name: "◉ Standard work audits", exact: true })
     .click();
   await page
     .getByLabel("Standard work", { exact: true })
@@ -204,7 +204,7 @@ async function main() {
     fullPage: true,
   });
   await page
-    .getByRole("button", { name: "Complete DL/TL Standard Work", exact: true })
+    .getByRole("button", { name: "Complete standard-work audit", exact: true })
     .click();
   await page.getByRole("status").waitFor();
   const audit = await db.record.findFirst({
@@ -231,7 +231,7 @@ async function main() {
   assert.equal(old.data.snapshot.steps[0].id, "inspection");
   r = await request(context, "/api/platform", {
     action: "video",
-    title: "Machine setup walkthrough",
+    title: `Machine setup walkthrough ${suffix}`,
     equipmentId: equipment.id,
     body: "https://youtu.be/dQw4w9WgXcQ",
   });
@@ -239,7 +239,7 @@ async function main() {
   contentIds.push(
     (
       await db.content.findFirst({
-        where: { title: "Machine setup walkthrough" },
+        where: { title: `Machine setup walkthrough ${suffix}` },
       })
     ).id,
   );
@@ -258,7 +258,7 @@ async function main() {
   await page.getByRole("button", { name: "▷ Training", exact: true }).click();
   await page
     .getByRole("button", {
-      name: "Play Machine setup walkthrough",
+      name: `Play Machine setup walkthrough ${suffix}`,
       exact: true,
     })
     .waitFor();
@@ -273,7 +273,7 @@ async function main() {
     }),
   );
   await page
-    .getByRole("button", { name: "Play Machine setup walkthrough" })
+    .getByRole("button", { name: `Play Machine setup walkthrough ${suffix}` })
     .click();
   await page.locator("iframe").waitFor();
   const exportResponse = await context.request.get(origin + "/api/export");
@@ -357,7 +357,7 @@ async function main() {
   const mp = await manager.newPage();
   await mp.goto(origin);
   await mp
-    .getByRole("button", { name: "◎ DL/TL Standard Work", exact: true })
+    .getByRole("button", { name: "◉ Standard work audits", exact: true })
     .click();
   await mp
     .getByLabel("Standard work", { exact: true })

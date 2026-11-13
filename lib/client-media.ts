@@ -28,3 +28,22 @@ export async function readMediaFile(file: File) {
   });
   return `data:${mime};base64,${value.split(",")[1]}`;
 }
+
+// Sending the original Blob avoids the base64/JSON copies and 33% wire overhead.
+export async function uploadVideo(file: File) {
+  const mime = mediaMime(file);
+  if (!["video/mp4", "video/webm", "video/quicktime"].includes(mime))
+    throw Error("Choose MP4, MOV or WebM");
+  if (file.size > 32 * 1024 * 1024) throw Error("Video must be under 32 MB");
+  const response = await fetch("/api/guide-media", {
+    method: "POST",
+    headers: {
+      "Content-Type": mime,
+      "X-Floorwork-Origin": window.location.origin,
+    },
+    body: file,
+  });
+  const data = await response.json();
+  if (!response.ok) throw Error(data.error ?? "Video upload failed");
+  return data as { id: string };
+}

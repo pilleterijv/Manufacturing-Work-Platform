@@ -64,6 +64,8 @@ model Location {
  @@unique([plant,department,area,line])
 }
 model Standard {
+ archived Boolean @default(false)
+ workflow String @default("process")
  id String @id @default(uuid())
  family String
  revision Int
@@ -471,4 +473,20 @@ model AccountAudit {
  data Json
  createdAt DateTime @default(now())
  @@index([targetId,createdAt])
+}
+
+model Centerline {
+ id String @id @default(uuid())
+ title String
+ equipmentId String
+ setup String @default("")
+ notes String @default("")
+ parameters Json
+ active Boolean @default(true)
+ version Int @default(1)
+ history Json @default("[]")
+ createdBy String
+ createdAt DateTime @default(now())
+ updatedAt DateTime @default(now())
+ @@index([equipmentId,active])
 }

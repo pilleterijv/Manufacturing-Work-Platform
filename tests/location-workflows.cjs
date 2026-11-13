@@ -595,7 +595,7 @@ async function main() {
   const tp = await tl.newPage();
   await tp.goto(origin);
   await tp
-    .getByRole("button", { name: "◎ DL/TL Standard Work", exact: true })
+    .getByRole("button", { name: "◉ Standard work audits", exact: true })
     .click();
   await tp.getByLabel("Standard work", { exact: true }).selectOption(audit.id);
   await tp.screenshot({

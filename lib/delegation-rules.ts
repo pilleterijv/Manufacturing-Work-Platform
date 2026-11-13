@@ -16,6 +16,7 @@ export const privilegeDefinitions = {
   "standards.manage": "Publish standard-work revisions",
   "resources.manage": "Maintain troubleshooting guides",
   "training.manage": "Maintain training content",
+  "centerlines.manage": "Manage machine centerline settings",
   "maintenance.manage": "Manage PM and CIL plans",
   "fiveS.manage": "Manage 5S area audit plans",
   "schedules.manage": "Manage shift-work schedules",
@@ -67,13 +68,15 @@ export function effectiveGrants(
   return [
     ...new Set([
       ...validPrivileges(privileges).flatMap((p) =>
-        p === "maintenance.manage"
-          ? ["maintenance" as const]
-          : p === "fiveS.manage"
-            ? ["fiveS" as const]
-            : p === "training.manage"
-              ? ["training" as const]
-              : [],
+        p === "centerlines.manage"
+          ? ["centerlines" as const]
+          : p === "maintenance.manage"
+            ? ["maintenance" as const]
+            : p === "fiveS.manage"
+              ? ["fiveS" as const]
+              : p === "training.manage"
+                ? ["training" as const]
+                : [],
       ),
       ...(Array.isArray(raw)
         ? raw.filter(

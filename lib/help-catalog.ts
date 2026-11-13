@@ -7,6 +7,18 @@ export type HelpTopic = {
 };
 export const helpTopics: HelpTopic[] = [
   {
+    section: "Centerlines",
+    keywords:
+      "centerline machine settings target tolerance range setup audit readings",
+    text: "Set approved machine parameters, then compare actual readings with the original limits.",
+    steps: [
+      "Open Centerlines. Managers or delegated centerline editors can add settings for a permitted machine and product/setup.",
+      "Define numeric targets and inclusive lower/upper limits, or an expected text setting. Add check instructions and evidence requirements.",
+      "Choose Audit centerline, record each reading, and explain every out-of-limit result. Attach required evidence and save.",
+      "Use history to review the original revision, readings and evidence. Refresh history without clearing an audit draft. Retiring settings preserves history.",
+    ],
+  },
+  {
     section: "Overview",
     keywords: "dashboard home personal assignments overdue login",
     text: "Your overview brings together your permitted assignments and work.",
@@ -40,12 +52,12 @@ export const helpTopics: HelpTopic[] = [
   },
   {
     section: "DL/TL Standard Work",
-    keywords: "dl tl leader supervisor audit linked 5s shift",
-    text: "DL/TL tasks may require an assigned auditor and a linked 5S result.",
+    keywords: "dl tl leader supervisor linked 5s shift handoff",
+    text: "DL/TL leader work is an assigned shift checklist with optional linked 5S evidence and room/machine handoff notes. Timed process checks are in Standard work audits.",
     steps: [
       "Select the assigned DL/TL process.",
       "If a step links 5S, complete that plan for the same area today, then select your completed audit in the step.",
-      "Answer the remaining steps, stop any running timer and save the work.",
+      "Choose the leader-work shift, record room/machine pass-down notes, answer the assigned tasks and save.",
     ],
   },
   {
