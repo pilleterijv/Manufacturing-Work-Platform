@@ -645,8 +645,10 @@ async function main() {
   await mp
     .getByRole("button", { name: "◈ Problem solving", exact: true })
     .click();
-  await mp.getByLabel("Find a record").fill(prefix + " recurring issue");
-  await mp.getByRole("button", { name: "Search", exact: true }).click();
+  await mp
+    .getByRole("combobox", { name: "Search problem solving", exact: true })
+    .fill(prefix + " recurring issue");
+  await mp.getByRole("button", { name: "Apply filters", exact: true }).click();
   await mp
     .getByRole("row")
     .filter({ hasText: prefix + " recurring issue" })

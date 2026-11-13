@@ -115,17 +115,17 @@ export default function Problems({
   userId,
   userName,
   canExport,
+  searchKey = "",
 }: {
   userId: string;
   userName: string;
   canExport: boolean;
+  searchKey?: string;
 }) {
   const [data, setData] = useState<List | null>(null),
     [department, setDepartment] = useState(""),
     [method, setMethod] = useState(""),
     [status, setStatus] = useState(""),
-    [search, setSearch] = useState(""),
-    [appliedSearch, setAppliedSearch] = useState(""),
     [view, setView] = useState("records"),
     [queue, setQueue] = useState<{
       items: QueueItem[];
@@ -140,9 +140,9 @@ export default function Problems({
     [caseUploading, setCaseUploading] = useState(false),
     [busy, setBusy] = useState(false),
     [loading, setLoading] = useState(false);
-  const generation = useRef(0);
-  const params = () =>
-    new URLSearchParams({ department, method, status, search: appliedSearch });
+  const generation = useRef(0),
+    queueGeneration = useRef(0);
+  const params = () => new URLSearchParams({ department, method, status });
   async function load(more = false) {
     const current = ++generation.current;
     setLoading(true);
@@ -163,17 +163,19 @@ export default function Problems({
     }
   }
   async function loadQueue(more = false) {
+    const current = ++queueGeneration.current;
     const p = params();
     p.set("view", "queue");
     if (more && queue.cursor) p.set("cursor", queue.cursor);
     try {
       const r = await api("/api/problems?" + p);
+      if (current !== queueGeneration.current) return;
       setQueue((prev) => ({
         ...r,
         items: more ? [...prev.items, ...r.items] : r.items,
       }));
     } catch (e) {
-      setError((e as Error).message);
+      if (current === queueGeneration.current) setError((e as Error).message);
     }
   }
   useSectionRefresh(
@@ -190,10 +192,13 @@ export default function Problems({
     return () => {
       generation.current++;
     };
-  }, [department, method, status, appliedSearch]);
+  }, [department, method, status, searchKey]);
   useEffect(() => {
     if (view === "queue") void loadQueue();
-  }, [view, department, method, status, appliedSearch]);
+    return () => {
+      queueGeneration.current++;
+    };
+  }, [view, department, method, status, searchKey]);
   async function open(id: string) {
     setError("");
     setNotice("");
@@ -320,7 +325,6 @@ export default function Problems({
           className="problem-filters"
           onSubmit={(e) => {
             e.preventDefault();
-            setAppliedSearch(search);
           }}
         >
           <Field label="Problem department">
@@ -350,15 +354,6 @@ export default function Problems({
               ))}
             </select>
           </Field>
-          <Field label="Find a record">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              maxLength={150}
-              placeholder="ID or problem title"
-            />
-          </Field>
-          <button className="outline">Search</button>
         </form>
         <p className="small muted">
           Department filters organize reporting; role permissions and

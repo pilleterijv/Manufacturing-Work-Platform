@@ -136,7 +136,7 @@ export default function Home() {
     [loaded, setLoaded] = useState(false),
     [data, setData] = useState<Data>(empty),
     [operations, setOperations] = useState<OperationsData>(emptyOperations),
-    [tab, setTab] = useState("Overview"),
+    [tab, setActiveTab] = useState("Overview"),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
@@ -151,7 +151,7 @@ export default function Home() {
     ),
     [expanded, setExpanded] = useState<Record<string, boolean>>({}),
     [refreshRevision, setRefreshRevision] = useState(0),
-    [suggestedTitles, setSuggestedTitles] = useState<string[]>([]);
+    [searchRevision, setSearchRevision] = useState(0);
   async function refreshSection() {
     setError("");
     setNotice("");
@@ -160,7 +160,7 @@ export default function Home() {
     await refresh();
     setRefreshRevision((v) => v + 1);
   }
-  useEffect(() => setSuggestedTitles([]), [tab]);
+
   useEffect(() => {
     if (!hasSectionSearch(tab) && (filters.person || filters.search)) {
       setSectionFilters({ person: "", search: "" });
@@ -173,6 +173,24 @@ export default function Home() {
   const refreshEpoch = useRef(0),
     currentView = useRef(tab);
   currentView.current = tab;
+  function setTab(name: string) {
+    if (currentView.current !== name) {
+      opsGeneration.current++;
+      historyGeneration.current++;
+      refreshEpoch.current++;
+      setSectionFilters({ person: "", search: "" });
+      setFilters({ person: "", search: "" });
+      setPlatformReady(false);
+      setPlatformTab("");
+      setOperationsReady(false);
+      setOpsDepartment("");
+      setError("");
+      setNotice("");
+      setSearchRevision((v) => v + 1);
+    }
+    setActiveTab(name);
+  }
+
   async function refresh() {
     let requestedTab = tab;
     const epoch = ++refreshEpoch.current,
@@ -737,7 +755,14 @@ export default function Home() {
                 <i /> Signed in <span className="role-tag">{user.role}</span>
               </span>
             </header>
-            <div className="page" key={filters.person + ":" + filters.search}>
+            <div
+              className="page"
+              key={
+                tab === "Problem solving"
+                  ? "problem-search"
+                  : filters.person + ":" + filters.search
+              }
+            >
               <div className="page-heading">
                 <div>
                   <span className="eyebrow">MANUFACTURING / OPERATIONS</span>
@@ -752,7 +777,7 @@ export default function Home() {
                   onRefresh={refreshSection}
                   label="Refresh section"
                 />
-                {g.includes("export") && (
+                {g.includes("export") && tab !== "Problem solving" && (
                   <a
                     className="outline"
                     href={filterUrl(
@@ -779,16 +804,8 @@ export default function Home() {
               </div>
               {hasSectionSearch(tab) && (
                 <SectionFiltersBar
-                  key={tab}
+                  key={tab + ":" + searchRevision}
                   section={tab}
-                  titles={[
-                    ...data.standards.map((s) => s.title),
-                    ...data.records
-                      .map((r) => r.data?.title || r.data?.snapshot?.title)
-                      .filter(Boolean),
-                    ...data.content.map((c) => c.title),
-                    ...suggestedTitles,
-                  ]}
                   value={filters}
                   onApply={(value) => {
                     opsGeneration.current++;
@@ -858,7 +875,6 @@ export default function Home() {
                   key={tab + filters.search + filters.person}
                   section={tab}
                   openDetails={() => setSectionMode("detail")}
-                  onTitles={setSuggestedTitles}
                 />
               )}
               <div hidden={hasSectionViews(tab) && sectionMode === "dashboard"}>
@@ -917,6 +933,7 @@ export default function Home() {
                   <Problems
                     userId={user.id}
                     userName={user.name}
+                    searchKey={filters.person + ":" + filters.search}
                     canExport={g.includes("export")}
                   />
                 )}

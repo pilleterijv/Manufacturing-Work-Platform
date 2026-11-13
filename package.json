@@ -35,7 +35,8 @@
     "codespaces:start": "node scripts/codespaces.cjs start",
     "test:install": "node tests/install-help.cjs",
     "test:centerlines": "node tests/centerlines-browser.cjs",
-    "test:security": "node tests/security-readiness.cjs"
+    "test:security": "node tests/security-readiness.cjs",
+    "test:contextual-search": "node tests/contextual-search-browser.cjs"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.29.1",

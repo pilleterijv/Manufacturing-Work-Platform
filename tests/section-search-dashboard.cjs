@@ -212,7 +212,7 @@ const check = async (r, status = 200) => {
       "Keep this unsaved draft",
     );
     const search = page.getByRole("combobox", {
-      name: "Search this section",
+      name: "Search time studies",
       exact: true,
     });
     await search.fill(prefix);
@@ -238,19 +238,16 @@ const check = async (r, status = 200) => {
       .click();
     assert.equal(await search.inputValue(), equipment[0].name);
     const person = page.getByRole("combobox", {
-      name: "Find a person",
+      name: "Study recorder",
       exact: true,
     });
     await person.fill("Morgan Search");
     await page
-      .getByRole("listbox", { name: "Find a person suggestions" })
+      .getByRole("listbox", { name: "Study recorder suggestions" })
       .getByRole("option")
       .filter({ hasText: users[0].name })
       .click();
-    assert.equal(
-      await page.getByLabel("Filter by person", { exact: true }).inputValue(),
-      users[0].id,
-    );
+    assert((await person.inputValue()).includes(users[0].username));
     await page
       .getByRole("button", { name: "Apply filters", exact: true })
       .click();

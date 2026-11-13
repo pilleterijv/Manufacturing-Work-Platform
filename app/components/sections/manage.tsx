@@ -5,7 +5,7 @@ import { LocationPicker } from "../location-picker";
 import { useState, useEffect, useRef } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
 import type { Data, Step, Cycle, Standard } from "@/lib/workspace-types";
-import { api } from "@/lib/client-api";
+import { api, getSectionFilters } from "@/lib/client-api";
 import {
   Field,
   Submit,
@@ -467,14 +467,21 @@ export default function Manage({
             <Submit busy={busy}>Add equipment</Submit>
           </form>
           <div className="equipment-list">
-            {data.equipment.map((e) => (
-              <p key={e.id}>
-                <strong>{e.name}</strong>
-                <span>
-                  {[e.plant, e.department, e.area, e.line].join(" / ")}
-                </span>
-              </p>
-            ))}
+            {data.equipment
+              .filter((e) =>
+                [e.name, e.plant, e.department, e.area, e.line]
+                  .join(" ")
+                  .toLowerCase()
+                  .includes(getSectionFilters().search.toLowerCase()),
+              )
+              .map((e) => (
+                <p key={e.id}>
+                  <strong>{e.name}</strong>
+                  <span>
+                    {[e.plant, e.department, e.area, e.line].join(" / ")}
+                  </span>
+                </p>
+              ))}
           </div>
         </section>
       )}

@@ -27,8 +27,7 @@ export default function Content({
   save: Save;
   busy: boolean;
 }) {
-  const [search, setSearch] = useState(""),
-    [playing, setPlaying] = useState(""),
+  const [playing, setPlaying] = useState(""),
     [editing, setEditing] = useState(""),
     [media, setMedia] = useState<
       { id: string; kind: "photo" | "video"; caption: string }[]
@@ -73,28 +72,13 @@ export default function Content({
       setUploading(false);
     }
   }
-  const items = data.content.filter(
-    (c) =>
-      c.kind === kind &&
-      `${c.title} ${kind === "guide" ? c.body : ""} ${data.equipment.find((e) => e.id === c.equipmentId)?.name ?? ""}`
-        .toLowerCase()
-        .includes(search.toLowerCase()),
-  );
+  const items = data.content.filter((c) => c.kind === kind);
   return (
     <>
-      <div className="search-row">
-        <input
-          aria-label="Search library"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={
-            kind === "video"
-              ? "Search training videos or equipment…"
-              : "Search troubleshooting guides or equipment…"
-          }
-        />
-        <span className="muted">{items.length} resources</span>
-      </div>
+      <p className="small muted">
+        {items.length} matching{" "}
+        {kind === "video" ? "training resources" : "troubleshooting guides"}
+      </p>
       <div className="content-grid">
         {items.map((c) => (
           <article className="panel resource" key={c.id}>
