@@ -171,12 +171,24 @@ async function main() {
   const visible = await request(tech, "/api/platform?view=equipment");
   assert(visible.equipment.some((e) => e.id === equipment[0].id));
   assert(!visible.equipment.some((e) => e.id === equipment[1].id));
-  const plan = { action: "save", kind: "pm", title: "Role inspection " + suffix,
-    equipmentId: equipment[0].id, assigneeId: users[2].id, intervalDays: 7,
-    nextDue: "2027-01-01", active: true,
-    steps: [{ id: "guard", text: "Inspect guard", photo: false }] };
+  const plan = {
+    action: "save",
+    kind: "pm",
+    title: "Role inspection " + suffix,
+    equipmentId: equipment[0].id,
+    assigneeId: users[2].id,
+    intervalDays: 7,
+    nextDue: "2027-01-01",
+    active: true,
+    steps: [{ id: "guard", text: "Inspect guard", photo: false }],
+  };
   await request(tech, "/api/maintenance", plan);
-  await request(tech, "/api/maintenance", { ...plan, equipmentId: equipment[1].id }, 403);
+  await request(
+    tech,
+    "/api/maintenance",
+    { ...plan, equipmentId: equipment[1].id },
+    403,
+  );
   await request(admin, "/api/roles", {
     action: "create",
     name: managerRole,
@@ -224,8 +236,13 @@ async function main() {
   const listing = await request(manager, "/api/account-management");
   assert(!listing.assignableRoles.some((r) => r.name === managerRole));
   assert(!listing.accounts.some((a) => a.id === users[3].id));
-  const beta = await db.user.findUnique({where:{id:users[3].id}});
-  await request(manager, "/api/account-management", {action:"active",id:beta.id,version:beta.version,active:false},403);
+  const beta = await db.user.findUnique({ where: { id: users[3].id } });
+  await request(
+    manager,
+    "/api/account-management",
+    { action: "active", id: beta.id, version: beta.version, active: false },
+    403,
+  );
   // UI: create a role using named controls, then select the existing custom role.
   await request(admin, "/api/dashboard-settings", {
     preferences: { home: "Permissions", widgets: [], defaultScope: "personal" },
@@ -286,7 +303,9 @@ main()
     await db.roleAudit.deleteMany({
       where: { actorId: { in: users.map((u) => u.id) } },
     });
-    await db.maintenancePlan.deleteMany({where:{equipmentId:{in:equipment.map(e=>e.id)}}});
+    await db.maintenancePlan.deleteMany({
+      where: { equipmentId: { in: equipment.map((e) => e.id) } },
+    });
     await db.session.deleteMany({
       where: { userId: { in: users.map((u) => u.id) } },
     });

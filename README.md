@@ -163,6 +163,14 @@ Assignments are enforced on start/stop requests, live timers, operational histor
 
 Run `npm run test:downtime-access` against a local production app to verify the hierarchy, assignment editing, immediate revocation, unauthorized starts/stops and scoped reads/exports. Back up data before upgrading; preserve your existing `.env`, uploads and database volume.
 
+## Custom roles and floor usability
+
+Migration **015** adds named custom roles, explicit management privileges, account role assignments and role change history. Admin uses **Permissions → Create custom role**, then assigns the role and permitted departments/areas/machines in **Accounts**. A custom Manager workflow does not inherit built-in Manager account privileges; choose them explicitly. One account has one role across all its assigned locations. Existing individual extra permissions remain additive.
+
+After updating source, stop the app and run `npm ci`, `npm run db:generate`, `npm run db:setup`, `npm run build`, then `npm start`. Preserve private settings and back up data first. Setup must apply migration 015 before the new runtime starts.
+
+See [the floor usability review and role guide](docs/floor-usability-and-roles.md) for role-specific navigation recommendations, mistake prevention priorities, assignment steps and limitations. Role permissions and location scope are enforced separately; neither an editing privilege nor a custom role bypasses location assignments. Scoped account management is available to built-in Managers and accounts explicitly granted account privileges; global role administration remains Admin-only.
+
 ## Shift alerts, photo evidence and factory integrations
 
 **Shift requirements** lets managers schedule standard-work families by shift and weekday, either once per machine or once per assigned operator. Choose manager/supervisor recipients and independently switch in-app and email alerts on/off. Monitoring begins with the next full shift after activation. Late completions do not erase a missed-shift alert. **Accounts** now stores notification email addresses. SMTP remains unconnected until IT supplies private relay settings; pending email is queued, retried, and visible in the service status.
