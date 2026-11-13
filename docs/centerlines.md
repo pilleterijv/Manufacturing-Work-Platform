@@ -37,3 +37,9 @@ npm start
 Use `codex/rebuild-floorwork` in the pull command if that is the branch you run. Migration **014** adds the centerline table and an audit history index. It enables the new section for existing role policies that already allow machine work; customized roles without Work remain unchanged. Admin can adjust Centerlines access in Permissions or grant individual access and editing privileges in Accounts. Location restrictions continue to apply.
 
 No company centerline values are preloaded. Enter approved limits for the intended machine and setup.
+
+## Validation and screenshots
+
+Verified November 13, 2026 using synthetic local fixtures: production build and TypeScript checks, all 59 unit tests, fresh/upgrade database migrations, isolated packaged runtime, Centerlines workflow, core app browser workflow, personal-access workflow and section search/dashboard regressions. The Centerlines checks cover inclusive numeric/text evaluation, stale revisions, concurrent retry deduplication, department isolation, delegated editing, required evidence and scoped media, exports, retained history after edits/retirement, 103-row pagination with tied timestamps, refresh-preserved drafts and tablet viewport layout. Physical iPad testing and live company systems were not exercised.
+
+Screenshots: [settings](screenshots/centerlines/settings.png), [audit](screenshots/centerlines/audit.png), [dashboard](screenshots/centerlines/dashboard.png), [tablet](screenshots/centerlines/tablet.png). These show synthetic examples, not approved company machine values.
