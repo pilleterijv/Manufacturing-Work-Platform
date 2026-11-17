@@ -1,3 +1,8 @@
+const {
+  expandTools,
+  assignmentPanels,
+  planningTools,
+} = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const assert = require("node:assert/strict"),
@@ -651,6 +656,7 @@ async function main() {
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(origin);
+  await expandTools(page);
   await page
     .getByRole("button", { name: "⚒ Preventive maintenance", exact: true })
     .click();

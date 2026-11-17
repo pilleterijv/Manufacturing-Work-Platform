@@ -1,3 +1,8 @@
+const {
+  expandTools,
+  assignmentPanels,
+  planningTools,
+} = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const { db } = require("../lib/db.ts"),
@@ -387,6 +392,7 @@ async function main() {
   });
   await page.goto(origin);
   async function nav(name) {
+    await expandTools(page);
     await page
       .locator(".sidebar nav > div")
       .getByRole("button", {

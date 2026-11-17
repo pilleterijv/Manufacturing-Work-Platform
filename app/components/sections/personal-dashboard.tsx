@@ -40,7 +40,19 @@ export default function PersonalDashboard({
       });
     return () => c.abort();
   }, [scope]);
-  const chosen = dashboardPreferences(preferences ?? data?.preferences).widgets;
+  const chosen = dashboardPreferences(
+    preferences ?? data?.preferences,
+  ).widgets.filter((key) =>
+    canGo(
+      {
+        ideas: "Improvement ideas",
+        problems: "Problem solving",
+        maintenance: "Preventive maintenance",
+        defects: "Defect reporting",
+        fiveS: "5S audits",
+      }[key],
+    ),
+  );
   const focus = () => ({
     focus: scope === "personal" ? "personal-open" : "department-open",
     ...(scope === "department"

@@ -1,5 +1,7 @@
 # Floorwork — Manufacturing Work Platform
 
+Role-specific shift queues, maintenance-first home views, a scoped machine workspace and compact navigation are available. **Apply migration 017 before starting this update.** See [setup, update steps and screenshots](docs/shift-queues-machine-workspace.md).
+
 Search now follows each tab’s actual records and person roles, with isolated filters and native suggestions. See [contextual search behavior and update steps](docs/contextual-search.md).
 
 Current hardening and device readiness: [security/resource review](docs/security-performance-review.md), [iPad/tablet/computer installation](docs/tablet-deployment.md), and [step-by-step TrakSYS/Azure SQL connections](docs/traksys-sql-connection-guide.md). Clients use the shared HTTPS app without Node or Docker. This release updates the vulnerable XML parser, streams video ranges, uploads video without base64 copies, bounds external responses and reuses limited SQL pools.

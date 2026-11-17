@@ -1,3 +1,4 @@
+const { expandTools } = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const assert = require("node:assert/strict"),
@@ -185,6 +186,7 @@ const check = async (r, status = 200) => {
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto(origin);
+    await expandTools(page);
     await page.getByRole("heading", { name: "Welcome, Morgan." }).waitFor();
     const nav = async (name) => {
       await page.locator(".nav-item").filter({ hasText: name }).first().click();

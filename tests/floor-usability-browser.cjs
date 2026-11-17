@@ -1,3 +1,8 @@
+const {
+  expandTools,
+  assignmentPanels,
+  planningTools,
+} = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const { db } = require("../lib/db.ts"),
@@ -219,6 +224,7 @@ async function main() {
     page = await operator.newPage();
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(origin);
+  await expandTools(page);
   await page.getByRole("heading", { name: "My shift", exact: true }).waitFor();
   await page
     .locator("nav")
@@ -255,6 +261,7 @@ async function main() {
     .getByRole("button", { name: "Overview", exact: false })
     .click();
   await page.getByRole("heading", { name: "My shift", exact: true }).waitFor();
+  await assignmentPanels(page);
   await page
     .getByRole("button", { name: "View Open defects assignments", exact: true })
     .click();
@@ -365,6 +372,7 @@ async function main() {
     const c = await login(i),
       p = await c.newPage();
     await p.goto(origin);
+    await expandTools(p);
     await p.getByRole("heading", { name: title, exact: true }).waitFor();
     await p.screenshot({
       path: "docs/screenshots/floor-usability/role-" + i + ".png",

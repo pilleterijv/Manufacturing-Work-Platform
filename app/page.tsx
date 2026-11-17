@@ -134,6 +134,7 @@ export default function Home() {
   const [moreTools, setMoreTools] = useState(false),
     [navSearch, setNavSearch] = useState("");
   const contextEquipment = useRef<Data["equipment"]>([]);
+  const [, setCatalogRevision] = useState(0);
   const contextOwner = useRef<string | null>(null);
   const [resetMode, setResetMode] = useState(false);
   useEffect(() => {
@@ -171,7 +172,21 @@ export default function Home() {
     contextOwner.current = user?.id ?? null;
     contextEquipment.current = [];
   }
-  if (platformReady) contextEquipment.current = data.equipment;
+  if (platformReady && !contextEquipment.current.length)
+    contextEquipment.current = data.equipment;
+  useEffect(() => {
+    if (!user || user.mustChange) return;
+    const c = new AbortController();
+    api("/api/assets", undefined, c.signal)
+      .then((d) => {
+        if (!c.signal.aborted) {
+          contextEquipment.current = d.equipment;
+          setCatalogRevision((v) => v + 1);
+        }
+      })
+      .catch(() => {});
+    return () => c.abort();
+  }, [user?.id, user?.mustChange, refreshRevision]);
   async function refreshSection() {
     setError("");
     setNotice("");
@@ -762,6 +777,7 @@ export default function Home() {
                       navSearch
                         ? !name.toLowerCase().includes(navSearch.toLowerCase())
                         : !moreTools &&
+                          name !== tab &&
                           ![
                             "Overview",
                             "Work queue",
@@ -1046,23 +1062,33 @@ export default function Home() {
                 />
               )}
               <div hidden={hasSectionViews(tab) && sectionMode === "dashboard"}>
-                {tab === "Overview" && preferences.showLaunchpad !== false && (
-                  <ShiftHome user={user} go={setTab} />
-                )}
                 {tab === "Overview" &&
                   user.role !== "Admin" &&
                   preferences.showQueue !== false && (
                     <WorkQueue user={user} compact />
                   )}
+                {tab === "Overview" && preferences.showLaunchpad !== false && (
+                  <ShiftHome user={user} go={setTab} />
+                )}
                 {tab === "Work queue" && <WorkQueue user={user} />}
                 {tab === "Machines" && <Machines user={user} />}
                 {tab === "Overview" && (
-                  <PersonalDashboard
-                    canGo={(name) => canOpenSection(user, name)}
-                    key={JSON.stringify(preferences)}
-                    preferences={preferences}
-                    go={setTab}
-                  />
+                  <details
+                    className="panel"
+                    open={
+                      preferences.showQueue === false || user.role === "Admin"
+                    }
+                  >
+                    <summary>
+                      Assignment panels and saved dashboard layout
+                    </summary>
+                    <PersonalDashboard
+                      canGo={(name) => canOpenSection(user, name)}
+                      key={JSON.stringify(preferences)}
+                      preferences={preferences}
+                      go={setTab}
+                    />
+                  </details>
                 )}
                 {tab === "Overview" && (
                   <Overview

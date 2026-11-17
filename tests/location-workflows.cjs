@@ -1,3 +1,8 @@
+const {
+  expandTools,
+  assignmentPanels,
+  planningTools,
+} = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const assert = require("node:assert/strict"),
@@ -568,6 +573,7 @@ async function main() {
     page = await admin.newPage();
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(origin);
+  await expandTools(page);
   await page.getByRole("button", { name: "♙ Accounts", exact: true }).click();
   await page
     .getByRole("heading", { name: "Departments, areas and lines" })
@@ -594,6 +600,7 @@ async function main() {
   });
   const tp = await tl.newPage();
   await tp.goto(origin);
+  await expandTools(tp);
   await tp
     .getByRole("button", { name: "◉ Standard work audits", exact: true })
     .click();
@@ -605,6 +612,7 @@ async function main() {
   const mp = await manager.newPage();
   mp.on("pageerror", (e) => errors.push(e.message));
   await mp.goto(origin);
+  await expandTools(mp);
   await mp
     .getByRole("button", { name: "◇ Troubleshooting", exact: true })
     .click();
