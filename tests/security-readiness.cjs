@@ -1,3 +1,4 @@
+const { expandTools } = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const { db } = require("../lib/db.ts"),
@@ -175,6 +176,7 @@ async function main() {
   );
   const page = await manager.newPage();
   await page.goto(origin);
+  await expandTools(page);
   await page
     .getByRole("button", { name: "≋ Centerlines", exact: true })
     .click();

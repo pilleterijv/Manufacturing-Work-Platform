@@ -1,3 +1,8 @@
+const {
+  expandTools,
+  assignmentPanels,
+  planningTools,
+} = require("./ui-workspace.cjs");
 const { selectDowntimeMachine } = require("./helpers/downtime.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
@@ -99,6 +104,7 @@ async function main() {
   assert.equal((await get(validator, "/api/leadership")).status, 403);
   const ap = await admin.newPage();
   await ap.goto(origin);
+  await expandTools(ap);
   await ap.getByRole("button", { name: /Downtime$/ }).click();
   await ap
     .getByLabel("Reason name", { exact: true })
@@ -161,6 +167,7 @@ async function main() {
     errors = [];
   op.on("pageerror", (e) => errors.push(e.message));
   await op.goto(origin);
+  await expandTools(op);
   await op.getByRole("button", { name: /Downtime$/ }).click();
   assert.equal(
     await op
@@ -339,6 +346,7 @@ async function main() {
   assert(directory.every((p) => !("password" in p) && !("role" in p)));
   const mp = await manager.newPage();
   await mp.goto(origin);
+  await expandTools(mp);
   await mp
     .locator("nav")
     .getByRole("button", { name: /Notifications/ })
@@ -641,6 +649,7 @@ async function main() {
   });
   const mobilePage = await mobile.newPage();
   await mobilePage.goto(origin);
+  await expandTools(mobilePage);
   await mobilePage.getByRole("button", { name: /Downtime$/ }).click();
   await selectDowntimeMachine(mobilePage, equipment[0]);
   await mobilePage.screenshot({

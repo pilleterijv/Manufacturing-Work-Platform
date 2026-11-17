@@ -1,3 +1,8 @@
+const {
+  expandTools,
+  assignmentPanels,
+  planningTools,
+} = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const { chromium } = require("playwright");
@@ -365,6 +370,7 @@ async function main() {
   await login(manager, users[1].username);
   const mp = await manager.newPage();
   await mp.goto(origin);
+  await expandTools(mp);
   await mp
     .getByRole("button", { name: "◉ Standard work audits", exact: true })
     .click();

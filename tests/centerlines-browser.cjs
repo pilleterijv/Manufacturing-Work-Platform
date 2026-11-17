@@ -1,3 +1,4 @@
+const { expandTools } = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const { db } = require("../lib/db.ts"),
@@ -278,6 +279,7 @@ async function main() {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(origin);
+  await expandTools(page);
   await page
     .getByRole("button", { name: "≋ Centerlines", exact: true })
     .click();
@@ -423,6 +425,7 @@ async function main() {
   assert.equal((await api(operator, evidenceAudit)).status, 200);
   await page.setViewportSize({ width: 820, height: 1180 });
   await page.reload();
+  await expandTools(page);
   await page
     .getByRole("button", { name: "≋ Centerlines", exact: true })
     .click();

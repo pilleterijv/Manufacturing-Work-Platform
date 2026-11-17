@@ -1,3 +1,8 @@
+const {
+  expandTools,
+  assignmentPanels,
+  planningTools,
+} = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const assert = require("node:assert/strict"),
@@ -687,6 +692,8 @@ async function main() {
   await fs.mkdir(shots, { recursive: true });
   const page = await manager.newPage();
   await page.goto(origin);
+  await expandTools(page);
+  await assignmentPanels(page);
   await page
     .getByRole("heading", { name: "My assignments", exact: true })
     .waitFor();

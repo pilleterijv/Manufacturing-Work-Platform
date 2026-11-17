@@ -1,3 +1,4 @@
+const { expandTools } = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const { randomUUID } = require("node:crypto"),
@@ -166,6 +167,7 @@ async function main() {
   assert.equal((await stop(foreign.id)).status, 403);
   const page = await operator.newPage();
   await page.goto(origin);
+  await expandTools(page);
   await page
     .locator("nav")
     .getByRole("button", { name: /Downtime$/ })
@@ -275,6 +277,7 @@ async function main() {
   // Native admin editor round-trip, with only one machine assigned.
   const ap = await admin.newPage();
   await ap.goto(origin);
+  await expandTools(ap);
   await ap
     .locator("nav")
     .getByRole("button", { name: /Accounts$/ })
@@ -339,6 +342,7 @@ async function main() {
   });
   const mp = await manager.newPage();
   await mp.goto(origin);
+  await expandTools(mp);
   assert.equal(
     await mp
       .locator("nav")
