@@ -7,6 +7,7 @@ export type SectionFilters = {
   equipment?: string;
   plant?: string;
   focusDepartment?: string;
+  standard?: string;
 };
 let filters: SectionFilters = { person: "", search: "" };
 export function getSectionFilters() {

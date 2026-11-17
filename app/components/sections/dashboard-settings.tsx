@@ -132,6 +132,7 @@ export default function DashboardSettings({
           {(
             [
               ["showLaunchpad", "Show workspace shortcuts"],
+              ["showQueue", "Show shift work queue"],
               ["showPerformance", "Show performance dashboard"],
               ["showHistory", "Show recent work and record totals"],
             ] as const

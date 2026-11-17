@@ -30,6 +30,8 @@ import {
 import { Field, Submit, HistoryPagingContext } from "./components/shared";
 import { emptyOperations, type OperationsData } from "@/lib/operations-types";
 const Assistant = dynamic(() => import("./components/sections/assistant"));
+const WorkQueue = dynamic(() => import("./components/sections/work-queue"));
+const Machines = dynamic(() => import("./components/sections/machines"));
 const DashboardSettings = dynamic(
   () => import("./components/sections/dashboard-settings"),
 );
@@ -129,6 +131,8 @@ const empty: Data = {
 };
 export default function Home() {
   const safety = useFloorSafety();
+  const [moreTools, setMoreTools] = useState(false),
+    [navSearch, setNavSearch] = useState("");
   const contextEquipment = useRef<Data["equipment"]>([]);
   const contextOwner = useRef<string | null>(null);
   const [resetMode, setResetMode] = useState(false);
@@ -159,6 +163,10 @@ export default function Home() {
     [expanded, setExpanded] = useState<Record<string, boolean>>({}),
     [refreshRevision, setRefreshRevision] = useState(0),
     [searchRevision, setSearchRevision] = useState(0);
+  useEffect(() => {
+    setMoreTools(user?.role === "Admin");
+    setNavSearch("");
+  }, [user?.id]);
   if (contextOwner.current !== (user?.id ?? null)) {
     contextOwner.current = user?.id ?? null;
     contextEquipment.current = [];
@@ -188,6 +196,17 @@ export default function Home() {
   function setTab(name: string) {
     if (currentView.current !== name && !safety.confirmLeave()) return false;
     if (currentView.current !== name) safety.clear();
+    if (
+      user &&
+      ![
+        "Overview",
+        "Work queue",
+        "Machines",
+        "Notifications",
+        ...roleHome(user).primary,
+      ].includes(name)
+    )
+      setMoreTools(true);
     if (currentView.current !== name) {
       opsGeneration.current++;
       historyGeneration.current++;
@@ -633,6 +652,8 @@ export default function Home() {
   const preferences = dashboardPreferences(user.dashboardPreferences);
   const nav: [string, Capability | null, string][] = [
     ["Overview", null, "◫"],
+    ["Work queue", null, "☷"],
+    ["Machines", null, "▣"],
     ["Dashboard settings", null, "⚙"],
     ["Assistant", null, "?"],
     ["Standard work", "work", "☑"],
@@ -714,6 +735,16 @@ export default function Home() {
             </div>
             <span className="nav-label">WORKSPACE</span>
             <nav>
+              <label className="nav-search">
+                <span>Find a section</span>
+                <input
+                  aria-label="Find a section"
+                  value={navSearch}
+                  onChange={(e) => setNavSearch(e.target.value)}
+                  maxLength={100}
+                  placeholder="Work, history or settings"
+                />
+              </label>
               {nav
                 .filter(([name]) => canOpenSection(user, name))
                 .sort((a, b) => {
@@ -724,7 +755,22 @@ export default function Home() {
                   );
                 })
                 .map(([name, , icon]) => (
-                  <div key={name} className="nav-group">
+                  <div
+                    key={name}
+                    className="nav-group"
+                    hidden={
+                      navSearch
+                        ? !name.toLowerCase().includes(navSearch.toLowerCase())
+                        : !moreTools &&
+                          ![
+                            "Overview",
+                            "Work queue",
+                            "Machines",
+                            "Notifications",
+                            ...roleHome(user).primary,
+                          ].includes(name)
+                    }
+                  >
                     <button
                       aria-expanded={
                         hasSectionViews(name) ? !!expanded[name] : undefined
@@ -732,6 +778,7 @@ export default function Home() {
                       className={tab === name ? "nav-item active" : "nav-item"}
                       onClick={() => {
                         if (!setTab(name)) return;
+                        setNavSearch("");
                         setSectionMode("detail");
                         setExpanded((old) => ({
                           ...old,
@@ -795,6 +842,17 @@ export default function Home() {
                     )}
                   </div>
                 ))}
+              <button
+                type="button"
+                className="nav-item"
+                aria-expanded={moreTools}
+                onClick={() => {
+                  setMoreTools((v) => !v);
+                  setNavSearch("");
+                }}
+              >
+                {moreTools ? "Fewer tools" : "More tools and history"}
+              </button>
             </nav>
             <div className="sidebar-bottom">
               <div className="avatar">
@@ -808,7 +866,7 @@ export default function Home() {
                 aria-label="Sign out"
                 onClick={() => void account({ action: "logout" })}
               >
-                →
+                Sign out / Change operator
               </button>
             </div>
           </aside>
@@ -991,6 +1049,13 @@ export default function Home() {
                 {tab === "Overview" && preferences.showLaunchpad !== false && (
                   <ShiftHome user={user} go={setTab} />
                 )}
+                {tab === "Overview" &&
+                  user.role !== "Admin" &&
+                  preferences.showQueue !== false && (
+                    <WorkQueue user={user} compact />
+                  )}
+                {tab === "Work queue" && <WorkQueue user={user} />}
+                {tab === "Machines" && <Machines user={user} />}
                 {tab === "Overview" && (
                   <PersonalDashboard
                     canGo={(name) => canOpenSection(user, name)}
@@ -1051,7 +1116,13 @@ export default function Home() {
                   />
                 )}
                 {tab === "Standard work" && sectionReady && (
-                  <Work data={data} save={save} busy={busy} audit={false} />
+                  <Work
+                    data={data}
+                    save={save}
+                    busy={busy}
+                    audit={false}
+                    initialStandardId={filters.standard}
+                  />
                 )}
                 {tab === "DL/TL Standard Work" && sectionReady && (
                   <Work
@@ -1060,11 +1131,18 @@ export default function Home() {
                     busy={busy}
                     audit
                     leader
+                    initialStandardId={filters.standard}
                     shiftNames={operations.config.shifts.map((s) => s.name)}
                   />
                 )}
                 {tab === "Standard work audits" && sectionReady && (
-                  <Work data={data} save={save} busy={busy} audit />
+                  <Work
+                    data={data}
+                    save={save}
+                    busy={busy}
+                    audit
+                    initialStandardId={filters.standard}
+                  />
                 )}
                 {tab === "Time studies" && sectionReady && (
                   <Studies data={data} save={save} busy={busy} />
@@ -1240,6 +1318,9 @@ export default function Home() {
                   <ExternalData
                     key={tab}
                     section={tab}
+                    hideEmpty={
+                      user.role !== "Admin" && tab !== "Production results"
+                    }
                     admin={user.role === "Admin"}
                     canImport={g.includes("manage")}
                     canExport={g.includes("export")}

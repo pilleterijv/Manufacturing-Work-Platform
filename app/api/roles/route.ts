@@ -79,6 +79,7 @@ export async function POST(req: Request) {
           data: {
             role: v.name,
             baseRole: v.baseRole,
+            homeProfile: v.homeProfile,
             description: v.description,
             grants: [...new Set(v.grants)],
             adminPrivileges: [...new Set(v.adminPrivileges)],
@@ -127,6 +128,9 @@ export async function POST(req: Request) {
               grants: [...new Set(v.grants)],
               adminPrivileges: [...new Set(v.adminPrivileges)],
               description: v.description,
+              homeProfile: Object.hasOwn(b, "homeProfile")
+                ? v.homeProfile
+                : old.homeProfile,
               version: { increment: 1 },
             },
           });

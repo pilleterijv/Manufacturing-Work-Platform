@@ -3,6 +3,7 @@ import { referenceDepartments } from "@/lib/reference-catalog";
 import RefreshControl, { useSectionRefresh } from "../refresh-control";
 import PersonSelect from "../person-select";
 import RelatedOpen from "../related-open";
+import RecordingContext from "../recording-context";
 import { confirmDraftChange } from "../floor-safety";
 import EvidenceInput from "../evidence-input";
 import { useEffect, useState, useRef } from "react";
@@ -894,6 +895,11 @@ export default function Problems({
                         </select>
                       </Field>
                     )}
+                    <RecordingContext
+                      equipment={data?.equipment.find(
+                        (e) => e.id === draft.equipmentId,
+                      )}
+                    />
                     <button
                       className="primary"
                       disabled={busy || caseUploading}

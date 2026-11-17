@@ -14,6 +14,8 @@ export const dashboardWidgetLabels = {
   fiveS: "5S audits",
 };
 export const homeSections = [
+  "Work queue",
+  "Machines",
   "Overview",
   "Standard work",
   "DL/TL Standard Work",
@@ -50,6 +52,7 @@ export const dashboardPreferencesSchema = z
       .max(5)
       .default([...dashboardWidgets]),
     showLaunchpad: z.boolean().default(true),
+    showQueue: z.boolean().default(true),
     showPerformance: z.boolean().default(true),
     showHistory: z.boolean().default(true),
     defaultScope: z.enum(["personal", "department"]).default("personal"),

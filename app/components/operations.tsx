@@ -1,6 +1,7 @@
 "use client";
 import RefreshControl, { useSectionRefresh } from "./refresh-control";
 import { HistoryPagingContext, Metric } from "./shared";
+import RecordingContext from "./recording-context";
 import { openWorkflow } from "@/lib/floor-navigation";
 import PersonSelect from "./person-select";
 import { filterUrl } from "@/lib/client-api";
@@ -282,6 +283,9 @@ export function Downtime({
               ? `${selected.reasonName} · started by ${selected.starter.name}`
               : "One shared timer per machine prevents overlapping records."}
           </p>
+          <RecordingContext
+            equipment={equipment.find((e) => e.id === equipmentId)}
+          />
           <button
             className={selected ? "danger" : "primary"}
             type="button"

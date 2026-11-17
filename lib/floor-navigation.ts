@@ -2,43 +2,76 @@ import type { NavigationUser } from "./navigation";
 import { canOpenSection } from "./navigation";
 export function roleHome(u: NavigationUser) {
   const role = u.role;
+  const profile =
+    u.homeProfile && u.homeProfile !== "auto"
+      ? u.homeProfile
+      : role === "Admin"
+        ? "admin"
+        : role === "Manager"
+          ? "manager"
+          : role === "DL/TL"
+            ? "leader"
+            : "operator";
   const title =
-    role === "Admin"
+    profile === "admin"
       ? "Administration"
-      : role === "Manager"
-        ? "Department review"
-        : role === "DL/TL"
-          ? "My shift board"
-          : "My shift";
+      : profile === "maintenance"
+        ? "My maintenance work"
+        : profile === "supervisor"
+          ? "Area supervision"
+          : profile === "manager"
+            ? "Department review"
+            : profile === "leader"
+              ? "My shift board"
+              : "My shift";
   const primary =
-    role === "Admin"
+    profile === "admin"
       ? ["Accounts", "Permissions", "Locations", "Manage", "Integrations"]
-      : role === "Manager"
+      : profile === "maintenance"
         ? [
-            "Leadership dashboard",
-            "Problem solving",
-            "Improvement ideas",
+            "Work queue",
+            "Machines",
+            "Preventive maintenance",
             "Defect reporting",
-            "Accounts",
+            "TPM / CIL",
           ]
-        : role === "DL/TL"
+        : profile === "supervisor"
           ? [
+              "Work queue",
               "DL/TL Standard Work",
-              "5S audits",
-              "Defect reporting",
-              "Problem solving",
               "Notifications",
+              "Problem solving",
+              "Machines",
             ]
-          : [
-              "Standard work",
-              "Downtime",
-              "Defect reporting",
-              "Troubleshooting",
-              "Preventive maintenance",
-              "TPM / CIL",
-              "5S audits",
-            ];
-  return { title, primary: primary.filter((name) => canOpenSection(u, name)) };
+          : profile === "manager"
+            ? [
+                "Work queue",
+                "Leadership dashboard",
+                "Problem solving",
+                "Improvement ideas",
+                "Defect reporting",
+              ]
+            : profile === "leader"
+              ? [
+                  "Work queue",
+                  "DL/TL Standard Work",
+                  "5S audits",
+                  "Defect reporting",
+                  "Problem solving",
+                ]
+              : [
+                  "Work queue",
+                  "Standard work",
+                  "Downtime",
+                  "Defect reporting",
+                  "Troubleshooting",
+                  "Machines",
+                ];
+  return {
+    title,
+    profile,
+    primary: primary.filter((name) => canOpenSection(u, name)),
+  };
 }
 export type WorkflowTarget = {
   tab: string;
@@ -50,6 +83,7 @@ export type WorkflowTarget = {
     equipment?: string;
     person?: string;
     search?: string;
+    standard?: string;
   };
 };
 export function openWorkflow(target: WorkflowTarget) {
