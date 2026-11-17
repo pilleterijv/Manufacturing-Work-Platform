@@ -43,13 +43,16 @@ export function validPrivileges(raw: unknown): AdminPrivilege[] {
 export function effectivePrivileges(
   role: string,
   raw: unknown,
+  inheritManagerDefaults = true,
 ): AdminPrivilege[] {
   return [
     ...new Set(
       role === "Admin"
         ? privilegeKeys
         : [
-            ...(role === "Manager" ? managerAccountPrivileges : []),
+            ...(role === "Manager" && inheritManagerDefaults
+              ? managerAccountPrivileges
+              : []),
             ...validPrivileges(raw),
           ],
     ),

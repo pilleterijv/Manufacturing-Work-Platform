@@ -112,3 +112,26 @@ Registration requires explicit Admin review and starts with no workspace access.
 Department account management checks the actor's current permissions, full target scope, protected status and capability hierarchy inside a transaction. Actors cannot widen wildcard coverage beyond their authority, self-escalate, manage privileged/broader accounts or assign Admin. Per-account delegation is Admin-only and revokes sessions. Account audit values omit passwords/hashes/tokens. Role policies remain separate from additive individual grants.
 
 Dashboard preferences are account-local presentation choices; permission checks still apply and invalid saved login sections fall back to Overview. The read-only assistant receives permitted static help topics and, only for explicitly enabled/selected AI, the typed question. It has no tools or automatic record/directory/media access. Private API keys stay server-side, output renders as text, and navigation links are checked against permitted section names. See [setup and limits](personal-dashboards-access-assistant.md).
+
+## Custom roles (migration 015)
+
+Custom roles retain a built-in workflow category for leader-task and notification eligibility, while capabilities and delegated privileges come from the assigned custom policy. Custom Manager workflows do not inherit built-in Manager account privileges. Missing, inactive or mismatched policies fail closed. Original Admin stays protected; custom roles cannot grant global account/role administration. Additional individual permissions remain additive for a valid active policy.
+
+Role assignment locks the policy, and retirement locks it exclusively and refuses assigned accounts, including disabled accounts. Role updates require an expected version, preserve before/after audit snapshots and are read afresh for subsequent requests. Reassigning an account revokes its sessions. Role definitions and individual workspace scope remain separate; the latter continues to restrict reads, writes, media and exports. Role history is preserved rather than deleting roles in use. See [the role guide](floor-usability-and-roles.md) for the single-role-per-account limitation and isolated local verification.
+
+## Floor workflow safeguards (migration 016)
+
+New defect/problem forms send per-submission UUID keys. Creation and its receipt
+commit in one transaction under a keyed PostgreSQL advisory lock. A repeated key
+with the same payload returns the original ID/reference; changed payloads return
+409. Receipts store a digest and record reference. Current authentication,
+capability and equipment access are still checked before accepting a retry.
+Existing API clients without keys retain their previous contract.
+
+Existing-issue suggestions require authentication and current equipment access,
+then independently check defects/problem-solving capabilities. Dashboard focus
+filters add predicates to existing permission scopes; they never replace them.
+The browser stores drafts/context in memory, clears context on account changes,
+warns before discarding edits, and does not claim offline submission or recovery.
+Machine scanning uses native browser capabilities and sends no camera frames to
+an external service. Unsupported browsers retain manual/QR-link entry.

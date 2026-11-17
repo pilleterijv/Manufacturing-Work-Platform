@@ -7,11 +7,13 @@ export default function ExternalData({
   admin,
   canImport,
   canExport,
+  hideEmpty = false,
 }: {
   section: string;
   admin: boolean;
   canImport: boolean;
   canExport: boolean;
+  hideEmpty?: boolean;
 }) {
   const [data, setData] = useState<any>(null),
     [error, setError] = useState(""),
@@ -40,6 +42,7 @@ export default function ExternalData({
   useEffect(() => {
     load().catch((e) => setError(e.message));
   }, [section]);
+  if (hideEmpty && data && !data.items.length && !error) return null;
   return (
     <section className="panel">
       <h2>Connected data · {section}</h2>

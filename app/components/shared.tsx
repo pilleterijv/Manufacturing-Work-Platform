@@ -8,6 +8,7 @@ export const HistoryPagingContext = createContext({
   hasMore: false,
 });
 import type { Data, Entry, Step, Cycle } from "@/lib/workspace-types";
+import { equipmentLabel } from "@/lib/equipment-label";
 export function Field({
   label,
   children,
@@ -237,9 +238,7 @@ export function EquipmentSelect({
       <option value="">Select equipment</option>
       {data.equipment.map((e) => (
         <option key={e.id} value={e.id}>
-          {[e.plant, e.department, e.area, e.line, e.name]
-            .filter(Boolean)
-            .join(" / ")}
+          {equipmentLabel(e)}
         </option>
       ))}
     </select>

@@ -5,6 +5,9 @@ import { api, filterUrl } from "@/lib/client-api";
 import EvidenceInput, { EvidenceView } from "../evidence-input";
 import { Field } from "../shared";
 import PersonSelect from "../person-select";
+import RelatedOpen from "../related-open";
+import RecordingContext from "../recording-context";
+import { equipmentLabel } from "@/lib/equipment-label";
 export default function Defects({
   userId,
   admin,
@@ -20,6 +23,8 @@ export default function Defects({
     [busy, setBusy] = useState(false),
     [mapping, setMapping] = useState<Record<string, number>>({});
   const loadSequence = useRef(0);
+  const requestKey = useRef(crypto.randomUUID());
+  const [equipmentId, setEquipmentId] = useState("");
   async function load(more = false) {
     const sequence = ++loadSequence.current;
     const d = await api(
@@ -44,8 +49,14 @@ export default function Defects({
     setNotice("");
     try {
       await api("/api/defects", body);
-      await load();
       setNotice("Defect saved.");
+      try {
+        await load();
+      } catch {
+        setNotice(
+          "Defect saved. Refresh the register before making another entry.",
+        );
+      }
       return true;
     } catch (e) {
       setError((e as Error).message);
@@ -57,7 +68,7 @@ export default function Defects({
   }
   const machine = (id: string) => {
     const e = data?.equipment.find((e: any) => e.id === id);
-    return e ? [e.plant, e.department, e.area, e.name].join(" / ") : id;
+    return e ? equipmentLabel(e) : id;
   };
   return (
     <>
@@ -76,17 +87,26 @@ export default function Defects({
             if (
               await save({
                 action: "report",
+                requestKey: requestKey.current,
                 ...Object.fromEntries(new FormData(form)),
                 media,
               })
             ) {
               form.reset();
               setMedia([]);
+              setEquipmentId("");
+              requestKey.current = crypto.randomUUID();
             }
           }}
         >
           <Field label="Defect machine">
-            <select name="equipmentId" required>
+            <select
+              aria-label="Defect machine"
+              name="equipmentId"
+              required
+              value={equipmentId}
+              onChange={(e) => setEquipmentId(e.target.value)}
+            >
               <option value="">Choose machine</option>
               {data?.equipment.map((e: any) => (
                 <option key={e.id} value={e.id}>
@@ -95,6 +115,7 @@ export default function Defects({
               ))}
             </select>
           </Field>
+          <RelatedOpen equipment={equipmentId} />
           <Field label="Defect title">
             <input name="title" required maxLength={150} />
           </Field>
@@ -113,6 +134,9 @@ export default function Defects({
             value={media}
             onChange={setMedia}
             onBusy={setUploading}
+          />
+          <RecordingContext
+            equipment={data?.equipment.find((e: any) => e.id === equipmentId)}
           />
           <button className="primary" disabled={busy || uploading}>
             Report defect

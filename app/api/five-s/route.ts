@@ -1,6 +1,7 @@
 import { canAdminister } from "@/lib/capabilities";
 import { requireDelegated } from "@/lib/security";
 import { z } from "zod";
+import { workflowFocus } from "@/lib/workflow-focus";
 import { db } from "@/lib/db";
 import {
   requireUser,
@@ -27,6 +28,7 @@ export async function GET(req: Request) {
       params = new URL(req.url).searchParams;
     const plans = await db.fiveSPlan.findMany({
       where: {
+        AND: [await workflowFocus(req.url, "fiveS", u.id)],
         locationId: { in: ids },
         ...(person ? { assigneeIds: { array_contains: [person] } } : {}),
         ...(search
@@ -54,7 +56,38 @@ export async function GET(req: Request) {
     const where = {
       locationId: { in: ids },
       ...(person ? { userId: person } : {}),
-      ...(search ? { planId: { in: plans.map((p) => p.id) } } : {}),
+      ...(search
+        ? {
+            OR: [
+              {
+                snapshot: {
+                  path: ["title"],
+                  string_contains: search,
+                  mode: "insensitive" as const,
+                },
+              },
+              ...["plant", "department", "area", "line"].map((k) => ({
+                snapshot: {
+                  path: ["area", k],
+                  string_contains: search,
+                  mode: "insensitive" as const,
+                },
+              })),
+              {
+                locationId: {
+                  in: areas
+                    .filter((a) =>
+                      [a.plant, a.department, a.area, a.line]
+                        .join(" ")
+                        .toLowerCase()
+                        .includes(search.toLowerCase()),
+                    )
+                    .map((a) => a.id),
+                },
+              },
+            ],
+          }
+        : {}),
     };
     if (params.get("format") === "xlsx") {
       await requireUser("export");

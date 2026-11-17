@@ -1,4 +1,6 @@
 import { readFilters } from "@/lib/filters";
+import { focusedEquipmentIds } from "@/lib/equipment-label";
+import { workflowFocus } from "@/lib/workflow-focus";
 import { evidenceSchema, ownEvidence } from "@/lib/evidence";
 import {
   equipmentIds,
@@ -34,7 +36,7 @@ export async function GET(req: Request) {
   try {
     const u = await requireUser();
     const g = await grants(u);
-    const ids = await equipmentIds(u);
+    const ids = focusedEquipmentIds(req.url, await equipmentIds(u));
     const { person, search } = readFilters(req.url);
     const notices = await notificationScope(u, ids);
     const view = z
@@ -49,7 +51,7 @@ export async function GET(req: Request) {
     const permittedEquipment =
       g.includes("downtime") && view !== "summary" && view !== "ideas"
         ? await db.equipment.findMany({
-            where: downtimeEquipmentWhere(u),
+            where: { AND: [downtimeEquipmentWhere(u), { id: { in: ids } }] },
             orderBy: { name: "asc" },
           })
         : [];
@@ -165,6 +167,7 @@ export async function GET(req: Request) {
                 ...location,
                 equipmentId: { in: ids },
                 AND: [
+                  await workflowFocus(req.url, "ideas", u.id),
                   ...(person
                     ? [
                         {

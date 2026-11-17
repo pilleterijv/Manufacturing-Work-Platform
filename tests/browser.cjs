@@ -1,3 +1,8 @@
+const {
+  expandTools,
+  assignmentPanels,
+  planningTools,
+} = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const { chromium } = require("playwright");
@@ -156,7 +161,10 @@ async function main() {
   await page
     .getByRole("button", { name: "Complete standard work", exact: true })
     .click();
-  await page.getByRole("status").waitFor();
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Saved to the database." })
+    .waitFor();
   assert.equal(
     await db.record.count({ where: { userId: users[0].id, kind: "run" } }),
     1,
@@ -176,7 +184,10 @@ async function main() {
   await page
     .getByRole("button", { name: "Save time study", exact: true })
     .click();
-  await page.getByRole("status").waitFor();
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Saved to the database." })
+    .waitFor();
   const study = await db.record.findFirst({
     where: { userId: users[0].id, kind: "study" },
   });
@@ -206,7 +217,10 @@ async function main() {
   await page
     .getByRole("button", { name: "Complete standard-work audit", exact: true })
     .click();
-  await page.getByRole("status").waitFor();
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Saved to the database." })
+    .waitFor();
   const audit = await db.record.findFirst({
     where: { userId: users[0].id, kind: "audit" },
   });
@@ -356,6 +370,7 @@ async function main() {
   await login(manager, users[1].username);
   const mp = await manager.newPage();
   await mp.goto(origin);
+  await expandTools(mp);
   await mp
     .getByRole("button", { name: "◉ Standard work audits", exact: true })
     .click();
@@ -478,7 +493,10 @@ async function main() {
   await page
     .getByRole("button", { name: "Create account", exact: true })
     .click();
-  await page.getByRole("status").waitFor();
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Saved to the database." })
+    .waitFor();
   const created = await db.user.findUnique({
     where: { username: "new-" + suffix },
   });
@@ -659,6 +677,7 @@ main()
       where: { OR: [{ id: { in: contentIds } }, { createdBy: { in: ids } }] },
     });
     await db.standard.deleteMany({ where: { id: { in: standardIds } } });
+    await db.roleAudit.deleteMany({ where: { actorId: { in: ids } } });
     await db.user.deleteMany({ where: { id: { in: ids } } });
     await db.rate.deleteMany({
       where: { OR: ids.map((id) => ({ key: { contains: id } })) },

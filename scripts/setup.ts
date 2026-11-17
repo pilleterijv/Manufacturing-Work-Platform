@@ -54,7 +54,7 @@ async function main() {
   for (const [role, grants] of Object.entries(defaults))
     await db.policy.upsert({
       where: { role },
-      create: { role, grants },
+      create: { role, grants, baseRole: role },
       update: {},
     });
   if (!(await db.equipment.count())) {

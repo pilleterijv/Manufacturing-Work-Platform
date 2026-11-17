@@ -1,3 +1,8 @@
+const {
+  expandTools,
+  assignmentPanels,
+  planningTools,
+} = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const assert = require("node:assert/strict"),
@@ -506,6 +511,7 @@ async function main() {
   await fs.mkdir(shots, { recursive: true });
   const page = await operator.newPage();
   await page.goto(origin);
+  await expandTools(page);
   await page
     .getByRole("heading", {
       name: "TPM · Clean, Inspect and Lubricate",
@@ -514,6 +520,7 @@ async function main() {
     .waitFor();
   assert(!/pharmavite/i.test(await page.locator("body").innerText()));
   await page.locator("nav").getByRole("button", { name: "Overview" }).click();
+  await assignmentPanels(page);
   await page
     .getByRole("heading", { name: "My assignments", exact: true })
     .waitFor();
@@ -532,9 +539,10 @@ async function main() {
   await page
     .locator(".personal-dashboard .metric")
     .first()
-    .getByText("PMs / CILs", { exact: true })
+    .getByText("PM plans", { exact: true })
     .waitFor();
-  assert.equal(await page.locator(".personal-dashboard .metric").count(), 2);
+  assert.equal(await page.locator(".personal-dashboard .metric").count(), 3);
+  await page.getByText("CIL plans", { exact: true }).waitFor();
   assert.equal(await page.locator(".personal-dashboard details").count(), 2);
   await page.screenshot({
     path: shots + "/custom-dashboard.png",
@@ -562,6 +570,7 @@ async function main() {
     fullPage: true,
   });
   await page.reload();
+  await expandTools(page);
   await page
     .getByRole("heading", { name: "Start a verification", exact: true })
     .waitFor();
@@ -585,6 +594,7 @@ async function main() {
     .waitFor();
   const mp = await manager.newPage();
   await mp.goto(origin);
+  await expandTools(mp);
   await mp.locator("nav").getByRole("button", { name: "Accounts" }).click();
   await mp
     .getByRole("heading", { name: "Department accounts", exact: true })
@@ -634,6 +644,8 @@ async function main() {
   });
   const dp = await delegate.newPage();
   await dp.goto(origin);
+  await expandTools(dp);
+  await assignmentPanels(dp);
   await dp
     .locator("nav")
     .getByRole("button", { name: "Manage", exact: false })
@@ -653,6 +665,7 @@ async function main() {
   });
   const ap = await admin.newPage();
   await ap.goto(origin);
+  await expandTools(ap);
   await ap.locator("nav").getByRole("button", { name: "Accounts" }).click();
   await ap.getByLabel("Account", { exact: true }).selectOption(users[7].id);
   await ap
@@ -694,6 +707,8 @@ async function main() {
     }),
   );
   await dp.goto(origin);
+  await expandTools(dp);
+  await assignmentPanels(dp);
   await dp
     .getByRole("heading", { name: "My assignments", exact: true })
     .waitFor();
@@ -738,6 +753,7 @@ main()
     await db.passwordReset.deleteMany({ where: { userId: { in: ids } } });
     await db.notification.deleteMany({ where: { userId: { in: ids } } });
     await db.session.deleteMany({ where: { userId: { in: ids } } });
+    await db.roleAudit.deleteMany({ where: { actorId: { in: ids } } });
     await db.user.deleteMany({ where: { id: { in: ids } } });
     await db.equipment.deleteMany({ where: { plant: prefix } });
     await db.location.deleteMany({ where: { plant: prefix } });

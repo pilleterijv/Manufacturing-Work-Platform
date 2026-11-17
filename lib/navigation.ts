@@ -2,10 +2,14 @@ import type { Capability } from "./rules";
 import type { AdminPrivilege } from "./delegation-rules";
 export type NavigationUser = {
   role: string;
+  homeProfile?: string;
+  customRole?: string | null;
   grants: Capability[];
   adminPrivileges?: AdminPrivilege[];
 };
 export const sectionRules: Record<string, Capability | null> = {
+  "Work queue": null,
+  Machines: null,
   Overview: null,
   "Dashboard settings": null,
   "Standard work": "work",
@@ -41,7 +45,7 @@ export function canOpenSection(u: NavigationUser, name: string) {
   if (name === "Accounts")
     return (
       u.role === "Admin" ||
-      u.role === "Manager" ||
+      (u.role === "Manager" && !u.customRole) ||
       p.some((v) => v.startsWith("accounts."))
     );
   if (name === "Permissions" || name === "Integrations")

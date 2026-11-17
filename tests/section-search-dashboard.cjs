@@ -1,3 +1,4 @@
+const { expandTools } = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const assert = require("node:assert/strict"),
@@ -184,7 +185,11 @@ const check = async (r, status = 200) => {
     const page = await context.newPage();
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
+    // This suite intentionally leaves its preserved draft when moving sections.
+    // Draft cancellation/retention is exercised in the floor-usability suite.
+    page.on("dialog", (dialog) => dialog.accept());
     await page.goto(origin);
+    await expandTools(page);
     await page.getByRole("heading", { name: "Welcome, Morgan." }).waitFor();
     const nav = async (name) => {
       await page.locator(".nav-item").filter({ hasText: name }).first().click();
@@ -212,12 +217,12 @@ const check = async (r, status = 200) => {
       "Keep this unsaved draft",
     );
     const search = page.getByRole("combobox", {
-      name: "Search this section",
+      name: "Search time studies",
       exact: true,
     });
     await search.fill(prefix);
     await page
-      .getByRole("option")
+      .locator('[role="listbox"] [role="option"]')
       .filter({ hasText: equipment[0].name })
       .first()
       .waitFor();
@@ -232,25 +237,22 @@ const check = async (r, status = 200) => {
     assert.equal(await search.getAttribute("aria-expanded"), "false");
     await search.fill(equipment[0].name);
     await page
-      .getByRole("option")
+      .locator('[role="listbox"] [role="option"]')
       .filter({ hasText: equipment[0].name })
       .first()
       .click();
     assert.equal(await search.inputValue(), equipment[0].name);
     const person = page.getByRole("combobox", {
-      name: "Find a person",
+      name: "Study recorder",
       exact: true,
     });
     await person.fill("Morgan Search");
     await page
-      .getByRole("listbox", { name: "Find a person suggestions" })
+      .getByRole("listbox", { name: "Study recorder suggestions" })
       .getByRole("option")
       .filter({ hasText: users[0].name })
       .click();
-    assert.equal(
-      await page.getByLabel("Filter by person", { exact: true }).inputValue(),
-      users[0].id,
-    );
+    assert((await person.inputValue()).includes(users[0].username));
     await page
       .getByRole("button", { name: "Apply filters", exact: true })
       .click();

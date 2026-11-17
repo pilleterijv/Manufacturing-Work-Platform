@@ -1,5 +1,8 @@
 "use client";
 import LeaderHandoff, { type LeaderHandoffData } from "../leader-handoff";
+import { confirmDraftChange } from "../floor-safety";
+import RecordingContext from "../recording-context";
+import { equipmentLabel } from "@/lib/equipment-label";
 import EvidenceInput from "../evidence-input";
 import { useState, useEffect, useRef } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
@@ -21,6 +24,7 @@ export default function Work({
   busy,
   audit,
   leader = false,
+  initialStandardId = "",
   shiftNames = ["Day", "Night"],
 }: {
   data: Data;
@@ -28,6 +32,7 @@ export default function Work({
   busy: boolean;
   audit: boolean;
   leader?: boolean;
+  initialStandardId?: string;
   shiftNames?: string[];
 }) {
   const uploads = useRef(0);
@@ -69,7 +74,8 @@ export default function Work({
         .catch((e) => setLocalError(e.message));
   }, [audit, data.standards]);
   const s = data.standards.find((s) => s.id === id);
-  function select(id: string) {
+  function select(id: string, check = true) {
+    if (check && !confirmDraftChange()) return;
     setId(id);
     setResponses({});
     setCycles([]);
@@ -77,6 +83,10 @@ export default function Work({
     setLocalError("");
     setHandoff({ shift: "", notes: "", rooms: [] });
   }
+  useEffect(() => {
+    if (initialStandardId && latest.some((s) => s.id === initialStandardId))
+      select(initialStandardId, false);
+  }, [initialStandardId]);
   function update(step: string, patch: object) {
     setResponses((prev) => ({
       ...prev,
@@ -161,7 +171,7 @@ export default function Work({
                   ...(audit && !leader && cycles.length ? { cycles } : {}),
                 })
               ) {
-                select("");
+                select("", false);
                 setOperator("");
               }
             }}
@@ -340,6 +350,10 @@ export default function Work({
                 {localError}
               </div>
             )}
+            <RecordingContext
+              equipment={data.equipment.find((e) => e.id === s.equipmentId)}
+              shift={leader ? handoff.shift : undefined}
+            />
             <Submit busy={busy || uploading}>
               {leader
                 ? "Complete DL/TL Standard Work"

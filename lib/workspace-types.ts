@@ -6,6 +6,8 @@ export type User = {
   name: string;
   username: string;
   role: string;
+  customRole?: string | null;
+  homeProfile?: string;
   mustChange: boolean;
   grants: Capability[];
   adminPrivileges?: AdminPrivilege[];
@@ -79,5 +81,13 @@ export type Data = {
     media?: { id: string; kind: "photo" | "video"; caption: string }[];
   }[];
   users: any[];
-  policies: { role: string; grants: Capability[] }[];
+  policies: {
+    role: string;
+    grants: Capability[];
+    active?: boolean;
+    baseRole?: string;
+    adminPrivileges?: AdminPrivilege[];
+    description?: string;
+    version?: number;
+  }[];
 };

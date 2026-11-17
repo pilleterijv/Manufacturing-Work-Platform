@@ -1,6 +1,9 @@
 "use client";
 import RefreshControl, { useSectionRefresh } from "../refresh-control";
 import PersonSelect from "../person-select";
+import RecordingContext from "../recording-context";
+import { equipmentLabel } from "@/lib/equipment-label";
+import { confirmDraftChange } from "../floor-safety";
 import { useState, useEffect, useRef } from "react";
 import { api, filterUrl } from "@/lib/client-api";
 import EvidenceInput, { EvidenceView } from "../evidence-input";
@@ -56,10 +59,14 @@ export default function Maintenance({
     setError("");
     try {
       await api("/api/maintenance", { ...body, kind });
-      await load();
       setSelected(null);
       setDraft(null);
       setNotice(`${label} saved.`);
+      try {
+        await load();
+      } catch {
+        setNotice(`${label} saved. Refresh the list before another entry.`);
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -68,7 +75,7 @@ export default function Maintenance({
   }
   const location = (id: string) => {
     const e = data?.equipment.find((e: any) => e.id === id);
-    return e ? [e.plant, e.department, e.area, e.name].join(" / ") : id;
+    return e ? equipmentLabel(e) : id;
   };
   return (
     <>
@@ -90,34 +97,38 @@ export default function Maintenance({
         {error && <p role="alert">{error}</p>}
         {notice && <p role="status">{notice}</p>}
         {data?.canManage && (
-          <button
-            className="primary"
-            onClick={() => {
-              setSelected(null);
-              setDraft({
-                title: "",
-                equipmentId: "",
-                assigneeId: "",
-                nextDue: data.today,
-                intervalDays: kind === "cil" ? 1 : 30,
-                active: true,
-                steps: (kind === "cil"
-                  ? [
-                      "Clean the specified machine points",
-                      "Inspect for abnormalities",
-                      "Lubricate specified points per machine instructions",
-                    ]
-                  : [""]
-                ).map((text) => ({
-                  id: crypto.randomUUID(),
-                  text,
-                  photo: false,
-                })),
-              });
-            }}
-          >
-            Create {label} plan
-          </button>
+          <details className="plan-tools">
+            <summary>Plan editing — authorized planners</summary>
+            <button
+              className="primary"
+              onClick={() => {
+                if (!confirmDraftChange()) return;
+                setSelected(null);
+                setDraft({
+                  title: "",
+                  equipmentId: "",
+                  assigneeId: "",
+                  nextDue: data.today,
+                  intervalDays: kind === "cil" ? 1 : 30,
+                  active: true,
+                  steps: (kind === "cil"
+                    ? [
+                        "Clean the specified machine points",
+                        "Inspect for abnormalities",
+                        "Lubricate specified points per machine instructions",
+                      ]
+                    : [""]
+                  ).map((text) => ({
+                    id: crypto.randomUUID(),
+                    text,
+                    photo: false,
+                  })),
+                });
+              }}
+            >
+              Create {label} plan
+            </button>
+          </details>
         )}
       </section>
       {draft && (
@@ -292,27 +303,6 @@ export default function Maintenance({
           .filter((p: any) => p.active || showRetired)
           .map((p: any) => (
             <article className="problem-action" key={p.id}>
-              {data.canManage && p.active && (
-                <button
-                  type="button"
-                  className="outline"
-                  disabled={busy}
-                  onClick={() => {
-                    if (
-                      confirm(
-                        "Retire this task? Its completed history and evidence will remain available.",
-                      )
-                    )
-                      void save({
-                        action: "retire",
-                        id: p.id,
-                        version: p.version,
-                      });
-                  }}
-                >
-                  Delete / retire task
-                </button>
-              )}
               <h3>
                 {p.title}{" "}
                 <span
@@ -325,7 +315,9 @@ export default function Maintenance({
                     ? "Paused"
                     : p.nextDue < data.today
                       ? "Overdue"
-                      : "Scheduled"}
+                      : p.nextDue === data.today
+                        ? "Due today"
+                        : "Scheduled"}
                 </span>
               </h3>
               <p>
@@ -341,6 +333,7 @@ export default function Maintenance({
                     <button
                       className="primary"
                       onClick={() => {
+                        if (!confirmDraftChange()) return;
                         setDraft(null);
                         setSelected(p);
                         setResponses({});
@@ -349,18 +342,45 @@ export default function Maintenance({
                       Perform {label}
                     </button>
                   )}
-                {data.canManage && (
-                  <button
-                    className="outline"
-                    onClick={() => {
-                      setSelected(null);
-                      setDraft(p);
-                    }}
-                  >
-                    Edit {label}
-                  </button>
-                )}
               </div>
+              {data.canManage && (
+                <details className="plan-tools">
+                  <summary>Manage this plan</summary>
+                  {data.canManage && (
+                    <button
+                      className="outline"
+                      onClick={() => {
+                        if (!confirmDraftChange()) return;
+                        setSelected(null);
+                        setDraft(p);
+                      }}
+                    >
+                      Edit {label}
+                    </button>
+                  )}
+                  {data.canManage && p.active && (
+                    <button
+                      type="button"
+                      className="outline"
+                      disabled={busy}
+                      onClick={() => {
+                        if (
+                          confirm(
+                            "Retire this task? Its completed history and evidence will remain available.",
+                          )
+                        )
+                          void save({
+                            action: "retire",
+                            id: p.id,
+                            version: p.version,
+                          });
+                      }}
+                    >
+                      Delete / retire task
+                    </button>
+                  )}
+                </details>
+              )}
             </article>
           ))}
         {data && !data.plans.length && (
@@ -474,6 +494,11 @@ export default function Maintenance({
                 />
               </section>
             ))}
+            <RecordingContext
+              equipment={data.equipment.find(
+                (e: any) => e.id === selected.equipmentId,
+              )}
+            />
             <button className="primary" disabled={busy || uploading}>
               Complete {label} and save evidence
             </button>

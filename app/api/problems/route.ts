@@ -1,4 +1,6 @@
 import { readFilters } from "@/lib/filters";
+import { workflowFocus } from "@/lib/workflow-focus";
+import { withSubmission } from "@/lib/submission";
 import { evidenceSchema, ownEvidence } from "@/lib/evidence";
 import {
   equipmentIds,
@@ -73,9 +75,10 @@ export async function GET(req: Request) {
       .parse(p.get("search") ?? "");
     const scope: Prisma.ProblemWhereInput = {
       equipmentId: { in: ids },
-      ...(person
-        ? {
-            AND: [
+      AND: [
+        await workflowFocus(req.url, "problems", u.id),
+        ...(person
+          ? [
               {
                 OR: [
                   { ownerId: person },
@@ -84,9 +87,9 @@ export async function GET(req: Request) {
                   { actions: { some: { ownerId: person } } },
                 ],
               },
-            ],
-          }
-        : {}),
+            ]
+          : []),
+      ],
       ...(department
         ? { equipmentSnapshot: { path: ["department"], equals: department } }
         : {}),
@@ -381,18 +384,22 @@ export async function POST(req: Request) {
       }
       const id = randomUUID(),
         reference = `${input.method}-${new Date().getUTCFullYear()}-${id.slice(0, 8).toUpperCase()}`;
-      const record = await db.problem.create({
-        data: {
-          ...input,
-          requirements: input.requirements ?? defaultRequirements(input.method),
-          id,
-          reference,
-          equipmentSnapshot: equipment,
-          createdBy: u.id,
-          history: [{ ...entry, event: "Created", values: input }],
-        },
+      const record = await withSubmission(u.id, "problem", body, async (tx) => {
+        const saved = await tx.problem.create({
+          data: {
+            ...input,
+            requirements:
+              input.requirements ?? defaultRequirements(input.method),
+            id,
+            reference,
+            equipmentSnapshot: equipment,
+            createdBy: u.id,
+            history: [{ ...entry, event: "Created", values: input }],
+          },
+        });
+        return { id: saved.id, reference: saved.reference };
       });
-      return Response.json({ id: record.id, reference });
+      return Response.json(record);
     }
     const id = idSchema.parse(body.id),
       version = versionSchema.parse(body.version);

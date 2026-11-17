@@ -6,6 +6,7 @@ import { fiveSPillars } from "@/lib/floor-rules";
 import EvidenceInput, { EvidenceView } from "../evidence-input";
 import { Field } from "../shared";
 import PersonSelect from "../person-select";
+import { confirmDraftChange } from "../floor-safety";
 export default function FiveS({
   userId,
   admin,
@@ -43,8 +44,12 @@ export default function FiveS({
       const r = await api("/api/five-s", body);
       setDraft(null);
       setSelected(null);
-      await load();
       setNotice(r.id ? `5S audit saved. Reference: ${r.id}` : "5S plan saved.");
+      try {
+        await load();
+      } catch {
+        setNotice("5S saved. Refresh the list before another entry.");
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -69,6 +74,7 @@ export default function FiveS({
           <button
             className="outline"
             onClick={() => {
+              if (!confirmDraftChange()) return;
               setSelected(null);
               setDraft({
                 title: "",
@@ -320,6 +326,7 @@ export default function FiveS({
                     <button
                       className="primary"
                       onClick={() => {
+                        if (!confirmDraftChange()) return;
                         setDraft(null);
                         setSelected(p);
                         setResponses({});
@@ -332,6 +339,7 @@ export default function FiveS({
                   <button
                     className="outline"
                     onClick={() => {
+                      if (!confirmDraftChange()) return;
                       setSelected(null);
                       setDraft(p);
                     }}

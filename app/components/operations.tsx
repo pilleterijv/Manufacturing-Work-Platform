@@ -1,6 +1,8 @@
 "use client";
 import RefreshControl, { useSectionRefresh } from "./refresh-control";
 import { HistoryPagingContext, Metric } from "./shared";
+import RecordingContext from "./recording-context";
+import { openWorkflow } from "@/lib/floor-navigation";
 import PersonSelect from "./person-select";
 import { filterUrl } from "@/lib/client-api";
 import EvidenceInput, { EvidenceView } from "./evidence-input";
@@ -281,6 +283,9 @@ export function Downtime({
               ? `${selected.reasonName} · started by ${selected.starter.name}`
               : "One shared timer per machine prevents overlapping records."}
           </p>
+          <RecordingContext
+            equipment={equipment.find((e) => e.id === equipmentId)}
+          />
           <button
             className={selected ? "danger" : "primary"}
             type="button"
@@ -1104,7 +1109,20 @@ export function Leadership({
         value={value}
         detail={detail}
         accent={accent}
-        onClick={go && target && canGo(target) ? () => go(target) : undefined}
+        onClick={
+          go && target && canGo(target)
+            ? () =>
+                label === "Open improvement ideas"
+                  ? openWorkflow({
+                      tab: target,
+                      filters: {
+                        focus: "open",
+                        ...(department ? { department } : {}),
+                      },
+                    })
+                  : go(target)
+            : undefined
+        }
       />
     );
   }
@@ -1112,6 +1130,7 @@ export function Leadership({
     <>
       <section className="panel">
         <form
+          data-no-draft
           className="leadership-filters"
           onSubmit={(e) => {
             e.preventDefault();

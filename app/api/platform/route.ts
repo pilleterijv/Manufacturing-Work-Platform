@@ -1,4 +1,5 @@
 import { referenceDepartments, referenceAreas } from "@/lib/reference-catalog";
+import { resolveRole } from "@/lib/role-assignment";
 import { adminPrivileges, canAdminister } from "@/lib/capabilities";
 import { requireDelegated } from "@/lib/security";
 import type { AdminPrivilege } from "@/lib/delegation-rules";
@@ -39,14 +40,22 @@ export async function GET(req: Request) {
   try {
     const u = await requireUser();
     const g = await grants(u);
-    const ids = await equipmentIds(u);
+    const permittedIds = await equipmentIds(u);
+    const focusedMachine = z
+      .string()
+      .uuid()
+      .optional()
+      .parse(new URL(req.url).searchParams.get("equipment") || undefined);
+    const ids = focusedMachine
+      ? permittedIds.filter((id) => id === focusedMachine)
+      : permittedIds;
     const { person, search } = readFilters(req.url);
     const assignmentIds = await assignedEquipmentIds(ids, person);
     const matchingEquipment = search
       ? (
           await db.equipment.findMany({
             where: {
-              id: { in: assignmentIds },
+              id: { in: ids },
               OR: ["name", "plant", "department", "area", "line"].map((k) => ({
                 [k]: { contains: search, mode: "insensitive" },
               })),
@@ -198,7 +207,11 @@ export async function GET(req: Request) {
     const [equipment, standards, records, content, users, policies] =
       await Promise.all([
         db.equipment.findMany({
-          where: { id: { in: assignmentIds } },
+          where: {
+            id: {
+              in: ["training", "guides"].includes(view) ? ids : assignmentIds,
+            },
+          },
           orderBy: { name: "asc" },
         }),
         standardsNeeded
@@ -271,6 +284,7 @@ export async function GET(req: Request) {
                 username: true,
                 name: true,
                 role: true,
+                customRole: true,
                 active: true,
                 mustChange: true,
                 email: true,
@@ -283,7 +297,8 @@ export async function GET(req: Request) {
               },
             })
           : [],
-        ["full", "policies"].includes(view) && g.includes("permissions")
+        ["full", "policies", "users"].includes(view) &&
+        g.includes("permissions")
           ? db.policy.findMany()
           : [],
       ]);
@@ -1018,10 +1033,22 @@ export async function POST(req: Request) {
         .parse(b);
       if (v.role === "Admin")
         throw new HttpError(400, "Admin permissions are protected");
-      await db.policy.upsert({
-        where: { role: v.role },
-        create: v,
-        update: { grants: v.grants },
+      await db.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT role FROM "Policy" WHERE role=${v.role} FOR UPDATE`;
+        const before = await tx.policy.findUnique({ where: { role: v.role } });
+        const after = await tx.policy.upsert({
+          where: { role: v.role },
+          create: { ...v, baseRole: v.role },
+          update: { grants: v.grants, version: { increment: 1 } },
+        });
+        await tx.roleAudit.create({
+          data: {
+            actorId: u.id,
+            role: v.role,
+            action: "Updated",
+            snapshot: JSON.parse(JSON.stringify({ before, after })),
+          },
+        });
       });
     }
     if (action === "user") {
@@ -1034,7 +1061,7 @@ export async function POST(req: Request) {
             .optional()
             .transform((v) => (v === "" ? null : v)),
           name: z.string().min(1).max(150),
-          role: z.enum(roles),
+          role: z.string().min(1).max(60),
           active: z.boolean(),
           password: z.string().max(128).optional(),
         })
@@ -1052,6 +1079,7 @@ export async function POST(req: Request) {
         throw new HttpError(400, "A temporary password is required");
       await db.$transaction(
         async (tx) => {
+          const assignment = await resolveRole(v.role, tx);
           if (id) {
             const old = await tx.user.findUnique({ where: { id } });
             if (!old) throw new HttpError(404, "User not found");
@@ -1073,6 +1101,7 @@ export async function POST(req: Request) {
               where: { id },
               data: {
                 ...fields,
+                ...assignment,
                 ...(passwordHash
                   ? { password: passwordHash, mustChange: true }
                   : {}),
@@ -1082,7 +1111,7 @@ export async function POST(req: Request) {
             await tx.session.deleteMany({ where: { userId: id } });
           } else
             await tx.user.create({
-              data: { ...fields, password: passwordHash! },
+              data: { ...fields, ...assignment, password: passwordHash! },
             });
         },
         { isolationLevel: "Serializable" },

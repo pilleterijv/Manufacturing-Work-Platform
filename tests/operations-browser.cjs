@@ -1,3 +1,8 @@
+const {
+  expandTools,
+  assignmentPanels,
+  planningTools,
+} = require("./ui-workspace.cjs");
 const { selectDowntimeMachine } = require("./helpers/downtime.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
@@ -99,6 +104,7 @@ async function main() {
   assert.equal((await get(validator, "/api/leadership")).status, 403);
   const ap = await admin.newPage();
   await ap.goto(origin);
+  await expandTools(ap);
   await ap.getByRole("button", { name: /Downtime$/ }).click();
   await ap
     .getByLabel("Reason name", { exact: true })
@@ -106,7 +112,10 @@ async function main() {
   await ap
     .getByRole("button", { name: "Add downtime reason", exact: true })
     .click();
-  await ap.getByRole("status").waitFor();
+  await ap
+    .getByRole("status")
+    .filter({ hasText: "Saved to the database." })
+    .waitFor();
   const reason = await db.downtimeReason.findUnique({
     where: { name: "Tool adjustment " + suffix },
   });
@@ -158,6 +167,7 @@ async function main() {
     errors = [];
   op.on("pageerror", (e) => errors.push(e.message));
   await op.goto(origin);
+  await expandTools(op);
   await op.getByRole("button", { name: /Downtime$/ }).click();
   assert.equal(
     await op
@@ -190,6 +200,7 @@ async function main() {
   );
   await op.waitForTimeout(1100);
   await op.reload();
+  await expandTools(op);
   await op.getByRole("button", { name: /Downtime$/ }).click();
   await selectDowntimeMachine(op, equipment[0]);
   await op
@@ -298,7 +309,10 @@ async function main() {
   await op
     .getByRole("button", { name: "Submit idea & notify pilot", exact: true })
     .click();
-  await op.getByRole("status").waitFor();
+  await op
+    .getByRole("status")
+    .filter({ hasText: "Saved to the database." })
+    .waitFor();
   const idea = await db.idea.findFirst({ where: { createdBy: users[3].id } });
   assert(idea);
   assert.equal(idea.process, "Packing changeover");
@@ -333,6 +347,7 @@ async function main() {
   assert(directory.every((p) => !("password" in p) && !("role" in p)));
   const mp = await manager.newPage();
   await mp.goto(origin);
+  await expandTools(mp);
   await mp
     .locator("nav")
     .getByRole("button", { name: /Notifications/ })
@@ -343,7 +358,10 @@ async function main() {
     fullPage: true,
   });
   await mp.getByRole("button", { name: "Mark as read", exact: true }).click();
-  await mp.getByRole("status").waitFor();
+  await mp
+    .getByRole("status")
+    .filter({ hasText: "Saved to the database." })
+    .waitFor();
   assert(
     (await db.notification.findUnique({ where: { id: notification.id } }))
       .readAt,
@@ -354,7 +372,10 @@ async function main() {
   await mp
     .getByLabel("Progress for " + idea.title, { exact: true })
     .selectOption("Piloting");
-  await mp.getByRole("status").waitFor();
+  await mp
+    .getByRole("status")
+    .filter({ hasText: "Saved to the database." })
+    .waitFor();
   let current = await db.idea.findUnique({ where: { id: idea.id } });
   assert.equal(current.status, "Piloting");
   assert.equal(
@@ -629,6 +650,7 @@ async function main() {
   });
   const mobilePage = await mobile.newPage();
   await mobilePage.goto(origin);
+  await expandTools(mobilePage);
   await mobilePage.getByRole("button", { name: /Downtime$/ }).click();
   await selectDowntimeMachine(mobilePage, equipment[0]);
   await mobilePage.screenshot({

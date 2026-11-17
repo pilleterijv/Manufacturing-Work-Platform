@@ -239,6 +239,9 @@ async function main() {
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(origin);
   await page
+    .getByText("Performance and department reports", { exact: true })
+    .click();
+  await page
     .getByRole("heading", { name: "Whole-floor performance", exact: true })
     .waitFor();
   await page.evaluate(() => navigator.serviceWorker.ready);
@@ -257,6 +260,9 @@ async function main() {
   );
   await page.reload();
   await page.waitForFunction(() => !!navigator.serviceWorker.controller);
+  await page
+    .getByText("Performance and department reports", { exact: true })
+    .click();
   await page
     .getByLabel("Leadership department", { exact: true })
     .selectOption(equipment[0].department);
@@ -331,6 +337,9 @@ async function main() {
   );
   const op = await operator.newPage();
   await op.goto(origin);
+  await op
+    .getByText("Performance and department reports", { exact: true })
+    .click();
   await op.getByRole("heading", { name: /section dashboard$/ }).waitFor();
   assert.equal(
     await op.getByRole("button", { name: /Leadership dashboard$/ }).count(),

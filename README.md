@@ -1,5 +1,9 @@
 # Floorwork — Manufacturing Work Platform
 
+Role-specific shift queues, maintenance-first home views, a scoped machine workspace and compact navigation are available. **Apply migration 017 before starting this update.** See [setup, update steps and screenshots](docs/shift-queues-machine-workspace.md).
+
+Search now follows each tab’s actual records and person roles, with isolated filters and native suggestions. See [contextual search behavior and update steps](docs/contextual-search.md).
+
 Current hardening and device readiness: [security/resource review](docs/security-performance-review.md), [iPad/tablet/computer installation](docs/tablet-deployment.md), and [step-by-step TrakSYS/Azure SQL connections](docs/traksys-sql-connection-guide.md). Clients use the shared HTTPS app without Node or Docker. This release updates the vulnerable XML parser, streams video ranges, uploads video without base64 copies, bounds external responses and reuses limited SQL pools.
 
 Machine **Centerlines** now support product/setup settings, numeric or text limits, photo/video audit evidence, permanent revision snapshots and follow-up results. **Apply migration 014 before starting this update.** See [Centerlines setup and usage](docs/centerlines.md).
@@ -165,6 +169,14 @@ Assignments are enforced on start/stop requests, live timers, operational histor
 
 Run `npm run test:downtime-access` against a local production app to verify the hierarchy, assignment editing, immediate revocation, unauthorized starts/stops and scoped reads/exports. Back up data before upgrading; preserve your existing `.env`, uploads and database volume.
 
+## Custom roles and floor usability
+
+Migration **015** adds named custom roles, explicit management privileges, account role assignments and role change history. Admin uses **Permissions → Create custom role**, then assigns the role and permitted departments/areas/machines in **Accounts**. A custom Manager workflow does not inherit built-in Manager account privileges; choose them explicitly. One account has one role across all its assigned locations. Existing individual extra permissions remain additive.
+
+After updating source, stop the app and run `npm ci`, `npm run db:generate`, `npm run db:setup`, `npm run build`, then `npm start`. Preserve private settings and back up data first. Setup must apply migration 015 before the new runtime starts.
+
+See [the floor usability review and role guide](docs/floor-usability-and-roles.md) for role-specific navigation recommendations, mistake prevention priorities, assignment steps and limitations. Role permissions and location scope are enforced separately; neither an editing privilege nor a custom role bypasses location assignments. Scoped account management is available to built-in Managers and accounts explicitly granted account privileges; global role administration remains Admin-only.
+
 ## Shift alerts, photo evidence and factory integrations
 
 **Shift requirements** lets managers schedule standard-work families by shift and weekday, either once per machine or once per assigned operator. Choose manager/supervisor recipients and independently switch in-app and email alerts on/off. Monitoring begins with the next full shift after activation. Late completions do not erase a missed-shift alert. **Accounts** now stores notification email addresses. SMTP remains unconnected until IT supplies private relay settings; pending email is queued, retried, and visible in the service status.
@@ -174,3 +186,7 @@ Required per-step photos are already enforced by the server. Managers with Analy
 The Admin-only **Integrations** section creates keyed sources and maps external machine IDs to Floorwork equipment. An authenticated webhook accepts down/running transitions; the optional Microsoft SQL Server/Azure SQL bridge reads an approved event view. Neither is a preconfigured connection to your TrakSYS 11.1 installation. Read [the IT setup guide](docs/factory-integrations.md) for the exact event/view contract, email setup, worker service and remaining validation.
 
 Migration 008 adds these tables and preserves existing users and records. `npm start` and the Windows launcher start the shift/integration worker. Custom hosting must also run it (or use `FLOORWORK_WORKER_MODE=external` and manage the worker as a separate service). New verification: `npm run test:connected`, `npm run background:once`. Native Windows, company Azure SQL, TrakSYS and SMTP-provider connectivity still require target-environment testing.
+
+## Floor workflow update (migration 016)
+
+Overview now prioritizes tasks for each role. The workspace adds machine/shift context, machine-label entry/scanning where supported, guarded unsaved forms, server-confirmed save feedback, scoped existing-issue suggestions and retry protection for new defect/problem reports. Dashboard assignment links retain their open/assignment filters; PM and CIL counts are separate. See [the floor workflow guide](docs/floor-workflows.md) for behavior, camera support, limits and upgrade steps. Run database generation/setup before rebuilding and starting the updated app.

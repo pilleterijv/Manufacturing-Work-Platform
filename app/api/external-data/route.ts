@@ -61,6 +61,7 @@ export async function GET(req: Request) {
       ...(search
         ? {
             OR: [
+              { externalId: { contains: search, mode: "insensitive" } },
               { title: { contains: search, mode: "insensitive" } },
               { details: { contains: search, mode: "insensitive" } },
               { equipmentId: { in: matched } },

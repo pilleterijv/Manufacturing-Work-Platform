@@ -1,4 +1,7 @@
 "use client";
+import RecordingContext from "../recording-context";
+import { equipmentLabel } from "@/lib/equipment-label";
+import { confirmDraftChange } from "../floor-safety";
 import { useEffect, useRef, useState } from "react";
 import { api, filterUrl } from "@/lib/client-api";
 import {
@@ -95,7 +98,11 @@ export default function Centerlines() {
             ? "Centerline retired. Audit history preserved."
             : "Centerline settings saved.",
       );
-      await load();
+      try {
+        await load();
+      } catch {
+        setNotice("Saved. Refresh the list before another entry.");
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -104,9 +111,7 @@ export default function Centerlines() {
   }
   const machine = (id: string) => {
     const e = data?.equipment.find((x: any) => x.id === id);
-    return e
-      ? [e.plant, e.department, e.area, e.name].filter(Boolean).join(" / ")
-      : id;
+    return e ? equipmentLabel(e) : id;
   };
   const update = (id: string, patch: object) =>
     setResponses((old) => ({
@@ -143,6 +148,7 @@ export default function Centerlines() {
             className="primary"
             disabled={busy || uploading}
             onClick={() => {
+              if (!confirmDraftChange()) return;
               setSelected(null);
               setDraft({
                 title: "",
@@ -424,6 +430,7 @@ export default function Centerlines() {
                               className="primary"
                               disabled={busy || uploading}
                               onClick={() => {
+                                if (!confirmDraftChange()) return;
                                 setDraft(null);
                                 setSelected(c);
                                 setResponses({});
@@ -442,6 +449,7 @@ export default function Centerlines() {
                                 className="outline"
                                 disabled={busy || uploading}
                                 onClick={() => {
+                                  if (!confirmDraftChange()) return;
                                   setSelected(null);
                                   setDraft(structuredClone(c));
                                 }}
@@ -590,6 +598,11 @@ export default function Centerlines() {
                 </fieldset>
               );
             })}
+            <RecordingContext
+              equipment={data.equipment.find(
+                (e: any) => e.id === selected.equipmentId,
+              )}
+            />
             <div className="button-row">
               <button className="primary" disabled={busy || uploading}>
                 Save centerline audit

@@ -5,6 +5,7 @@ export type SearchChoice = {
   label: string;
   kind?: string;
   detail?: string;
+  searchText?: string;
 };
 export default function SearchPicker({
   label,
@@ -33,7 +34,7 @@ export default function SearchPicker({
   }, [selection]);
   const results = choices
     .filter((c) =>
-      `${c.label} ${c.value} ${c.kind || ""}`
+      `${c.label} ${c.value} ${c.kind || ""} ${c.searchText || ""}`
         .toLowerCase()
         .includes(value.toLowerCase()),
     )

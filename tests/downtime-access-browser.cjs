@@ -1,3 +1,4 @@
+const { expandTools } = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const { randomUUID } = require("node:crypto"),
@@ -29,7 +30,7 @@ async function main() {
           role,
           password: hash,
           mustChange: false,
-          workspaceAccess:{mode:"all",locations:[],equipmentIds:[]},
+          workspaceAccess: { mode: "all", locations: [], equipmentIds: [] },
         },
       }),
     );
@@ -45,7 +46,24 @@ async function main() {
         data: { name, plant, department, area, line: "Line A" },
       }),
     );
-  for(const e of equipment) await db.location.upsert({where:{plant_department_area_line:{plant:e.plant,department:e.department,area:e.area,line:e.line}},create:{plant:e.plant,department:e.department,area:e.area,line:e.line},update:{}});
+  for (const e of equipment)
+    await db.location.upsert({
+      where: {
+        plant_department_area_line: {
+          plant: e.plant,
+          department: e.department,
+          area: e.area,
+          line: e.line,
+        },
+      },
+      create: {
+        plant: e.plant,
+        department: e.department,
+        area: e.area,
+        line: e.line,
+      },
+      update: {},
+    });
   reason = await db.downtimeReason.create({
     data: { name: "Location verification " + suffix },
   });
@@ -149,6 +167,7 @@ async function main() {
   assert.equal((await stop(foreign.id)).status, 403);
   const page = await operator.newPage();
   await page.goto(origin);
+  await expandTools(page);
   await page
     .locator("nav")
     .getByRole("button", { name: /Downtime$/ })
@@ -258,6 +277,7 @@ async function main() {
   // Native admin editor round-trip, with only one machine assigned.
   const ap = await admin.newPage();
   await ap.goto(origin);
+  await expandTools(ap);
   await ap
     .locator("nav")
     .getByRole("button", { name: /Accounts$/ })
@@ -281,7 +301,10 @@ async function main() {
   await ap
     .getByRole("button", { name: "Save downtime access", exact: true })
     .click();
-  await ap.getByRole("status").waitFor();
+  await ap
+    .getByRole("status")
+    .filter({ hasText: "Saved to the database." })
+    .waitFor();
   const saved = (
     await db.user.findUniqueOrThrow({ where: { id: users[1].id } })
   ).downtimeAccess;
@@ -319,7 +342,23 @@ async function main() {
   });
   const mp = await manager.newPage();
   await mp.goto(origin);
-  assert.equal(await mp.locator("nav").getByRole("button",{name:/Accounts$/}).count(),0);
+  await expandTools(mp);
+  assert.equal(
+    await mp
+      .locator("nav")
+      .getByRole("button", { name: /Accounts$/ })
+      .count(),
+    1,
+  );
+  // Managers now have scoped account administration; global administration
+  // remains protected by the account/delegation regression suite.
+  await mp
+    .locator("nav")
+    .getByRole("button", { name: /Accounts$/ })
+    .click();
+  await mp
+    .getByRole("heading", { name: "Department accounts", exact: false })
+    .waitFor();
   // Operational exports use the same assignment filter, even with export rights.
   const originalOperator = (
     await db.policy.findUniqueOrThrow({ where: { role: "Operator" } })

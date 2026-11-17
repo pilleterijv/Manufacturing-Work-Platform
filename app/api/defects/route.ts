@@ -1,4 +1,7 @@
 import { z } from "zod";
+import { focusedEquipmentIds } from "@/lib/equipment-label";
+import { workflowFocus } from "@/lib/workflow-focus";
+import { withSubmission } from "@/lib/submission";
 import { db } from "@/lib/db";
 import {
   requireUser,
@@ -26,7 +29,7 @@ import { paged, streamWorkbook } from "@/lib/excel-stream";
 export async function GET(req: Request) {
   try {
     const u = await requireUser("defects"),
-      ids = await equipmentIds(u),
+      ids = focusedEquipmentIds(req.url, await equipmentIds(u)),
       equipment = await db.equipment.findMany({
         where: { id: { in: ids } },
         orderBy: { name: "asc" },
@@ -35,6 +38,7 @@ export async function GET(req: Request) {
       where = {
         equipmentId: { in: ids },
         AND: [
+          await workflowFocus(req.url, "defects", u.id),
           ...(person
             ? [{ OR: [{ reportedBy: person }, { assigneeId: person }] }]
             : []),
@@ -42,6 +46,13 @@ export async function GET(req: Request) {
             ? [
                 {
                   OR: [
+                    {
+                      maintainxId: {
+                        contains: search,
+                        mode: "insensitive" as const,
+                      },
+                    },
+                    { id: { contains: search, mode: "insensitive" as const } },
                     {
                       equipmentId: {
                         in: equipment
@@ -168,10 +179,11 @@ export async function POST(req: Request) {
       });
     } else if (b.action === "report") {
       const v = defectSchema.parse(b);
-      const d = await db.$transaction(async (tx) => {
+      await assertEquipmentAccess(u, v.equipmentId);
+      const d = await withSubmission(u.id, "defect", b, async (tx) => {
         const e = await assertEquipmentAccess(u, v.equipmentId, tx);
         await ownEvidence(u.id, v.media, [], tx);
-        return tx.defect.create({
+        const saved = await tx.defect.create({
           data: {
             ...v,
             reportedBy: u.id,
@@ -179,6 +191,7 @@ export async function POST(req: Request) {
             history: [{ ...entry, event: "Reported" }],
           },
         });
+        return { id: saved.id };
       });
       return Response.json({ ok: true, id: d.id });
     } else {
