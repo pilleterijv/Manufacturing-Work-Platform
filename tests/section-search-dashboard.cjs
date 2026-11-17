@@ -185,6 +185,9 @@ const check = async (r, status = 200) => {
     const page = await context.newPage();
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
+    // This suite intentionally leaves its preserved draft when moving sections.
+    // Draft cancellation/retention is exercised in the floor-usability suite.
+    page.on("dialog", (dialog) => dialog.accept());
     await page.goto(origin);
     await expandTools(page);
     await page.getByRole("heading", { name: "Welcome, Morgan." }).waitFor();
