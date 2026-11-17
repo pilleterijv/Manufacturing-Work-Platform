@@ -348,8 +348,17 @@ async function main() {
       .locator("nav")
       .getByRole("button", { name: /Accounts$/ })
       .count(),
-    0,
+    1,
   );
+  // Managers now have scoped account administration; global administration
+  // remains protected by the account/delegation regression suite.
+  await mp
+    .locator("nav")
+    .getByRole("button", { name: /Accounts$/ })
+    .click();
+  await mp
+    .getByRole("heading", { name: "Department accounts", exact: false })
+    .waitFor();
   // Operational exports use the same assignment filter, even with export rights.
   const originalOperator = (
     await db.policy.findUniqueOrThrow({ where: { role: "Operator" } })
