@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { focusedEquipmentIds } from "@/lib/equipment-label";
 import { workflowFocus } from "@/lib/workflow-focus";
 import { withSubmission } from "@/lib/submission";
 import { db } from "@/lib/db";
@@ -28,7 +29,7 @@ import { paged, streamWorkbook } from "@/lib/excel-stream";
 export async function GET(req: Request) {
   try {
     const u = await requireUser("defects"),
-      ids = await equipmentIds(u),
+      ids = focusedEquipmentIds(req.url, await equipmentIds(u)),
       equipment = await db.equipment.findMany({
         where: { id: { in: ids } },
         orderBy: { name: "asc" },

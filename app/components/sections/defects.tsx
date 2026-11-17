@@ -6,6 +6,8 @@ import EvidenceInput, { EvidenceView } from "../evidence-input";
 import { Field } from "../shared";
 import PersonSelect from "../person-select";
 import RelatedOpen from "../related-open";
+import RecordingContext from "../recording-context";
+import { equipmentLabel } from "@/lib/equipment-label";
 export default function Defects({
   userId,
   admin,
@@ -66,7 +68,7 @@ export default function Defects({
   }
   const machine = (id: string) => {
     const e = data?.equipment.find((e: any) => e.id === id);
-    return e ? [e.plant, e.department, e.area, e.name].join(" / ") : id;
+    return e ? equipmentLabel(e) : id;
   };
   return (
     <>
@@ -132,6 +134,9 @@ export default function Defects({
             value={media}
             onChange={setMedia}
             onBusy={setUploading}
+          />
+          <RecordingContext
+            equipment={data?.equipment.find((e: any) => e.id === equipmentId)}
           />
           <button className="primary" disabled={busy || uploading}>
             Report defect

@@ -14,6 +14,7 @@ import { Field } from "../shared";
 import type { Data } from "@/lib/workspace-types";
 import RefreshControl from "../refresh-control";
 type Draft = {
+  homeProfile?: string;
   name: string;
   baseRole: string;
   description: string;
@@ -184,12 +185,39 @@ export default function Permissions(_props: {
                   }
                 />
               </Field>
+              <Field label="Home view">
+                <select
+                  aria-label="Home view"
+                  value={draft.homeProfile || "auto"}
+                  disabled={!draft.active}
+                  onChange={(e) =>
+                    setDraft({ ...draft, homeProfile: e.target.value })
+                  }
+                >
+                  {[
+                    ["auto", "Use workflow default"],
+                    ["operator", "Operator shift work"],
+                    ["leader", "Team leader shift work"],
+                    ["supervisor", "Supervisor area review"],
+                    ["maintenance", "Maintenance work"],
+                    ["manager", "Manager department review"],
+                  ].map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
             </div>
             <p>
               Workflow type determines leader-task eligibility and
               manager/leader notification eligibility. It does not grant extra
               editing or account-management rights to a custom role. Choose
               those explicitly below.
+            </p>
+            <p>
+              Home view changes presentation only. Permissions and
+              department/area assignments still control every record and action.
             </p>
             <h3>Functions this role can use</h3>
             <div className="permission-grid">

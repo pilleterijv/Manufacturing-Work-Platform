@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { focusedEquipmentIds } from "@/lib/equipment-label";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
@@ -39,7 +40,7 @@ const responsesSchema = z
 export async function GET(req: Request) {
   try {
     const u = await requireUser("centerlines"),
-      ids = await equipmentIds(u),
+      ids = focusedEquipmentIds(req.url, await equipmentIds(u)),
       { person, search } = readFilters(req.url),
       p = new URL(req.url).searchParams;
     const equipment = await db.equipment.findMany({

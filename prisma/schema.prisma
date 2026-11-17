@@ -113,6 +113,7 @@ model Content {
  active Boolean @default(true)
 }
 model Policy {
+ homeProfile String @default("auto")
  role String @id
  grants Json
  baseRole String @default("Operator")

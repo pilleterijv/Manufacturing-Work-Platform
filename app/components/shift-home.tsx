@@ -15,15 +15,20 @@ export default function ShiftHome({
       <span className="eyebrow">START HERE</span>
       <h2>{home.title}</h2>
       <p>
-        {user.role === "Admin"
-          ? "Set up your locations, people and permissions. Review service health under Integrations."
-          : user.role === "Manager"
-            ? "Review exceptions and overdue work for your assigned departments. Use your department dashboard below for the queue."
-            : user.role === "DL/TL"
-              ? "Complete leader work, check missed tasks and pass important conditions to the next shift."
-              : "Choose your assigned work. Confirm the machine, complete the checks and wait for the saved confirmation."}
+        {home.profile === "maintenance"
+          ? "Start with urgent defects and due PM/CIL work. Use Machines to find instructions and history together."
+          : home.profile === "supervisor"
+            ? "Review missed checks and unresolved work across your assigned areas, then hand over unfinished actions."
+            : user.role === "Admin"
+              ? "Set up your locations, people and permissions. Review service health under Integrations."
+              : user.role === "Manager"
+                ? "Review exceptions and overdue work for your assigned departments. Use your department dashboard below for the queue."
+                : user.role === "DL/TL"
+                  ? "Complete leader work, check missed tasks and pass important conditions to the next shift."
+                  : "Choose your assigned work. Confirm the machine, complete the checks and wait for the saved confirmation."}
       </p>
-      {canOpenSection(user, "Standard work") &&
+      {user.role === "Admin" &&
+        canOpenSection(user, "Standard work") &&
         !home.primary.includes("Standard work") && (
           <button
             type="button"
@@ -33,11 +38,11 @@ export default function ShiftHome({
             Start standard work →
           </button>
         )}
-      <div className="module-grid">
+      <div className="button-row role-shortcuts">
         {home.primary.map((name) => (
           <button
             type="button"
-            className="module-card"
+            className="outline"
             key={name}
             onClick={() => go(name)}
           >

@@ -1,4 +1,5 @@
 "use client";
+import RecordingContext from "../recording-context";
 import { useState, useEffect, useRef } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
 import type { Data, Step, Cycle, Standard } from "@/lib/workspace-types";
@@ -75,6 +76,9 @@ export default function Studies({
           </div>
           <Timer cycles={cycles} setCycles={setCycles} />
           {error && <div className="error">{error}</div>}
+          <RecordingContext
+            equipment={data.equipment.find((e) => e.id === equipment)}
+          />
           <Submit busy={busy}>Save time study</Submit>
         </form>
       </section>

@@ -30,6 +30,13 @@ export async function GET() {
             username: u.username,
             role: u.role,
             customRole: u.customRole,
+            homeProfile:
+              (
+                await db.policy.findUnique({
+                  where: { role: u.customRole || u.role },
+                  select: { homeProfile: true },
+                })
+              )?.homeProfile || "auto",
             mustChange: u.mustChange,
             grants: await grants(u),
             adminPrivileges: await adminPrivileges(u),

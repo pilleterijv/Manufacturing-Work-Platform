@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { equipmentLabel } from "@/lib/equipment-label";
+import { openWorkflow } from "@/lib/floor-navigation";
 type Machine = {
   id: string;
   name: string;
@@ -116,7 +118,7 @@ export default function FloorContext({
     <section className="floor-context" aria-label="Machine and shift context">
       <div className="form-grid">
         <label className="field">
-          <span>Machine context</span>
+          <span>Machine reminder — does not switch an open task</span>
           <select
             aria-label="Machine context"
             value={machine}
@@ -125,15 +127,13 @@ export default function FloorContext({
             <option value="">Confirm the machine for your work</option>
             {equipment.map((e) => (
               <option key={e.id} value={e.id}>
-                {[e.plant, e.department, e.area, e.name]
-                  .filter(Boolean)
-                  .join(" / ")}
+                {equipmentLabel(e)}
               </option>
             ))}
           </select>
         </label>
         <label className="field">
-          <span>Working shift ({timezone})</span>
+          <span>Shift reminder ({timezone})</span>
           <select
             aria-label="Working shift"
             value={shift}
@@ -150,8 +150,17 @@ export default function FloorContext({
         <p>
           <strong>{e.name}</strong> · {e.plant} / {e.department} / {e.area}
           {e.line ? " / " + e.line : ""}
-          {shift ? " · " + shift : ""}. Confirm this matches the machine on your
-          form.{" "}
+          {shift ? " · " + shift : ""}. Reminder only; check the recording
+          target on your form.{" "}
+          <button
+            type="button"
+            className="outline"
+            onClick={() =>
+              openWorkflow({ tab: "Machines", filters: { equipment: e.id } })
+            }
+          >
+            Open machine workspace
+          </button>{" "}
           <button
             type="button"
             className="outline"

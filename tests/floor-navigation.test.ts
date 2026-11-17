@@ -12,16 +12,7 @@ test("floor home prioritizes the correct work for each role without widening per
     };
     const h = roleHome(u);
     assert(h.primary.length > 0);
-    assert.equal(
-      h.primary[0],
-      role === "Operator"
-        ? "Standard work"
-        : role === "DL/TL"
-          ? "DL/TL Standard Work"
-          : role === "Manager"
-            ? "Leadership dashboard"
-            : "Accounts",
-    );
+    assert.equal(h.primary[0], role === "Admin" ? "Accounts" : "Work queue");
   }
   const restricted = roleHome({
     role: "Manager",

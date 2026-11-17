@@ -1,6 +1,7 @@
 import { canAdminister } from "@/lib/capabilities";
 import { requireDelegated } from "@/lib/security";
 import { z } from "zod";
+import { focusedEquipmentIds } from "@/lib/equipment-label";
 import { workflowFocus } from "@/lib/workflow-focus";
 import { db } from "@/lib/db";
 import {
@@ -28,7 +29,7 @@ import { streamWorkbook, paged } from "@/lib/excel-stream";
 export async function GET(req: Request) {
   try {
     const u = await requireUser("maintenance"),
-      ids = await equipmentIds(u),
+      ids = focusedEquipmentIds(req.url, await equipmentIds(u)),
       { person, search } = readFilters(req.url),
       params = new URL(req.url).searchParams,
       kind = z.enum(["pm", "cil"]).parse(params.get("kind") || "pm");
@@ -148,15 +149,58 @@ export async function GET(req: Request) {
     }
     const cursor = z
       .string()
-      .uuid()
+      .max(500)
       .optional()
       .parse(params.get("cursor") || undefined);
+    let after: any = null;
+    if (cursor) {
+      if (z.string().uuid().safeParse(cursor).success) {
+        after = await db.maintenancePlan.findFirst({
+          where: { ...where, id: cursor },
+          select: { id: true, nextDue: true, active: true },
+        });
+        if (!after)
+          throw new HttpError(400, "Refresh the plan list before loading more");
+      } else {
+        try {
+          after = z
+            .object({
+              id: z.string().uuid(),
+              nextDue: z.iso.date(),
+              active: z.boolean(),
+            })
+            .strict()
+            .parse(JSON.parse(Buffer.from(cursor, "base64url").toString()));
+        } catch {
+          throw new HttpError(400, "Invalid plan cursor");
+        }
+      }
+    }
     const [plans, records, people, setting] = await Promise.all([
       db.maintenancePlan.findMany({
-        where,
-        orderBy: { id: "asc" },
+        where: {
+          ...where,
+          AND: [
+            ...where.AND,
+            ...(after
+              ? [
+                  {
+                    OR: [
+                      ...(after.active ? [{ active: false }] : []),
+                      { active: after.active, nextDue: { gt: after.nextDue } },
+                      {
+                        active: after.active,
+                        nextDue: after.nextDue,
+                        id: { gt: after.id },
+                      },
+                    ],
+                  },
+                ]
+              : []),
+          ],
+        },
+        orderBy: [{ active: "desc" }, { nextDue: "asc" }, { id: "asc" }],
         take: 101,
-        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       }),
       db.record.findMany({
         where: {
@@ -189,7 +233,15 @@ export async function GET(req: Request) {
     return Response.json({
       plans: plans.slice(0, 100),
       hasMore: plans.length > 100,
-      cursor: plans[99]?.id ?? null,
+      cursor: plans[99]
+        ? Buffer.from(
+            JSON.stringify({
+              id: plans[99].id,
+              nextDue: plans[99].nextDue,
+              active: plans[99].active,
+            }),
+          ).toString("base64url")
+        : null,
       records,
       people,
       equipment: eq,

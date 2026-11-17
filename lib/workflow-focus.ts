@@ -9,7 +9,15 @@ export async function workflowFocus(
 ): Promise<any> {
   const p = new URL(url).searchParams;
   const focus = z
-    .enum(["", "open", "personal-open", "department-open", "overdue"])
+    .enum([
+      "",
+      "open",
+      "personal-open",
+      "department-open",
+      "overdue",
+      "due",
+      "upcoming",
+    ])
     .parse(p.get("focus") || "");
   const item = z
     .string()
@@ -93,7 +101,7 @@ export async function workflowFocus(
       );
   }
   if (
-    focus === "overdue" &&
+    ["overdue", "due", "upcoming"].includes(focus) &&
     ["ideas", "problems", "maintenance"].includes(kind)
   ) {
     const setting = await db.setting.findUniqueOrThrow({
@@ -101,7 +109,12 @@ export async function workflowFocus(
       }),
       today = localToday((setting.value as ShiftConfig).timezone);
     clauses.push({
-      [kind === "maintenance" ? "nextDue" : "dueDate"]: { lt: today },
+      [kind === "maintenance" ? "nextDue" : "dueDate"]:
+        focus === "due"
+          ? { lte: today }
+          : focus === "upcoming"
+            ? { gt: today }
+            : { lt: today },
     });
   }
   return { AND: clauses };

@@ -7,6 +7,7 @@ export type User = {
   username: string;
   role: string;
   customRole?: string | null;
+  homeProfile?: string;
   mustChange: boolean;
   grants: Capability[];
   adminPrivileges?: AdminPrivilege[];

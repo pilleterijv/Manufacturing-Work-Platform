@@ -20,6 +20,16 @@ export const roleSchema = z
   .object({
     name: roleNameSchema,
     baseRole: z.enum(["Operator", "DL/TL", "Manager"]),
+    homeProfile: z
+      .enum([
+        "auto",
+        "operator",
+        "leader",
+        "supervisor",
+        "maintenance",
+        "manager",
+      ])
+      .default("auto"),
     description: z.string().trim().max(500),
     grants: z.array(z.enum(capabilities)).max(capabilities.length),
     adminPrivileges: z
