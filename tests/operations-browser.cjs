@@ -200,6 +200,7 @@ async function main() {
   );
   await op.waitForTimeout(1100);
   await op.reload();
+  await expandTools(op);
   await op.getByRole("button", { name: /Downtime$/ }).click();
   await selectDowntimeMachine(op, equipment[0]);
   await op
