@@ -157,10 +157,19 @@ async function main() {
     });
     assert.equal(r.status(), 206);
     assert(r.headers()["cache-control"].includes("no-store"));
-    if (range === "bytes=500-509") {
-      assert.equal((await r.body()).toString(), "range-test");
-      assert.equal(r.headers()["content-length"], "10");
-    }
+    const start = range === "bytes=-10" ? bytes.length - 10 : 500;
+    const end = range === "bytes=500-509" ? 509 : bytes.length - 1;
+    assert.equal(
+      r.headers()["content-range"],
+      `bytes ${start}-${end}/${bytes.length}`,
+    );
+    assert.equal(r.headers()["accept-ranges"], "bytes");
+    assert.deepEqual(await r.body(), bytes.subarray(start, end + 1));
+    // Next.js 16.4.6 strips application Content-Length and lets the HTTP
+    // transport frame streamed responses. Validate both supported framings.
+    if (r.headers()["content-length"] !== undefined)
+      assert.equal(r.headers()["content-length"], String(end - start + 1));
+    else assert.equal(r.headers()["transfer-encoding"], "chunked");
   }
   assert.equal(
     (
