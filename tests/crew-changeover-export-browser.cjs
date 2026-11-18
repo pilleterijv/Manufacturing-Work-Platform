@@ -355,7 +355,7 @@ async function main() {
   );
   for (const [status, owner] of [
     ["Open", users[2].id],
-    ["Closed", users[2].id],
+    ["Completed", users[2].id],
     ["Open", users[0].id],
   ])
     await db.idea.create({
