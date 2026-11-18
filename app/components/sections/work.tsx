@@ -1,4 +1,5 @@
 "use client";
+import { handoffRooms } from "@/lib/tableting-leader";
 import LeaderHandoff, { type LeaderHandoffData } from "../leader-handoff";
 import { confirmDraftChange } from "../floor-safety";
 import RecordingContext from "../recording-context";
@@ -81,7 +82,13 @@ export default function Work({
     setCycles([]);
     setStarted(new Date().toISOString());
     setLocalError("");
-    setHandoff({ shift: "", notes: "", rooms: [] });
+    setHandoff({
+      shift: "",
+      notes: "",
+      rooms: handoffRooms(
+        data.standards.find((s) => s.id === id)?.handoffProfile || "generic",
+      ),
+    });
   }
   useEffect(() => {
     if (initialStandardId && latest.some((s) => s.id === initialStandardId))
@@ -341,6 +348,7 @@ export default function Work({
             {leader && (
               <LeaderHandoff
                 value={handoff}
+                profile={s.handoffProfile || "generic"}
                 onChange={setHandoff}
                 shifts={shiftNames}
               />

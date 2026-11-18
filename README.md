@@ -1,5 +1,7 @@
 # Floorwork — Manufacturing Work Platform
 
+The four supplied **Tableting DL/TL standard works** (Compressing, Blending, Weigh Room/Bin Blending and Coating) can now be installed with the complete department/area catalog for your selected site. **Apply migration 018**, then use Admin → Locations → Install Tableting standard works. See [installation, assignments and handoff formats](docs/tableting-leader-standard-work.md).
+
 Role-specific shift queues, maintenance-first home views, a scoped machine workspace and compact navigation are available. **Apply migration 017 before starting this update.** See [setup, update steps and screenshots](docs/shift-queues-machine-workspace.md).
 
 Search now follows each tab’s actual records and person roles, with isolated filters and native suggestions. See [contextual search behavior and update steps](docs/contextual-search.md).

@@ -1,3 +1,5 @@
+import { leaderHandoffSchema } from "@/lib/leader-handoff-rules";
+import { installTableting } from "@/lib/tableting-install";
 import { referenceDepartments, referenceAreas } from "@/lib/reference-catalog";
 import { resolveRole } from "@/lib/role-assignment";
 import { adminPrivileges, canAdminister } from "@/lib/capabilities";
@@ -384,6 +386,7 @@ export async function POST(req: Request) {
         archive: "training",
         "retire-standard": "manage",
         "seed-catalog": "manage",
+        "install-tableting": "manage",
         run: "work",
         study: "studies",
         audit: "audits",
@@ -414,6 +417,18 @@ export async function POST(req: Request) {
         403,
         "Only Admin can manage accounts, policies and locations",
       );
+    if (action === "install-tableting") {
+      if (u.role !== "Admin" || u.customRole)
+        throw new HttpError(
+          403,
+          "Only Admin can install the Tableting reference package",
+        );
+      const plant = z.string().trim().min(1).max(100).parse(b.plant);
+      return Response.json({
+        ok: true,
+        ...(await installTableting(plant, u.id)),
+      });
+    }
     if (action === "seed-catalog") {
       if (u.role !== "Admin" && !(await canAdminister(u, "locations.manage")))
         throw new HttpError(
@@ -702,6 +717,10 @@ export async function POST(req: Request) {
           await tx.standard.create({
             data: {
               ...v,
+              handoffProfile:
+                v.workflow === "leader"
+                  ? (v.handoffProfile ?? last?.handoffProfile ?? "generic")
+                  : "generic",
               family,
               revision: (last?.revision ?? 0) + 1,
               steps: v.steps,
@@ -825,26 +844,7 @@ export async function POST(req: Request) {
             )
             .max(100),
           cycles: cyclesSchema.optional(),
-          handoff: z
-            .object({
-              shift: z.string().max(100),
-              notes: z.string().max(10000),
-              rooms: z
-                .array(
-                  z.object({
-                    room: z.string().max(100),
-                    item: z.string().max(100),
-                    lot: z.string().max(100),
-                    targetSpeed: z.string().max(40),
-                    actualSpeed: z.string().max(40),
-                    remaining: z.string().max(150),
-                    issues: z.string().max(2000),
-                    nextOrder: z.enum(["", "Yes", "No", "Not applicable"]),
-                  }),
-                )
-                .max(30),
-            })
-            .optional(),
+          handoff: leaderHandoffSchema.optional(),
         })
         .parse(b);
       const standard = await db.standard.findUnique({
