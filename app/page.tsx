@@ -956,40 +956,63 @@ export default function Home() {
                   onRefresh={refreshSection}
                   label="Refresh section"
                 />
-                {g.includes("export") && tab !== "Problem solving" && (
-                  <a
-                    className="outline"
-                    href={filterUrl(
-                      tab === "Centerlines"
-                        ? "/api/centerlines?format=xlsx"
-                        : tab === "5S audits"
-                          ? "/api/five-s?format=xlsx"
-                          : tab === "Defect reporting"
-                            ? "/api/defects?format=xlsx"
-                            : tab === "TPM / CIL"
-                              ? "/api/maintenance?kind=cil&format=xlsx"
-                              : tab === "Preventive maintenance"
-                                ? "/api/maintenance?format=xlsx"
-                                : tab === "Production results"
-                                  ? "/api/external-data?section=Production%20results&format=xlsx"
-                                  : tab === "Problem solving"
-                                    ? "/api/problems?format=xlsx"
-                                    : tab === "DL/TL Standard Work"
-                                      ? "/api/export?section=leaders"
-                                      : tab === "Standard work"
-                                        ? "/api/export?section=operator"
-                                        : tab === "Standard work audits"
-                                          ? "/api/export?section=process"
-                                          : tab === "Changeover standards"
-                                            ? "/api/export?section=changeovers"
-                                            : tab === "Time studies"
-                                              ? "/api/export?section=studies"
-                                              : "/api/export",
-                    )}
-                  >
-                    ↓ Export Excel
-                  </a>
-                )}
+                {g.includes("export") &&
+                  [
+                    "Overview",
+                    "Analytics",
+                    "Standard work",
+                    "DL/TL Standard Work",
+                    "Standard work audits",
+                    "Changeover standards",
+                    "Time studies",
+                    "Centerlines",
+                    "5S audits",
+                    "Defect reporting",
+                    "TPM / CIL",
+                    "Preventive maintenance",
+                    "Production results",
+                    "Downtime",
+                    "Improvement ideas",
+                  ].includes(tab) && (
+                    <a
+                      className="outline"
+                      href={filterUrl(
+                        tab === "Centerlines"
+                          ? "/api/centerlines?format=xlsx"
+                          : tab === "5S audits"
+                            ? "/api/five-s?format=xlsx"
+                            : tab === "Defect reporting"
+                              ? "/api/defects?format=xlsx"
+                              : tab === "TPM / CIL"
+                                ? "/api/maintenance?kind=cil&format=xlsx"
+                                : tab === "Preventive maintenance"
+                                  ? "/api/maintenance?format=xlsx"
+                                  : tab === "Production results"
+                                    ? "/api/external-data?section=Production%20results&format=xlsx"
+                                    : tab === "Problem solving"
+                                      ? "/api/problems?format=xlsx"
+                                      : tab === "DL/TL Standard Work"
+                                        ? "/api/export?section=leaders"
+                                        : tab === "Standard work"
+                                          ? "/api/export?section=operator"
+                                          : tab === "Standard work audits"
+                                            ? "/api/export?section=process"
+                                            : tab === "Changeover standards"
+                                              ? "/api/export?section=changeovers"
+                                              : tab === "Time studies"
+                                                ? "/api/export?section=studies"
+                                                : tab === "Downtime"
+                                                  ? "/api/export?section=downtime"
+                                                  : tab === "Improvement ideas"
+                                                    ? "/api/export?section=ideas"
+                                                    : "/api/export",
+                      )}
+                    >
+                      {tab === "Overview" || tab === "Analytics"
+                        ? "↓ Export combined work history"
+                        : "↓ Export Excel"}
+                    </a>
+                  )}
               </div>
               {hasSectionSearch(tab) && (
                 <SectionFiltersBar

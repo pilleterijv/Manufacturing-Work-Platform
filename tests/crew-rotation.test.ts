@@ -59,3 +59,21 @@ test("crew requirements skip off days and night belongs to its local start date"
       .every((w) => w.weekday === 3 && w.name === "Day"),
   );
 });
+
+test("changeover navigation exposes native search, dashboard and distinct task labels", async () => {
+  const { hasSectionSearch, hasSectionViews } =
+    await import("../lib/section-views");
+  const { sectionSnapshot } = await import("../lib/section-snapshot");
+  const { sectionLabel } = await import("../lib/navigation");
+  assert(hasSectionSearch("Changeover standards"));
+  assert(hasSectionViews("Changeover standards"));
+  const s = sectionSnapshot("Changeover standards", {
+    overview: { runs: 150, followUps: 2 },
+    standards: [{ id: "s" }],
+    records: [],
+  });
+  assert.equal(s.metrics[0].label, "Completed changeovers");
+  assert.equal(s.metrics[0].value, 150);
+  assert.equal(sectionLabel("Standard work"), "Operator tasks");
+  assert.equal(sectionLabel("Standard work audits"), "Process verification");
+});

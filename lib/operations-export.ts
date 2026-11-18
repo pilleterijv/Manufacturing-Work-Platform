@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { equipmentIds } from "./location-access";
 import { downtimeEquipmentWhere } from "./downtime-access";
 import { paged, type ExportBook } from "./excel-stream";
@@ -12,7 +13,12 @@ export async function addOperationsSheets(
   book: ExportBook,
   grants: Capability[],
   user: import("./location-access").ScopedUser & { downtimeAccess: unknown },
-  filters: { person?: string; search: string; equipmentIds?: string[] } = {
+  filters: {
+    person?: string;
+    search: string;
+    equipmentIds?: string[];
+    ideasWhere?: Prisma.IdeaWhereInput;
+  } = {
     search: "",
   },
 ) {
@@ -171,6 +177,7 @@ export async function addOperationsSheets(
           createdAt: { lte: asOf },
           equipmentId: { in: ids },
           AND: [
+            ...(filters.ideasWhere ? [filters.ideasWhere] : []),
             ...(filters.person
               ? [
                   {
