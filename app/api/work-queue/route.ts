@@ -1,3 +1,4 @@
+import { crewWorks } from "@/lib/crew-rotation";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireUser, grants, failure, HttpError } from "@/lib/security";
@@ -362,8 +363,14 @@ export async function GET(req: Request) {
       canTeam,
       today,
       timezone: config.timezone,
-      currentShift:
-        nearbyShifts(config, now).find((w) => +w.end > +now)?.name || "",
+      currentShift: (() => {
+        const w = nearbyShifts(config, now).find((w) => +w.end > +now);
+        if (!w) return "";
+        const names = (config.crews || [])
+          .filter((c) => c.shiftName === w.name && crewWorks(c, w.date))
+          .map((c) => c.name);
+        return names.length ? `${names.join(" / ")} · ${w.name}` : w.name;
+      })(),
       truncated:
         scheduled.truncated ||
         schedules.length > 1000 ||

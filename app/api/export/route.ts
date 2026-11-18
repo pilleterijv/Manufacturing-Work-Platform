@@ -251,7 +251,11 @@ export async function GET(req: Request) {
             }
           }
         }
-        await addOperationsSheets(book, g, u, { person, search });
+        await addOperationsSheets(book, g, u, {
+          person,
+          search,
+          equipmentIds: ids,
+        });
       },
       req.signal,
     );

@@ -12,9 +12,14 @@ export async function addOperationsSheets(
   book: ExportBook,
   grants: Capability[],
   user: import("./location-access").ScopedUser & { downtimeAccess: unknown },
-  filters: { person?: string; search: string } = { search: "" },
+  filters: { person?: string; search: string; equipmentIds?: string[] } = {
+    search: "",
+  },
 ) {
-  const ids = await equipmentIds(user);
+  const allowed = await equipmentIds(user);
+  const ids = filters.equipmentIds
+    ? allowed.filter((id) => filters.equipmentIds!.includes(id))
+    : allowed;
   const matchedEquipment = filters.search
     ? (
         await db.equipment.findMany({
@@ -63,6 +68,7 @@ export async function addOperationsSheets(
       db.downtime.findMany({
         where: {
           AND: [
+            ...(filters.equipmentIds ? [{ equipmentId: { in: ids } }] : []),
             ...(filters.person
               ? [
                   {

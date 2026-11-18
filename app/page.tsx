@@ -840,14 +840,17 @@ export default function Home() {
                       )}
                     </button>
                     {hasSectionViews(name) && expanded[name] && (
-                      <div className="nav-submenu" aria-label={`${name} views`}>
+                      <div
+                        className="nav-submenu"
+                        aria-label={`${sectionLabel(name)} views`}
+                      >
                         <button
                           className={
                             tab === name && sectionMode === "dashboard"
                               ? "active"
                               : ""
                           }
-                          aria-label={`${name} dashboard`}
+                          aria-label={`${sectionLabel(name)} dashboard`}
                           onClick={() => {
                             if (!setTab(name)) return;
                             setSectionMode("dashboard");
@@ -862,7 +865,7 @@ export default function Home() {
                               ? "active"
                               : ""
                           }
-                          aria-label={`${name} in detail`}
+                          aria-label={`${sectionLabel(name)} in detail`}
                           onClick={() => {
                             if (!setTab(name)) return;
                             setSectionMode("detail");
@@ -906,7 +909,7 @@ export default function Home() {
           <main className="main">
             <header className="topbar">
               <span>
-                Workspace <span className="muted"> / {tab}</span>
+                Workspace <span className="muted"> / {sectionLabel(tab)}</span>
               </span>
               <span className="status">
                 <i /> Signed in{" "}
@@ -1061,7 +1064,7 @@ export default function Home() {
                 <div
                   className="section-view-switch"
                   role="group"
-                  aria-label={`${tab} view mode`}
+                  aria-label={`${sectionLabel(tab)} view mode`}
                 >
                   <button
                     className={

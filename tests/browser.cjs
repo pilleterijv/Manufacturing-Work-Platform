@@ -102,7 +102,7 @@ async function main() {
       cookie.sameSite === "Strict" &&
       cookie.expires > Date.now() / 1000,
   );
-  await page.getByRole("button", { name: /Start standard work/ }).waitFor();
+  await page.getByRole("button", { name: /Open operator tasks/ }).waitFor();
   await page.screenshot({
     path: "docs/screenshots/overview.png",
     fullPage: true,
@@ -141,7 +141,7 @@ async function main() {
   await page.reload();
   await page.getByRole("heading", { name: "Welcome, Jordan." }).waitFor();
   await page
-    .getByRole("button", { name: "☑ Standard work", exact: true })
+    .getByRole("button", { name: "☑ Operator tasks", exact: true })
     .click();
   await page.getByLabel("Standard work", { exact: true }).selectOption(s.id);
   await page.getByRole("button", { name: "✓ Yes", exact: true }).click();
@@ -193,7 +193,7 @@ async function main() {
   });
   assert(study.data.cycles[0].seconds > 0.3);
   await page
-    .getByRole("button", { name: "◉ Standard work audits", exact: true })
+    .getByRole("button", { name: "◉ Process verification", exact: true })
     .click();
   await page
     .getByLabel("Standard work", { exact: true })
@@ -215,7 +215,7 @@ async function main() {
     fullPage: true,
   });
   await page
-    .getByRole("button", { name: "Complete standard-work audit", exact: true })
+    .getByRole("button", { name: "Complete process verification", exact: true })
     .click();
   await page
     .getByRole("status")
@@ -372,7 +372,7 @@ async function main() {
   await mp.goto(origin);
   await expandTools(mp);
   await mp
-    .getByRole("button", { name: "◉ Standard work audits", exact: true })
+    .getByRole("button", { name: "◉ Process verification", exact: true })
     .click();
   await mp
     .getByLabel("Standard work", { exact: true })
@@ -606,7 +606,7 @@ async function main() {
   await mobilePage.reload();
   await mobilePage.getByRole("heading", { name: "Welcome, Jordan." }).waitFor();
   await mobilePage
-    .getByRole("button", { name: /Start standard work/ })
+    .getByRole("button", { name: /Open operator tasks/ })
     .waitFor();
   await mobilePage.screenshot({
     path: "docs/screenshots/mobile-overview.png",

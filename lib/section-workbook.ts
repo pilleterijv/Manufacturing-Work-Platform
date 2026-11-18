@@ -1,3 +1,4 @@
+import { stats } from "./rules";
 import { Prisma } from "@prisma/client";
 import { db } from "./db";
 import { recordScope } from "./location-access";
@@ -70,8 +71,18 @@ export async function sectionWorkbook(
     async (book) => {
       const details = book.addWorksheet("Export details"),
         results = book.addWorksheet(choice.label),
-        answers = book.addWorksheet("Task answers"),
-        handoff = book.addWorksheet("Leader handoff");
+        answers =
+          choice.kind === "study" ? null : book.addWorksheet("Task answers"),
+        handoff =
+          choice.workflow === "leader"
+            ? book.addWorksheet("Leader handoff")
+            : null,
+        observations =
+          choice.kind === "study"
+            ? book.addWorksheet("Time observations")
+            : null,
+        statistics =
+          choice.kind === "study" ? book.addWorksheet("Statistics") : null;
       await details.addRow(["Section", choice.label]);
       await details.addRow(["Exported at UTC", asOf.toISOString()]);
       await details.addRow(["Search", search]);
@@ -92,16 +103,19 @@ export async function sectionWorkbook(
         "Area",
         "Line",
         "Equipment",
-        "Shift",
-        "Pass-down notes",
         "Duration seconds",
         "Follow up",
-        "Previous product",
-        "Next product",
-        "Changeover type",
-        "Changeover notes",
+        ...(choice.workflow === "leader" ? ["Shift", "Pass-down notes"] : []),
+        ...(choice.workflow === "changeover"
+          ? [
+              "Previous product",
+              "Next product",
+              "Changeover type",
+              "Changeover notes",
+            ]
+          : []),
       ]);
-      await answers.addRow([
+      await answers?.addRow([
         "Record ID",
         "Step ID",
         "Section",
@@ -135,7 +149,7 @@ export async function sectionWorkbook(
         "nextSolutionReady",
         "lastFourRecalculated",
       ];
-      await handoff.addRow([
+      await handoff?.addRow([
         "Record ID",
         "Shift",
         "Room / machine",
@@ -158,6 +172,24 @@ export async function sectionWorkbook(
         "Current solution mixed",
         "Next solution ready",
         "Last four rounds recalculated",
+      ]);
+      await observations?.addRow([
+        "Study ID",
+        "Study",
+        "Element",
+        "Seconds",
+        "Observed at UTC",
+      ]);
+      await statistics?.addRow([
+        "Study ID",
+        "Element",
+        "Count",
+        "Average seconds",
+        "Median",
+        "Minimum",
+        "Maximum",
+        "Range",
+        "Population standard deviation",
       ]);
       let count = 0;
       for await (const r of paged((cursor) =>
@@ -193,18 +225,23 @@ export async function sectionWorkbook(
           e.area || "",
           e.line || "",
           e.name || "",
-          d.handoff?.shift || "",
-          d.handoff?.notes || "",
           d.durationSeconds ?? "",
           d.followUp ?? false,
-          d.changeover?.fromProduct || "",
-          d.changeover?.toProduct || "",
-          d.changeover?.type || "",
-          d.changeover?.notes || "",
+          ...(choice.workflow === "leader"
+            ? [d.handoff?.shift || "", d.handoff?.notes || ""]
+            : []),
+          ...(choice.workflow === "changeover"
+            ? [
+                d.changeover?.fromProduct || "",
+                d.changeover?.toProduct || "",
+                d.changeover?.type || "",
+                d.changeover?.notes || "",
+              ]
+            : []),
         ]);
         for (const a of d.responses || []) {
           const step = d.snapshot?.steps?.find((s: any) => s.id === a.stepId);
-          await answers.addRow([
+          await answers?.addRow([
             r.id,
             a.stepId,
             step?.group || "",
@@ -222,25 +259,41 @@ export async function sectionWorkbook(
           ]);
         }
         for (const room of d.handoff?.rooms || [])
-          await handoff.addRow([
+          await handoff?.addRow([
             r.id,
             d.handoff?.shift || "",
             ...roomKeys.map((k) => room[k] || ""),
           ]);
-        if (choice.kind === "study")
-          for (const c of d.cycles || [])
-            await answers.addRow([
+        if (choice.kind === "study") {
+          const groups = new Map<string, number[]>();
+          for (const c of d.cycles || []) {
+            await observations?.addRow([
               r.id,
-              "",
-              "Time observation",
-              c.at || "",
+              d.title || "",
               c.element,
               c.seconds,
-              "Seconds",
-              "",
-              "",
               c.at || "",
             ]);
+            const a = groups.get(c.element) || [];
+            a.push(c.seconds);
+            groups.set(c.element, a);
+          }
+          for (const [element, values] of groups) {
+            const summary = stats(values);
+            if (summary)
+              await statistics?.addRow([
+                r.id,
+                element,
+                summary.count,
+                summary.average,
+                summary.median,
+                summary.min,
+                summary.max,
+                summary.range,
+                summary.standardDeviation,
+              ]);
+          }
+        }
       }
       await details.addRow(["Completed records exported", count]);
       if (!count)

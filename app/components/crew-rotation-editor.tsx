@@ -11,6 +11,7 @@ export default function CrewRotationEditor({
   save: (v: unknown) => Promise<boolean>;
   busy: boolean;
 }) {
+  const [timezone, setTimezone] = useState(config.timezone);
   const [slots, setSlots] = useState<any[]>(
     config.crews?.length ? config.shifts : plantCrewPreset().shifts,
   );
@@ -63,6 +64,7 @@ export default function CrewRotationEditor({
             action: "configureCrews",
             config: {
               ...config,
+              timezone,
               shifts: slots,
               crews: crews.map(({ slot, ...c }) => ({
                 ...c,
@@ -72,6 +74,16 @@ export default function CrewRotationEditor({
           });
         }}
       >
+        <label className="field">
+          <span>Plant time zone</span>
+          <input
+            aria-label="Plant time zone"
+            required
+            maxLength={100}
+            value={timezone}
+            onChange={(e) => setTimezone(e.target.value)}
+          />
+        </label>
         <div className="form-grid">
           {slots.map((s, i) => (
             <fieldset key={i}>
