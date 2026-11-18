@@ -74,6 +74,7 @@ model Location {
  @@unique([plant,department,area,line])
 }
 model Standard {
+ handoffProfile String @default("generic")
  archived Boolean @default(false)
  workflow String @default("process")
  id String @id @default(uuid())

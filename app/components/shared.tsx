@@ -144,6 +144,38 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
                               target {room.targetSpeed} / actual{" "}
                               {room.actualSpeed} · remaining {room.remaining} ·
                               issues {room.issues} · next order {room.nextOrder}
+                              {(
+                                [
+                                  ["status", "Work order status"],
+                                  [
+                                    "materialsSplit",
+                                    "Materials split correctly",
+                                  ],
+                                  ["weighsLeft", "Weighs left"],
+                                  ["cleanBins", "Clean bins"],
+                                  ["inspectingFor", "Inspecting for"],
+                                  [
+                                    "requiresYielding",
+                                    "Requires charging / yielding",
+                                  ],
+                                  ["yielded", "Yielded"],
+                                  ["round", "Current round"],
+                                  ["totalRounds", "Total rounds"],
+                                  ["solutionMixed", "Current solution mixed"],
+                                  ["nextSolutionReady", "Next solution ready"],
+                                  [
+                                    "lastFourRecalculated",
+                                    "Last four rounds recalculated",
+                                  ],
+                                ] as const
+                              )
+                                .filter(([key]) => room[key])
+                                .map(([key, label]) => (
+                                  <span key={key}>
+                                    {" "}
+                                    · {label}: {room[key]}
+                                  </span>
+                                ))}
                             </p>
                           ))}
                         </div>

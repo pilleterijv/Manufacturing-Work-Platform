@@ -1,0 +1,980 @@
+[
+  {
+    "key": "compressing",
+    "title": "Tableting Compressing Leader Standard Work",
+    "source": "Tableting Compressing Leader Standard Work.docx",
+    "area": "Compressing",
+    "rooms": [
+      "Room 1",
+      "Room 2",
+      "Room 3",
+      "Room 4",
+      "Room 5",
+      "Room 6",
+      "Room 7",
+      "Room 8",
+      "Room 9",
+      "Room 10"
+    ],
+    "steps": [
+      {
+        "id": "compressing-1",
+        "text": "1. Gemba Walk (4:30am / 4:30pm)- One leader completes the department walkthrough.",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "compressing-2",
+        "text": "2. Review Pass Down- Read all information from previous shift’s LSW. Ensure Accuracy of Pass down, collect previous shifts Major Clean check sheet from M1 mechanic’s.",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "compressing-3",
+        "text": "3. Assign Team Members- Assign operators to Compressing Rooms 1–10. (Use the assignment board)",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "compressing-4",
+        "text": "4. Shift Change Meeting (5:30am / 5:30pm)- Align on priorities, issues, and flow risks.",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "compressing-5",
+        "text": "5. Witness Compressing Handoff- 1 Leader shall be physically present during the Compressing handoff.",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "compressing-6",
+        "text": "6. Attend DDS Meeting 6am- Be present for the DDS Meeting",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "compressing-7",
+        "text": "7. Verify Press Parameters: Confirm RPM matches Batch Record in all rooms.",
+        "group": "(CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-8",
+        "text": "a. Verify Target Weights",
+        "group": "(CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-9",
+        "text": "b. Verify Compressing Force - (IPR 3.5–6; Korsch <50)",
+        "group": "(CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-10",
+        "text": "c. Verify Press – Formula to calculate Press Speed (RPM X # of Press Stations X Feeders X Tips = TPM)",
+        "group": "(CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-11",
+        "text": "d. Verify MES Printed Sheets: Sequence, process card, and lot numbers match current WO.",
+        "group": "(CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-12",
+        "text": "e. Verify Press HMI Lot # matches MES/Batch Record.",
+        "group": "(CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-13",
+        "text": "f. Verify Proper AQL’s Are Performed",
+        "group": "(CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-14",
+        "text": "g. Verify Hourly SPC Checks & Review SPC History",
+        "group": "(CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-15",
+        "text": "h. Verify Shake Test & Metal Detector Checks Completed",
+        "group": "(CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-16",
+        "text": "I. Reconcile Current Batch Record: Correct all Compressing errors before the next process step.",
+        "group": "(CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-17",
+        "text": "8. Capture UPDT in Real Time- Update accurately throughout the day",
+        "group": "(CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-18",
+        "text": "9. Complete 2D Problem Solving Form: Required for downtime exceeding 1 hour",
+        "group": "(CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-19",
+        "text": "10. Record Defects: 1 defect per shift; update online spreadsheet and strike through corrected defects on physical list.",
+        "group": "(CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-20",
+        "text": "11. Verify Composites Samples Collected (for each room)",
+        "group": "(CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-21",
+        "text": "12. Verify Material Supply (bags, gloves, pallets, MES sticker labels, Zebra printer ribbon, and PPE)",
+        "group": "(CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-22",
+        "text": "13. GMP & Safety- Verify GMP adherence & safety hazards.",
+        "group": "QUALITY, COMPLIANCE & DOCUMENTATION",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-23",
+        "text": "14. MSS Compliance- Ensure MSS tasks are progressing. Tasks Completed – Circle (Wk, Mo, Qt) _______ Tasks Remaining_______",
+        "group": "QUALITY, COMPLIANCE & DOCUMENTATION",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-24",
+        "text": "15. Complete 5S Checklist for Compressing Suites",
+        "group": "SUSTAINMENT & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-25",
+        "text": "16. Ensure M1’s update Compressing MDI & Changeover Board at the end of the shift",
+        "group": "SUSTAINMENT & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-26",
+        "text": "17. Update Production Schedule – Check off WOs as completed.",
+        "group": "SUSTAINMENT & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-27",
+        "text": "18. Verify Major Clean Changeover Checklist - Include details in pass down.",
+        "group": "SUSTAINMENT & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-28",
+        "text": "19. Ensure Blended Material Is Charged Correctly. (Desk activity requires JDE)",
+        "group": "SUSTAINMENT & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-29",
+        "text": "20. Close Out Completed Batches postproduction",
+        "group": "SUSTAINMENT & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-30",
+        "text": "21. Mid-Shift Check for Quality Issues (lubrication leaks, defects, powder leaks)",
+        "group": "SUSTAINMENT & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-31",
+        "text": "22. Verify CIL Completion",
+        "group": "SUSTAINMENT & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-32",
+        "text": "23. Verify the dust collection ports are halfway open",
+        "group": "SUSTAINMENT & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-33",
+        "text": "24. Verify Next Batch Record (All Presses): Check for errors and confirm Planner, Weigh Staging & Blending signoffs before Compressing",
+        "group": "PREVENTATIVE MEASURES (UPDT CONTROL)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-34",
+        "text": "25. Ensure Mezzanine Operator - Keeps Presses Supplied",
+        "group": "PREVENTATIVE MEASURES (UPDT CONTROL)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "compressing-35",
+        "text": "26. Verify Correct Blended Material Staged",
+        "group": "PREVENTATIVE MEASURES (UPDT CONTROL)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      }
+    ]
+  },
+  {
+    "key": "blending",
+    "title": "Tableting Blending Leader Standard Work",
+    "source": "Tableting Blending Leader Standard Work.docx",
+    "area": "Upstairs Blending",
+    "rooms": ["125 Blending", "250 Blending"],
+    "steps": [
+      {
+        "id": "blending-1",
+        "text": "1. Gemba Walk (4:30am / 4:30pm)- One leader completes the department walkthrough",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "blending-2",
+        "text": "2. Review Pass Down- Read all information from previous shift’s LSW. Ensure Accuracy of Pass down, collect previous shifts Major Clean check sheet.",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "blending-3",
+        "text": "3. Assign Teams- Assign Blending teams in the office. (Use the assignment board)",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "blending-4",
+        "text": "4. Shift Change Meeting (5:30am / 5:30pm)- Align on priorities, issues, and flow risks.",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "blending-5",
+        "text": "5. Witness Blending Handoff- 1 Leader shall be physically present during the Blending handoff.",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "blending-6",
+        "text": "6. Attend DDS Meeting 6am- Be Present for the DDS Meeting that occurs daily on weekdays",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "blending-7",
+        "text": "7. Review Blending Schedule- Confirm priorities, coverage, and 12hour flow. (Prior to going to the 3rd floor)",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-8",
+        "text": "8. Verify WO’s Staged on Third Floor - Coordinate with Weigh Room Leader to send orders upstairs",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-9",
+        "text": "9. Must Kit Next WOs for 125 & 250 Prior to Starting the Next Order- Ensure next WO for each room is broken into proper stages according to the Batch Record.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-10",
+        "text": "10. Stage AC3 (Two Barrels Minimum)- Ensure AC3 supply is always ready. If AC3 skids are empty notify MRO. (Send empty containers downstairs)",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-11",
+        "text": "11. Fill Gamma Jet with Water + AC3- Follow recipe requirements. (External Major Clean activity)",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-12",
+        "text": "12. Documentation Accuracy- Process cards, logbooks, batch records completed correctly.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-13",
+        "text": "13. Current Batch Record Reconciliation- Errors corrected before next process step.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-14",
+        "text": "14. Capture UPDT in Real Time: Ensure the team has a downtime sheet and records unplanned downtime as it occurs.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-15",
+        "text": "15. Complete 2D Problem Solving Form: Required for downtime exceeding 1 hour",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-16",
+        "text": "16. MSS Compliance- Ensure MSS tasks are progressing.  Tasks Completed (Wk, Mo, Qt,) __________ out of Tasks Remaining ____________",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-17",
+        "text": "17. GMP & Safety- Check for GMP adherence and safety hazards.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-18",
+        "text": "18. Ensure Two Skirts Are Cleaned and Available- Maintain readiness for Major Change Over operations.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-19",
+        "text": "19. Send Extra Containers Downstairs Immediately- Prevent charging unplanned quantity of material into a WO.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-20",
+        "text": "20. Verify Material Supply- Clean bulk bags, pallets, Zebra printer labels, PPE available on second floor.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-21",
+        "text": "21. Ensure Liner Bags Are Available- One pallet minimum.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-22",
+        "text": "22. Make Bags for Next Discharge- Prepare ahead to prevent.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-23",
+        "text": "23. Ensure Two Skirts Are Cleaned and Available- Maintain readiness for Major Change Over operations.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-24",
+        "text": "24. Return Used Bins Downstairs- Maintain bin flow and prevent UPDT. (On the 2nd floor)",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-25",
+        "text": "25. Capture UPDT in Real Time- Ensure team is recording UPDT in real time.",
+        "group": "PREVENTATIVE MEASURES (UPDT CONTROL)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-26",
+        "text": "26. Stage Blended Material: Keep each Compressing suite supplied. Stage bags in FIFO order; charge bag #1 first, then #2, #3, and #4.",
+        "group": "SUSTAINMENT & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-27",
+        "text": "27. Complete Mezzanine 5S Checklist- Ensure workplace organization.",
+        "group": "SUSTAINMENT & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-28",
+        "text": "28. Update Production Schedule- Check off WO’s accordingly (Picked/Blend Complete)",
+        "group": "SUSTAINMENT & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-29",
+        "text": "29. Update Blending MDI & Changeover Boards- Keep visual management current.",
+        "group": "SUSTAINMENT & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "blending-30",
+        "text": "30. Prepare Pass Down Document and communicate shift information.",
+        "group": "SUSTAINMENT & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      }
+    ]
+  },
+  {
+    "key": "weigh-room",
+    "title": "Tableting Weigh Room & Bin Blending Leader Standard Work",
+    "source": "Tableting Weigh Room Leader Standard Work.docx",
+    "area": "Weigh Room",
+    "rooms": [
+      "Weigh Room A",
+      "Weigh Room B",
+      "Weigh Room C",
+      "Weigh Room D",
+      "Bin Blending",
+      "Inspection"
+    ],
+    "steps": [
+      {
+        "id": "weigh-room-1",
+        "text": "1. Gemba Walk (4:30am / 4:30pm)- One leader completes the department walkthrough.",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-2",
+        "text": "2. Review Pass Down- Read all information from previous shift’s LSW. Ensure Accuracy of Pass down, collect previous shifts Major Clean check sheet.",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-3",
+        "text": "3. Assign Teams- WR, Bin Blending, Inspection. (Use the assignment board)",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-4",
+        "text": "4. Shift Change Meeting (5:30am / 5:30pm)- Align on priorities, issues, and flow risks.",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-5",
+        "text": "5. Witness Weigh Room Handoff- 1 Leader shall be physically present during the Weigh Room handoff.",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-6",
+        "text": "6. Attend DDS Meeting 6am- Be present for the DDS Meeting that occurs daily on weekdays",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-7",
+        "text": "7. Review Weigh Room Schedule- Confirm priorities schedule with Weigh Room Operators in room A, B, C, & D, ensure there are enough WOs for 12hours.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-8",
+        "text": "a. Verify Material Supply- Teams have clean bags, labels, PPE, and required materials in each room.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-9",
+        "text": "b. Documentation Accuracy- Verify process cards, logbooks, and batch records are fill out correctly.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-10",
+        "text": "c. Capture UPDT in Real Time- Update accurately throughout the day.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-11",
+        "text": "d. Batch Record Reconciliation- Errors corrected before next process step.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-12",
+        "text": "e. GMP & Safety- Check for GMP adherence and safety",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-13",
+        "text": "8. MSS Compliance- Ensure MSS tasks are progressing. Tasks Completed (Wk, Mo, Qt) ________ Tasks Remaining _________",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-14",
+        "text": "9. Communicate with Blending Leader to verify what WO’s are Picked for (125CF & 250CF)- Ensure at least two WO’s are ready for each blender. If order is not present, get with WHS and verify if a Pick List has been updated.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-15",
+        "text": "10. Communicate with Blending Leader to verify what WO’s need Staging for (125 & 250) – Stage WO according to the Batch Record.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-16",
+        "text": "11. Verify Production Schedule and follow Up with Gummies/Softgel - Ensure weighs/blends will be completed on time to prevent UPDT.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-17",
+        "text": "12. Update Bin Blending Kanban- WO’s are stacked vertically in rack locations; Kanban must match reality.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-18",
+        "text": "13. Maintain Partial Area Flow- Return unused partials; no pallets on floor; replenishments put away.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-19",
+        "text": "14. Move Completed Partials Forward- Verify the partials according to the Batch Record Steps before going upstairs. Return unused partials to their partial location.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-20",
+        "text": "15. Return Used Bins Downstairs- Keep bin flow continuously to prevent UPDT.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-21",
+        "text": "16. GMP & Safety- Check for GMP adherence and safety hazards.",
+        "group": "QUALITY, COMPLIANCE & DOCUMENTATION",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-22",
+        "text": "17. Inspection Documentation- Confirm proper documentation and daily inspection goals.*Temporary moved to Coating AC3*",
+        "group": "QUALITY, COMPLIANCE & DOCUMENTATION",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-23",
+        "text": "18. Batch Record Reconciliation- Errors corrected before next process step.",
+        "group": "QUALITY, COMPLIANCE & DOCUMENTATION",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-24",
+        "text": "19. External Bin Cleaning- Third person cleans bins; leave next shift 3 clean bins.",
+        "group": "PREVENTATIVE MEASURES (UPDT CONTROL)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-25",
+        "text": "20. Complete 2D Problem Solving Form: Required for downtime exceeding 1 hour",
+        "group": "PREVENTATIVE MEASURES (UPDT CONTROL)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-26",
+        "text": "21. Complete 5S Checklist- Ensure workplace organization.",
+        "group": "SUSTAINMENT & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-27",
+        "text": "22. Update Production Schedule- Check off WO’s as completed.",
+        "group": "SUSTAINMENT & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-28",
+        "text": "23. Update MDI & Changeover Boards- Keep visual management current.",
+        "group": "SUSTAINMENT & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "weigh-room-29",
+        "text": "24. Prepare Pass Down- Document and communicate shift information.",
+        "group": "SUSTAINMENT & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      }
+    ]
+  },
+  {
+    "key": "coating",
+    "title": "Tableting Coating Leader Standard Work",
+    "source": "Tableting Coating Leader Standard Work.docx",
+    "area": "Coating",
+    "rooms": ["CC1", "CC2", "AC3", "AC4"],
+    "steps": [
+      {
+        "id": "coating-1",
+        "text": "1. Gemba Walk (4:30am / 4:30pm)- One leader completes the department walkthrough.",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "coating-2",
+        "text": "2. Review Pass Down- Read all information from previous shift’s LSW. Ensure Accuracy of Pass down, collect previous shifts Major Clean check sheet.",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "coating-3",
+        "text": "3. Assign Team Members- CC1, CC2, AC3, & AC4. (Use the assignment board)",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "coating-4",
+        "text": "4. Shift Change Meeting (5:30am / 5:30pm)- Align on priorities and issues.",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "coating-5",
+        "text": "5. Witness Coating Handoff- 1 Leader shall be physically present during the Coating handoff.",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "coating-6",
+        "text": "6. Attend DDS Meeting 6am- Be present for the DDS Meeting that occurs daily on weekdays",
+        "group": "STARTUP & HANDOFF (CRITICAL PATH)",
+        "timing": "Start of shift",
+        "photo": false
+      },
+      {
+        "id": "coating-7",
+        "text": "7. GMP & Safety- Check for GMP adherence and safety hazards.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-8",
+        "text": "8. Verify Weigh Belt Centering- Prevents product loss.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-9",
+        "text": "9. Verify ZConveyor Alignment- Centered under weigh belt; top aligned with hopper mat.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-10",
+        "text": "10. Verify Chute Alignment- Ensure chute is not rubbing against infeed ring.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-11",
+        "text": "11. Verify Spray Bars Are Spraying (First sprayers #1 & #2 shouldn’t be spraying when Coater is in continuous mode)",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-12",
+        "text": "11.1 Verify that the air-knife is working",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-13",
+        "text": "12. Verify Weigh Belt Check- Capture product for 1 minute before starting next order",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-14",
+        "text": "13. Verify Infeed/Outfeed Pump Output- Pumps must operate between 20–30%. (Critical Step)",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-15",
+        "text": "14. Make Solution When Tank Is Available- Minor changeover; solution good for 24 hours.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-16",
+        "text": "15. Mixer Control- Clear solution → turn mixer off Colored solution → slow speed (60–65 rpm)",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-17",
+        "text": "16. Verify MES Printed Sheets- Sequence & lot numbers must match. Perform in (CC1, CC2, AC3, & AC4) It’s recommended to do each room one at a time to prevent overprocessing",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-18",
+        "text": "17. Batch Record Reconciliation- Correct errors before turning into coordinators.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-19",
+        "text": "18. Ensure Proper AQL’s Are Performed- Team members perform additional spot checks.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-20",
+        "text": "19. Verify Bags Staged for Order in (CC1, CC2, AC3, & AC4) – (Production schedule needed to perform this activity)",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-21",
+        "text": "20. Verify Material Supply- Clean bags, pallets, collapsible, MES labels, PPE.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-22",
+        "text": "21. Verify Coating Solution is Planned/Picked/Weighed for (CC1, CC2, AC3, & AC4)",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-23",
+        "text": "22. Verify Actual Weight of Product Containers- Determines target pan load for AC3/AC4.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-24",
+        "text": "23. Recalculate Last 4 Rounds (AC3/AC4)- Confirm pan load accuracy.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-25",
+        "text": "24. Update Coating WO Board",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-26",
+        "text": "25. Ensure Next BR from Compressing Is Reconciled for (CC1, CC2, AC3, & AC4)",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-27",
+        "text": "26. Close Out Completed Batches for (CC1, CC2, AC3, & AC4)",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-28",
+        "text": "27. Capture UPDT in Real Time- Update accurately throughout the day",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-29",
+        "text": "28. Complete 2D Problem Solving Form: Required for downtime exceeding 1 hour",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-30",
+        "text": "29. Verify Changeover Checklist – Must be completed and submitted to DL",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-31",
+        "text": "30. Update Production Schedule – Check off WOs as completed.",
+        "group": "FLOW CONTROL (CHECK THROUGHOUT SHIFT)",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-32",
+        "text": "31. Inspection Documentation- Confirm proper documentation and daily inspection goals. *Temporary moved to Coating AC3*",
+        "group": "QUALITY COMPLIANCE, DOCUMENTATION, & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-33",
+        "text": "32. Complete 5S Checklist- Between DL office and Coating.",
+        "group": "QUALITY COMPLIANCE, DOCUMENTATION, & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-34",
+        "text": "33. MSS Compliance- Ensure MSS tasks are progressing.  Tasks Completed (Wk, Mo, Qt) ______________ Tasks Remaining ________________",
+        "group": "QUALITY COMPLIANCE, DOCUMENTATION, & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-35",
+        "text": "34. Ensure Composite Samples Collected (1200 piece)",
+        "group": "QUALITY COMPLIANCE, DOCUMENTATION, & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-36",
+        "text": "34. Check for Quality Issues- Leaky sprayers, weigh belt speed, product defects.",
+        "group": "QUALITY COMPLIANCE, DOCUMENTATION, & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-37",
+        "text": "36. Update Coating MDI & Changeover Boards",
+        "group": "QUALITY COMPLIANCE, DOCUMENTATION, & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      },
+      {
+        "id": "coating-38",
+        "text": "37. Update Production Schedule – Check off WOs as completed.",
+        "group": "QUALITY COMPLIANCE, DOCUMENTATION, & VISUAL MANAGEMENT",
+        "timing": "Throughout shift / as applicable",
+        "photo": false
+      }
+    ]
+  }
+]

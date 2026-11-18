@@ -22,6 +22,7 @@ export type Step = {
   timing?: string;
 };
 export type Standard = {
+  handoffProfile?: string;
   archived?: boolean;
   workflow?: string;
   kind: string;

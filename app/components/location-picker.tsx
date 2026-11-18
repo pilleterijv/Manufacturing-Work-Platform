@@ -87,7 +87,9 @@ export function LocationsEditor({
   data,
   save,
   busy,
+  canInstall = false,
 }: {
+  canInstall?: boolean;
   data: Data;
   save: (b: unknown) => Promise<boolean>;
   busy: boolean;
@@ -156,6 +158,57 @@ export function LocationsEditor({
           </button>
         </form>
       </details>
+      {canInstall && (
+        <details>
+          <summary>
+            Install the four Tableting DL/TL standard works and department
+            catalog
+          </summary>
+          <p>
+            Creates Compressing, Upstairs Blending, Weigh Room / Bin Blending,
+            and Coating leader checklists from the supplied documents. Adds all
+            17 departments and their supplied areas for the selected site.
+          </p>
+          <p>
+            Area checklist work points are clearly labelled DL/TL area
+            checklist; they are not physical machines. Existing standards,
+            retired work, completed records and user access are preserved.
+            Repeating installation does not overwrite your edits.
+          </p>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const f = e.currentTarget;
+              if (
+                await save({
+                  action: "install-tableting",
+                  plant: new FormData(f).get("plant"),
+                })
+              )
+                f.reset();
+            }}
+          >
+            <Field label="Plant / site for Tableting standard works">
+              <input
+                name="plant"
+                required
+                maxLength={100}
+                list="reference-catalog-sites"
+                aria-label="Plant / site for Tableting standard works"
+              />
+            </Field>
+            <button className="outline" disabled={busy}>
+              Install Tableting standard works and locations
+            </button>
+          </form>
+          <p>
+            After installing, assign leaders to the relevant areas under
+            Accounts and set shift requirements. The Weigh Room checklist also
+            covers Bin Blending and Inspection; the Blending checklist covers
+            upstairs and mezzanine activities.
+          </p>
+        </details>
+      )}
       <form
         onSubmit={async (e) => {
           e.preventDefault();

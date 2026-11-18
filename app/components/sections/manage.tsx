@@ -1,5 +1,6 @@
 "use client";
 import { leaderStarter } from "@/lib/reference-catalog";
+import { tabletingLeaderTemplates } from "@/lib/tableting-leader";
 import PersonSelect from "../person-select";
 import { LocationPicker } from "../location-picker";
 import { useState, useEffect, useRef } from "react";
@@ -41,6 +42,7 @@ export default function Manage({
     [revisionLoading, setRevisionLoading] = useState(false),
     [kind, setKind] = useState("run"),
     [workflow, setWorkflow] = useState("process"),
+    [handoffProfile, setHandoffProfile] = useState("generic"),
     [assignees, setAssignees] = useState<string[]>([]),
     [title, setTitle] = useState(""),
     [equipment, setEquipment] = useState(""),
@@ -81,6 +83,7 @@ export default function Manage({
     const s = data.standards.find((x) => x.id === id);
     setKind(s?.kind ?? "run");
     setWorkflow(s?.workflow ?? "process");
+    setHandoffProfile(s?.handoffProfile ?? "generic");
     setAssignees(s?.assigneeIds ?? []);
     setTitle(s?.title ?? "");
     setEquipment(s?.equipmentId ?? "");
@@ -185,6 +188,7 @@ export default function Manage({
                   action: "standard",
                   kind,
                   workflow,
+                  handoffProfile,
                   assigneeIds: assignees,
                   title,
                   equipmentId: equipment,
@@ -236,11 +240,65 @@ export default function Manage({
               )}
               {workflow === "leader" && (
                 <div>
+                  <Field label="Leader handoff format">
+                    <select
+                      aria-label="Leader handoff format"
+                      value={handoffProfile}
+                      onChange={(e) => setHandoffProfile(e.target.value)}
+                    >
+                      <option value="generic">
+                        Generic room / machine handoff
+                      </option>
+                      {tabletingLeaderTemplates.map((t) => (
+                        <option key={t.key} value={t.key}>
+                          {t.title}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  {!editing && (
+                    <Field label="Load supplied Tableting checklist">
+                      <select
+                        aria-label="Load supplied Tableting checklist"
+                        value=""
+                        onChange={(e) => {
+                          const t = tabletingLeaderTemplates.find(
+                            (t) => t.key === e.target.value,
+                          );
+                          if (
+                            !t ||
+                            (steps.some((s) => s.text) &&
+                              !confirm(
+                                "Replace the unsaved checklist tasks with this supplied template?",
+                              ))
+                          )
+                            return;
+                          setTitle(t.title);
+                          setHandoffProfile(t.key);
+                          setSteps(
+                            t.steps.map((s) => ({
+                              ...s,
+                              id: crypto.randomUUID(),
+                            })),
+                          );
+                        }}
+                      >
+                        <option value="">Choose document template</option>
+                        {tabletingLeaderTemplates.map((t) => (
+                          <option key={t.key} value={t.key}>
+                            {t.title} ({t.steps.length} checks)
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  )}
+
                   <button
                     className="outline"
                     type="button"
                     onClick={() => {
                       setTitle("Compressing leader standard work");
+                      setHandoffProfile("compressing");
                       setSteps(
                         leaderStarter.map(([group, text, timing]) => ({
                           id: crypto.randomUUID(),
