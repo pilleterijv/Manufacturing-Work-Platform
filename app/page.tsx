@@ -1128,7 +1128,12 @@ export default function Home() {
                   />
                 )}
                 {tab === "Locations" && sectionReady && (
-                  <LocationsEditor data={data} save={save} busy={busy} />
+                  <LocationsEditor
+                    data={data}
+                    save={save}
+                    busy={busy}
+                    canInstall={user.role === "Admin" && !user.customRole}
+                  />
                 )}
                 {tab === "Accounts" && user.role !== "Admin" && (
                   <DepartmentAccounts />

@@ -80,6 +80,9 @@ export const standardSchema = z
   .object({
     kind: z.enum(["run", "audit"]).default("run"),
     workflow: z.enum(["process", "leader"]).default("process"),
+    handoffProfile: z
+      .enum(["generic", "compressing", "blending", "weigh-room", "coating"])
+      .optional(),
     assigneeIds: z.array(z.string().uuid()).max(1000).default([]),
     title: z.string().min(1).max(150),
     equipmentId: z.string(),

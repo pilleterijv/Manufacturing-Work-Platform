@@ -1,3 +1,4 @@
+const { expandTools, assignmentPanels } = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const assert = require("node:assert/strict"),
@@ -488,6 +489,7 @@ const post = (c, path, data) =>
     const errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto(origin);
+    await expandTools(page);
     await page.getByRole("heading", { name: "Welcome, Manager." }).waitFor();
     assert.equal(
       await page
@@ -496,6 +498,7 @@ const post = (c, path, data) =>
       0,
     );
     const nav = async (name) => {
+      await expandTools(page);
       await page.locator(".nav-item").filter({ hasText: name }).first().click();
       await page
         .getByRole("heading", {
@@ -504,6 +507,17 @@ const post = (c, path, data) =>
           exact: true,
         })
         .waitFor();
+      if (name === "Overview") {
+        await assignmentPanels(page);
+        const summary = page.getByText("Recent work and history", {
+          exact: true,
+        });
+        if (
+          (await summary.isVisible()) &&
+          (await summary.locator("..").getAttribute("open")) === null
+        )
+          await summary.click();
+      }
     };
     await nav("My account");
     assert.equal(
