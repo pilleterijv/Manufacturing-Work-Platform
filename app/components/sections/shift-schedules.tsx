@@ -1,4 +1,5 @@
 "use client";
+import CrewRotationEditor from "../crew-rotation-editor";
 import { useSectionRefresh } from "../refresh-control";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client-api";
@@ -11,6 +12,8 @@ export default function ShiftSchedules() {
     [managers, setManagers] = useState<string[]>([]),
     [assignees, setAssignees] = useState<string[]>([]),
     [shifts, setShifts] = useState<string[]>([]),
+    [cadence, setCadence] = useState("crew"),
+    [crews, setCrews] = useState<string[]>([]),
     [weekdays, setWeekdays] = useState<string[]>([
       "1",
       "2",
@@ -106,8 +109,11 @@ export default function ShiftSchedules() {
         <p>Loading schedules…</p>
       ) : (
         <>
-          <section className="panel">
-            <h2>Notification service</h2>
+          {data.canConfigureCrews && (
+            <CrewRotationEditor config={data.config} save={save} busy={busy} />
+          )}
+          <details className="panel">
+            <summary>Notification service status</summary>
             {data.email.failed > 0 && (
               <button
                 className="outline"
@@ -136,9 +142,15 @@ export default function ShiftSchedules() {
               the background worker; custom hosting must run the worker too.
               Email delivery is retried, with a maximum of ten attempts.
             </p>
-          </section>
+          </details>
           <section className="panel">
             <h2>Create shift requirement</h2>
+            <p>
+              1. Choose the checklist. 2. Choose the working crew. 3. Choose the
+              people responsible and who receives missed-work alerts. Each
+              selected person must complete it during that crew’s working shift;
+              off days are excluded.
+            </p>
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
@@ -150,8 +162,12 @@ export default function ShiftSchedules() {
                     family: f.get("family"),
                     managerIds: managers,
                     assigneeIds: assignees,
-                    shiftNames: shifts,
-                    weekdays: weekdays.map(Number),
+                    shiftNames: cadence === "crew" ? [] : shifts,
+                    crewNames: cadence === "crew" ? crews : [],
+                    weekdays:
+                      cadence === "crew"
+                        ? [1, 2, 3, 4, 5, 6, 7]
+                        : weekdays.map(Number),
                     notifyInApp: f.get("inApp") === "on",
                     notifyEmail: f.get("email") === "on",
                   })
@@ -168,34 +184,86 @@ export default function ShiftSchedules() {
                   <option value="">Choose standard work</option>
                   {data.standards.map((s: any) => (
                     <option key={s.family} value={s.family}>
-                      {s.kind === "audit" ? "DL/TL" : "Operator"} · {s.title} ·{" "}
-                      {s.equipmentName} / {s.department}
+                      {s.workflow === "leader"
+                        ? "DL/TL"
+                        : s.workflow === "changeover"
+                          ? "Changeover"
+                          : s.kind === "audit"
+                            ? "Process verification"
+                            : "Operator task"}{" "}
+                      · {s.title} · {s.equipmentName} / {s.department}
                     </option>
                   ))}
                 </select>
               </Field>
-              {picker(
-                "Required shifts",
-                data.config.shifts.map((s: any) => ({
-                  id: s.name,
-                  name: s.name,
-                })),
-                shifts,
-                setShifts,
+              <Field label="Requirement schedule">
+                <select
+                  aria-label="Requirement schedule"
+                  value={cadence}
+                  onChange={(e) => setCadence(e.target.value)}
+                >
+                  <option value="crew">
+                    Rotating crew — follows on/off roster
+                  </option>
+                  <option value="weekly">
+                    Fixed weekly schedule — advanced / legacy
+                  </option>
+                </select>
+              </Field>
+              {cadence === "crew" && (
+                <>
+                  {!data.config.crews?.length ? (
+                    <p role="status">
+                      Ask Admin to configure crews 4–7 and their start dates
+                      above before adding rotating requirements.
+                    </p>
+                  ) : (
+                    <Field label="Working crew">
+                      <select
+                        required
+                        aria-label="Working crew"
+                        value={crews[0] || ""}
+                        onChange={(e) =>
+                          setCrews(e.target.value ? [e.target.value] : [])
+                        }
+                      >
+                        <option value="">Choose crew</option>
+                        {data.config.crews.map((c: any) => (
+                          <option key={c.name} value={c.name}>
+                            {c.name} · {c.shiftName}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  )}
+                </>
               )}
-              {picker(
-                "Weekdays",
-                [
-                  "Monday",
-                  "Tuesday",
-                  "Wednesday",
-                  "Thursday",
-                  "Friday",
-                  "Saturday",
-                  "Sunday",
-                ].map((name, i) => ({ id: String(i + 1), name })),
-                weekdays,
-                setWeekdays,
+              {cadence === "weekly" && (
+                <>
+                  {picker(
+                    "Required shifts",
+                    data.config.shifts.map((s: any) => ({
+                      id: s.name,
+                      name: s.name,
+                    })),
+                    shifts,
+                    setShifts,
+                  )}
+                  {picker(
+                    "Weekdays",
+                    [
+                      "Monday",
+                      "Tuesday",
+                      "Wednesday",
+                      "Thursday",
+                      "Friday",
+                      "Saturday",
+                      "Sunday",
+                    ].map((name, i) => ({ id: String(i + 1), name })),
+                    weekdays,
+                    setWeekdays,
+                  )}
+                </>
               )}
               {picker(
                 "Notify managers",
@@ -206,18 +274,19 @@ export default function ShiftSchedules() {
                 setManagers,
               )}
               {picker(
-                "Assigned operators (optional)",
+                "People responsible (optional)",
                 data.people,
                 assignees,
                 setAssignees,
               )}
               <p className="small muted">
-                No assigned operators means one completion for the machine per
-                selected shift. When operators are selected, each must complete
-                the standard once. Monitoring begins with the first full shift
-                after activation. Shift boundaries and timezone are saved with
-                the schedule; create a new schedule if the shift definition
-                changes.
+                Create one requirement per crew so each crew has its own
+                responsible people. No assigned people means one completion for
+                the machine per selected shift. When operators are selected,
+                each must complete the standard once. Monitoring begins with the
+                first full shift after activation. Shift boundaries and timezone
+                are saved with the schedule; create a new schedule if the shift
+                definition changes.
               </p>
               <div className="button-row">
                 <label className="check">
@@ -233,7 +302,10 @@ export default function ShiftSchedules() {
                 Email recipients need an address in Accounts. Both channels can
                 be switched off independently.
               </p>
-              <button className="primary" disabled={busy}>
+              <button
+                className="primary"
+                disabled={busy || (cadence === "crew" && !crews.length)}
+              >
                 Create shift requirement
               </button>
             </form>
@@ -243,10 +315,31 @@ export default function ShiftSchedules() {
             {data.schedules.map((s: any) => (
               <article className="problem-action" key={s.id}>
                 <h3>{s.title}</h3>
+                {!s.crewNames?.length && (
+                  <p className="small muted">
+                    Fixed weekday requirement — review/pause this if replacing
+                    it with the rotating roster.
+                  </p>
+                )}
                 <p className="small">
-                  {s.shiftNames.join(", ")} · {s.config.timezone} ·{" "}
+                  Responsible:{" "}
                   {s.assigneeIds.length
-                    ? `${s.assigneeIds.length} assigned operators`
+                    ? s.assigneeIds
+                        .map(
+                          (id: string) =>
+                            data.people.find((p: any) => p.id === id)?.name ||
+                            "Inactive person",
+                        )
+                        .join(", ")
+                    : "One shared completion per machine"}
+                </p>
+                <p className="small">
+                  {(s.crewNames?.length ? s.crewNames : s.shiftNames).join(
+                    ", ",
+                  )}{" "}
+                  · {s.config.timezone} ·{" "}
+                  {s.assigneeIds.length
+                    ? `${s.assigneeIds.length} assigned people`
                     : "One completion per machine"}
                 </p>
                 <p className="small">

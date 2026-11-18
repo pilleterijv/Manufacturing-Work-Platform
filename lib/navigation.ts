@@ -13,6 +13,7 @@ export const sectionRules: Record<string, Capability | null> = {
   Overview: null,
   "Dashboard settings": null,
   "Standard work": "work",
+  "Changeover standards": "work",
   "DL/TL Standard Work": "audits",
   "Standard work audits": "audits",
   "Time studies": "studies",
@@ -68,3 +69,12 @@ export function canOpenSection(u: NavigationUser, name: string) {
 }
 export const allowedSections = (u: NavigationUser) =>
   Object.keys(sectionRules).filter((n) => canOpenSection(u, n));
+
+// Keep saved section keys stable while using distinct floor-facing names.
+export function sectionLabel(name: string) {
+  return name === "Standard work"
+    ? "Operator tasks"
+    : name === "Standard work audits"
+      ? "Process verification"
+      : name;
+}

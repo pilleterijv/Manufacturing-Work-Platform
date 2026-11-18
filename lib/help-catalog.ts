@@ -45,7 +45,7 @@ export const helpTopics: HelpTopic[] = [
       "standard work task complete photo picture evidence steps verification",
     text: "Complete the approved standard and save its evidence.",
     steps: [
-      "Select Standard work and choose the process/machine.",
+      "Open Operator tasks and choose the process/machine.",
       "Answer every step explicitly Yes or No; add required photos/videos.",
       "Finish the task to save a permanent completion record. Do not use a changed procedure until a manager publishes its revision.",
     ],
@@ -53,7 +53,7 @@ export const helpTopics: HelpTopic[] = [
   {
     section: "DL/TL Standard Work",
     keywords: "dl tl leader supervisor linked 5s shift handoff",
-    text: "DL/TL leader work is an assigned shift checklist with optional linked 5S evidence and room/machine handoff notes. Timed process checks are in Standard work audits.",
+    text: "DL/TL leader work is an assigned shift checklist with optional linked 5S evidence and room/machine handoff notes. Timed process checks are in Process verification; Operator tasks are separate execution instructions.",
     steps: [
       "Select the assigned DL/TL process.",
       "If a step links 5S, complete that plan for the same area today, then select your completed audit in the step.",
@@ -210,7 +210,7 @@ export const helpTopics: HelpTopic[] = [
     text: "Shift requirements define expected work and alert recipients.",
     steps: [
       "Choose the standard-work family and equipment.",
-      "Set permitted assignees, managers, shifts and weekdays.",
+      "Choose one rotating crew and the people responsible; off days follow the roster. Fixed weekday schedules remain available for non-rotating work.",
       "Enable in-app/email channels as needed; the background worker checks missed work after shift deadlines.",
     ],
   },

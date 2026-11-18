@@ -86,6 +86,12 @@ export default function Machines({ user }: { user: User }) {
     if (view === "Checks") {
       if (g.includes("work"))
         add("/api/platform?view=work", "standards", "Standard work");
+      if (g.includes("work"))
+        add(
+          "/api/platform?view=changeovers",
+          "standards",
+          "Changeover standards",
+        );
       if (g.includes("audits"))
         add("/api/platform?view=leaders", "standards", "DL/TL Standard Work");
       if (g.includes("audits"))
@@ -161,7 +167,9 @@ export default function Machines({ user }: { user: User }) {
                   ? r.data?.snapshot?.workflow === "leader"
                     ? "DL/TL Standard Work"
                     : "Standard work audits"
-                  : "Standard work"
+                  : r.data?.snapshot?.workflow === "changeover"
+                    ? "Changeover standards"
+                    : "Standard work"
               : p.tab,
           standard: p.type === "standards" ? r.id : undefined,
           item: ["defects", "items", "plans"].includes(p.type)

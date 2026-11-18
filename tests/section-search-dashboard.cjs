@@ -1,5 +1,6 @@
 const { expandTools } = require("./ui-workspace.cjs");
 require("tsx/cjs");
+const { sectionLabel } = require("../lib/navigation.ts");
 require("dotenv").config({ quiet: true });
 const assert = require("node:assert/strict"),
   { randomUUID } = require("node:crypto"),
@@ -192,9 +193,17 @@ const check = async (r, status = 200) => {
     await expandTools(page);
     await page.getByRole("heading", { name: "Welcome, Morgan." }).waitFor();
     const nav = async (name) => {
-      await page.locator(".nav-item").filter({ hasText: name }).first().click();
       await page
-        .getByRole("heading", { level: 1, name, exact: true })
+        .locator(".nav-item")
+        .filter({ hasText: sectionLabel(name) })
+        .first()
+        .click();
+      await page
+        .getByRole("heading", {
+          level: 1,
+          name: sectionLabel(name),
+          exact: true,
+        })
         .waitFor();
     };
     await nav("Time studies");
@@ -302,7 +311,10 @@ const check = async (r, status = 200) => {
         .getByRole("button", { name: "Dashboard", exact: true })
         .click();
       await page
-        .getByRole("heading", { name: name + " at a glance", exact: true })
+        .getByRole("heading", {
+          name: sectionLabel(name) + " at a glance",
+          exact: true,
+        })
         .waitFor();
     }
     await nav("Defect reporting");

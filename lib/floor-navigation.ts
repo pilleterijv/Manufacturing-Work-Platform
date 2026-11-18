@@ -26,7 +26,14 @@ export function roleHome(u: NavigationUser) {
               : "My shift";
   const primary =
     profile === "admin"
-      ? ["Accounts", "Permissions", "Locations", "Manage", "Integrations"]
+      ? [
+          "DL/TL Standard Work",
+          "Accounts",
+          "Permissions",
+          "Locations",
+          "Manage",
+          "Integrations",
+        ]
       : profile === "maintenance"
         ? [
             "Work queue",
@@ -46,10 +53,10 @@ export function roleHome(u: NavigationUser) {
           : profile === "manager"
             ? [
                 "Work queue",
+                "DL/TL Standard Work",
                 "Leadership dashboard",
                 "Problem solving",
                 "Improvement ideas",
-                "Defect reporting",
               ]
             : profile === "leader"
               ? [

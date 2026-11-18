@@ -1,4 +1,5 @@
 "use client";
+import { sectionLabel } from "@/lib/navigation";
 import { canOpenSection, type NavigationUser } from "@/lib/navigation";
 import type { ReactNode } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
@@ -217,13 +218,13 @@ export default function Overview({
                     className="module-card"
                     key={name}
                     onClick={() => go(name)}
-                    aria-label={`Open ${name} section`}
+                    aria-label={`Open ${sectionLabel(name)} section`}
                   >
                     <span className="module-icon" aria-hidden="true">
                       {icon}
                     </span>
                     <span>
-                      <strong>{name}</strong>
+                      <strong>{sectionLabel(name)}</strong>
                       <small>{detail}</small>
                     </span>
                     <span className="module-arrow" aria-hidden="true">

@@ -27,6 +27,7 @@ export function PublicAccessForms() {
       </div>
       {mode && (
         <form
+          key={mode}
           onSubmit={async (e) => {
             e.preventDefault();
             const f = new FormData(e.currentTarget);

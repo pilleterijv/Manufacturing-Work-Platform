@@ -1,4 +1,5 @@
 "use client";
+import { sectionLabel } from "@/lib/navigation";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client-api";
 import { sectionEndpoints } from "@/lib/section-views";
@@ -49,9 +50,12 @@ export default function SectionDashboard({
   const snapshot = sectionSnapshot(section, data),
     max = Math.max(1, ...snapshot.buckets.map((b) => b.count));
   return (
-    <section className="section-dashboard" aria-label={`${section} dashboard`}>
+    <section
+      className="section-dashboard"
+      aria-label={`${sectionLabel(section)} dashboard`}
+    >
       <div className="section-title">
-        <h2>{section} at a glance</h2>
+        <h2>{sectionLabel(section)} at a glance</h2>
         <div className="button-row">
           <RefreshControl onRefresh={load} label="Refresh dashboard" />
           <button className="primary" onClick={openDetails}>

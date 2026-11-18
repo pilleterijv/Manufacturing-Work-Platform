@@ -1,4 +1,5 @@
 "use client";
+import { sectionLabel } from "@/lib/navigation";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client-api";
 import {
@@ -64,7 +65,9 @@ export default function DashboardSettings({
               {data.sections
                 .filter((s: string) => s !== "Dashboard settings")
                 .map((s: string) => (
-                  <option key={s}>{s}</option>
+                  <option key={s} value={s}>
+                    {sectionLabel(s)}
+                  </option>
                 ))}
             </select>
           </Field>

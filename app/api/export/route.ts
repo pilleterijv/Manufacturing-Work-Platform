@@ -1,8 +1,11 @@
+import { workflowFocus } from "@/lib/workflow-focus";
+import { sectionWorkbook } from "@/lib/section-workbook";
+import { focusedEquipmentIds } from "@/lib/equipment-label";
 import { readFilters, recordFilters } from "@/lib/filters";
 import { equipmentIds, recordScope } from "@/lib/location-access";
 import { streamWorkbook, paged } from "@/lib/excel-stream";
 import { db } from "@/lib/db";
-import { requireUser, grants, failure } from "@/lib/security";
+import { requireUser, grants, failure, HttpError } from "@/lib/security";
 import { stats } from "@/lib/rules";
 import { addOperationsSheets } from "@/lib/operations-export";
 const locationColumns = [
@@ -20,13 +23,61 @@ export async function GET(req: Request) {
   try {
     const u = await requireUser("export");
     const g = await grants(u);
-    const ids = await equipmentIds(u);
+    const ids = focusedEquipmentIds(req.url, await equipmentIds(u));
     const { person, search } = readFilters(req.url);
+    const equipment = await db.equipment.findMany({
+      where: { id: { in: ids } },
+    });
+    const matchingEquipment = search
+      ? equipment
+          .filter((e) =>
+            [e.name, e.plant, e.department, e.area, e.line]
+              .join(" ")
+              .toLowerCase()
+              .includes(search.toLowerCase()),
+          )
+          .map((e) => e.id)
+      : [];
+    const section = new URL(req.url).searchParams.get("section");
+    if (section === "downtime" || section === "ideas") {
+      const cap = section === "downtime" ? "downtime" : "ideas";
+      if (!g.includes(cap))
+        throw new HttpError(403, "Section export is not permitted");
+      const ideasWhere =
+        section === "ideas"
+          ? await workflowFocus(req.url, "ideas", u.id)
+          : undefined;
+      return await streamWorkbook(
+        `floorwork-${section}.xlsx`,
+        (book) =>
+          addOperationsSheets(book, [cap], u, {
+            person,
+            search,
+            equipmentIds: ids,
+            ideasWhere,
+          }),
+        req.signal,
+      );
+    }
+    if (section)
+      return await sectionWorkbook(
+        req,
+        u,
+        g,
+        ids,
+        person,
+        search,
+        matchingEquipment,
+        section,
+      );
     const asOf = new Date();
     const records = paged((cursor) =>
       db.record.findMany({
         where: {
-          AND: [recordScope(ids), recordFilters(person, search)],
+          AND: [
+            recordScope(ids),
+            recordFilters(person, search, matchingEquipment),
+          ],
           ...(g.includes("analytics") ? {} : { userId: u.id }),
           created: { lte: asOf },
           kind: {
@@ -221,7 +272,11 @@ export async function GET(req: Request) {
             }
           }
         }
-        await addOperationsSheets(book, g, u, { person, search });
+        await addOperationsSheets(book, g, u, {
+          person,
+          search,
+          equipmentIds: ids,
+        });
       },
       req.signal,
     );

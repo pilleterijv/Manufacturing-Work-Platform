@@ -1,5 +1,6 @@
 export const sectionEndpoints: Record<string, string> = {
   "Standard work": "/api/platform?view=work",
+  "Changeover standards": "/api/platform?view=changeovers",
   "Time studies": "/api/platform?view=studies",
   "DL/TL Standard Work": "/api/platform?view=leaders",
   "Standard work audits": "/api/platform?view=audits",

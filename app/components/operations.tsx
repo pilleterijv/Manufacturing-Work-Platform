@@ -1,8 +1,8 @@
 "use client";
+import { openWorkflow } from "@/lib/floor-navigation";
 import RefreshControl, { useSectionRefresh } from "./refresh-control";
 import { HistoryPagingContext, Metric } from "./shared";
 import RecordingContext from "./recording-context";
-import { openWorkflow } from "@/lib/floor-navigation";
 import PersonSelect from "./person-select";
 import { filterUrl } from "@/lib/client-api";
 import EvidenceInput, { EvidenceView } from "./evidence-input";
@@ -493,7 +493,23 @@ function DowntimeSettings({
       <section className="panel">
         <span className="eyebrow">ADMIN ONLY</span>
         <h2>Shift schedule</h2>
+        {config.crews?.length && (
+          <>
+            <p>
+              Rotating crews are configured. Manage their 12-hour times, time
+              zone and roster together under Shift requirements.
+            </p>
+            <button
+              type="button"
+              className="outline"
+              onClick={() => openWorkflow({ tab: "Shift requirements" })}
+            >
+              Manage rotating crews
+            </button>
+          </>
+        )}
         <form
+          hidden={!!config.crews?.length}
           onSubmit={(e) => {
             e.preventDefault();
             void save({ action: "shifts", config });

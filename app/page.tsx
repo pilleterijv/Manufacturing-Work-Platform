@@ -1,4 +1,5 @@
 "use client";
+import { sectionLabel } from "@/lib/navigation";
 import {
   PublicAccessForms,
   ResetPasswordForm,
@@ -103,6 +104,7 @@ const Leadership = dynamic(
 const platformViews: Record<string, string> = {
   Overview: "overview",
   "Standard work": "work",
+  "Changeover standards": "changeovers",
   "DL/TL Standard Work": "leaders",
   "Standard work audits": "audits",
   "Time studies": "studies",
@@ -600,6 +602,9 @@ export default function Home() {
             </div>
           )}
           <form
+            key={user ? `temporary-password:${user.id}` : "sign-in"}
+            aria-label={user ? "Set your own password" : "Sign in"}
+            autoComplete={user ? "off" : "on"}
             onSubmit={(e) => {
               e.preventDefault();
               const f = new FormData(e.currentTarget);
@@ -621,14 +626,22 @@ export default function Home() {
           >
             {!user ? (
               <Field label="Username">
-                <input name="username" autoComplete="username" required />
+                <input
+                  id="sign-in-username"
+                  name="username"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  required
+                />
               </Field>
             ) : (
               <Field label="Temporary password">
                 <input
+                  id="temporary-password-current"
                   name="current"
                   type="password"
-                  autoComplete="current-password"
+                  autoComplete="off"
                   required
                 />
               </Field>
@@ -637,6 +650,7 @@ export default function Home() {
               label={user ? "New password · 12–128 characters" : "Password"}
             >
               <input
+                id={user ? "temporary-password-new" : "sign-in-password"}
                 name="password"
                 type="password"
                 minLength={user ? 12 : undefined}
@@ -671,7 +685,9 @@ export default function Home() {
     ["Machines", null, "▣"],
     ["Dashboard settings", null, "⚙"],
     ["Assistant", null, "?"],
+    ["DL/TL Standard Work", "audits", "◎"],
     ["Standard work", "work", "☑"],
+    ["Changeover standards", "work", "⇄"],
     ["Time studies", "studies", "◷"],
     ["Preventive maintenance", "maintenance", "⚒"],
     ["Centerlines", "centerlines", "≋"],
@@ -679,7 +695,6 @@ export default function Home() {
     ["5S audits", "fiveS", "◎"],
     ["Defect reporting", "defects", "◇"],
     ["Production results", "analytics", "▥"],
-    ["DL/TL Standard Work", "audits", "◎"],
     ["Standard work audits", "audits", "◉"],
     ["Training", null, "▷"],
     ["Troubleshooting", null, "◇"],
@@ -775,7 +790,9 @@ export default function Home() {
                     className="nav-group"
                     hidden={
                       navSearch
-                        ? !name.toLowerCase().includes(navSearch.toLowerCase())
+                        ? !`${sectionLabel(name)} ${name}`
+                            .toLowerCase()
+                            .includes(navSearch.toLowerCase())
                         : !moreTools &&
                           name !== tab &&
                           ![
@@ -806,7 +823,7 @@ export default function Home() {
                       }}
                     >
                       <span>{icon}</span>
-                      {name}
+                      {sectionLabel(name)}
                       {name === "Notifications" &&
                         operations.notifications.some((n) => !n.readAt) && (
                           <span className="notification-count">
@@ -823,14 +840,17 @@ export default function Home() {
                       )}
                     </button>
                     {hasSectionViews(name) && expanded[name] && (
-                      <div className="nav-submenu" aria-label={`${name} views`}>
+                      <div
+                        className="nav-submenu"
+                        aria-label={`${sectionLabel(name)} views`}
+                      >
                         <button
                           className={
                             tab === name && sectionMode === "dashboard"
                               ? "active"
                               : ""
                           }
-                          aria-label={`${name} dashboard`}
+                          aria-label={`${sectionLabel(name)} dashboard`}
                           onClick={() => {
                             if (!setTab(name)) return;
                             setSectionMode("dashboard");
@@ -845,7 +865,7 @@ export default function Home() {
                               ? "active"
                               : ""
                           }
-                          aria-label={`${name} in detail`}
+                          aria-label={`${sectionLabel(name)} in detail`}
                           onClick={() => {
                             if (!setTab(name)) return;
                             setSectionMode("detail");
@@ -889,7 +909,7 @@ export default function Home() {
           <main className="main">
             <header className="topbar">
               <span>
-                Workspace <span className="muted"> / {tab}</span>
+                Workspace <span className="muted"> / {sectionLabel(tab)}</span>
               </span>
               <span className="status">
                 <i /> Signed in{" "}
@@ -928,7 +948,7 @@ export default function Home() {
                   <h1>
                     {tab === "Overview"
                       ? `Welcome, ${user.name.split(" ")[0]}.`
-                      : tab}
+                      : sectionLabel(tab)}
                   </h1>
                   <p className="muted">{descriptions[tab]}</p>
                 </div>
@@ -936,30 +956,63 @@ export default function Home() {
                   onRefresh={refreshSection}
                   label="Refresh section"
                 />
-                {g.includes("export") && tab !== "Problem solving" && (
-                  <a
-                    className="outline"
-                    href={filterUrl(
-                      tab === "Centerlines"
-                        ? "/api/centerlines?format=xlsx"
-                        : tab === "5S audits"
-                          ? "/api/five-s?format=xlsx"
-                          : tab === "Defect reporting"
-                            ? "/api/defects?format=xlsx"
-                            : tab === "TPM / CIL"
-                              ? "/api/maintenance?kind=cil&format=xlsx"
-                              : tab === "Preventive maintenance"
-                                ? "/api/maintenance?format=xlsx"
-                                : tab === "Production results"
-                                  ? "/api/external-data?section=Production%20results&format=xlsx"
-                                  : tab === "Problem solving"
-                                    ? "/api/problems?format=xlsx"
-                                    : "/api/export",
-                    )}
-                  >
-                    ↓ Export Excel
-                  </a>
-                )}
+                {g.includes("export") &&
+                  [
+                    "Overview",
+                    "Analytics",
+                    "Standard work",
+                    "DL/TL Standard Work",
+                    "Standard work audits",
+                    "Changeover standards",
+                    "Time studies",
+                    "Centerlines",
+                    "5S audits",
+                    "Defect reporting",
+                    "TPM / CIL",
+                    "Preventive maintenance",
+                    "Production results",
+                    "Downtime",
+                    "Improvement ideas",
+                  ].includes(tab) && (
+                    <a
+                      className="outline"
+                      href={filterUrl(
+                        tab === "Centerlines"
+                          ? "/api/centerlines?format=xlsx"
+                          : tab === "5S audits"
+                            ? "/api/five-s?format=xlsx"
+                            : tab === "Defect reporting"
+                              ? "/api/defects?format=xlsx"
+                              : tab === "TPM / CIL"
+                                ? "/api/maintenance?kind=cil&format=xlsx"
+                                : tab === "Preventive maintenance"
+                                  ? "/api/maintenance?format=xlsx"
+                                  : tab === "Production results"
+                                    ? "/api/external-data?section=Production%20results&format=xlsx"
+                                    : tab === "Problem solving"
+                                      ? "/api/problems?format=xlsx"
+                                      : tab === "DL/TL Standard Work"
+                                        ? "/api/export?section=leaders"
+                                        : tab === "Standard work"
+                                          ? "/api/export?section=operator"
+                                          : tab === "Standard work audits"
+                                            ? "/api/export?section=process"
+                                            : tab === "Changeover standards"
+                                              ? "/api/export?section=changeovers"
+                                              : tab === "Time studies"
+                                                ? "/api/export?section=studies"
+                                                : tab === "Downtime"
+                                                  ? "/api/export?section=downtime"
+                                                  : tab === "Improvement ideas"
+                                                    ? "/api/export?section=ideas"
+                                                    : "/api/export",
+                      )}
+                    >
+                      {tab === "Overview" || tab === "Analytics"
+                        ? "↓ Export combined work history"
+                        : "↓ Export Excel"}
+                    </a>
+                  )}
               </div>
               {hasSectionSearch(tab) && (
                 <SectionFiltersBar
@@ -1034,7 +1087,7 @@ export default function Home() {
                 <div
                   className="section-view-switch"
                   role="group"
-                  aria-label={`${tab} view mode`}
+                  aria-label={`${sectionLabel(tab)} view mode`}
                 >
                   <button
                     className={
@@ -1155,6 +1208,16 @@ export default function Home() {
                     initialStandardId={filters.standard}
                   />
                 )}
+                {tab === "Changeover standards" && sectionReady && (
+                  <Work
+                    data={data}
+                    save={save}
+                    busy={busy}
+                    audit={false}
+                    changeover
+                    initialStandardId={filters.standard}
+                  />
+                )}
                 {tab === "DL/TL Standard Work" && sectionReady && (
                   <Work
                     data={data}
@@ -1163,7 +1226,11 @@ export default function Home() {
                     audit
                     leader
                     initialStandardId={filters.standard}
-                    shiftNames={operations.config.shifts.map((s) => s.name)}
+                    shiftNames={
+                      operations.config.crews?.length
+                        ? operations.config.crews.map((c: any) => c.name)
+                        : operations.config.shifts.map((s) => s.name)
+                    }
                   />
                 )}
                 {tab === "Standard work audits" && sectionReady && (

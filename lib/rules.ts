@@ -79,7 +79,7 @@ export const stepSchema = z.object({
 export const standardSchema = z
   .object({
     kind: z.enum(["run", "audit"]).default("run"),
-    workflow: z.enum(["process", "leader"]).default("process"),
+    workflow: z.enum(["process", "leader", "changeover"]).default("process"),
     handoffProfile: z
       .enum(["generic", "compressing", "blending", "weigh-room", "coating"])
       .optional(),
@@ -96,6 +96,11 @@ export const standardSchema = z
       c.addIssue({
         code: "custom",
         message: "Leader work uses the leader checklist task type",
+      });
+    if (s.workflow === "changeover" && s.kind !== "run")
+      c.addIssue({
+        code: "custom",
+        message: "Changeover standards use the operator checklist task type",
       });
     if (new Set(s.steps.map((x) => x.id)).size !== s.steps.length)
       c.addIssue({ code: "custom", message: "Step IDs must be unique" });
