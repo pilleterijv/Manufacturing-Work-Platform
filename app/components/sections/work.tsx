@@ -25,6 +25,7 @@ export default function Work({
   busy,
   audit,
   leader = false,
+  changeover = false,
   initialStandardId = "",
   shiftNames = ["Day", "Night"],
 }: {
@@ -33,9 +34,16 @@ export default function Work({
   busy: boolean;
   audit: boolean;
   leader?: boolean;
+  changeover?: boolean;
   initialStandardId?: string;
   shiftNames?: string[];
 }) {
+  const [changeoverDetails, setChangeoverDetails] = useState({
+    fromProduct: "",
+    toProduct: "",
+    type: "",
+    notes: "",
+  });
   const uploads = useRef(0);
   const [handoff, setHandoff] = useState<LeaderHandoffData>({
     shift: "",
@@ -46,7 +54,9 @@ export default function Work({
     (s) =>
       !s.archived &&
       s.kind === (audit ? "audit" : "run") &&
-      (audit ? (s.workflow === "leader") === leader : true),
+      (audit
+        ? (s.workflow === "leader") === leader
+        : (s.workflow === "changeover") === changeover),
   );
   const [id, setId] = useState(""),
     [responses, setResponses] = useState<
@@ -78,6 +88,12 @@ export default function Work({
   function select(id: string, check = true) {
     if (check && !confirmDraftChange()) return;
     setId(id);
+    setChangeoverDetails({
+      fromProduct: "",
+      toProduct: "",
+      type: "",
+      notes: "",
+    });
     setResponses({});
     setCycles([]);
     setStarted(new Date().toISOString());
@@ -111,12 +127,20 @@ export default function Work({
           <h2>
             {leader
               ? "Complete assigned DL/TL Standard Work"
-              : audit
-                ? "Complete a standard-work audit"
-                : "Start a verification"}
+              : changeover
+                ? "Perform a changeover"
+                : audit
+                  ? "Perform a process verification"
+                  : "Start a verification"}
           </h2>
           <span className="badge">
-            {leader ? "DL/TL" : audit ? "PROCESS AUDIT" : "STANDARD WORK"}
+            {leader
+              ? "DL/TL"
+              : changeover
+                ? "CHANGEOVER"
+                : audit
+                  ? "PROCESS VERIFICATION"
+                  : "OPERATOR TASK"}
           </span>
         </div>
         <Field label="Standard work">
@@ -171,6 +195,7 @@ export default function Work({
                   started,
                   operator,
                   ...(leader ? { handoff } : {}),
+                  ...(changeover ? { changeover: changeoverDetails } : {}),
                   responses: s.steps.map((step) => ({
                     stepId: step.id,
                     ...responses[step.id],
@@ -183,6 +208,64 @@ export default function Work({
               }
             }}
           >
+            {changeover && (
+              <fieldset>
+                <legend>Changeover details</legend>
+                <div className="form-grid">
+                  {(
+                    [
+                      ["fromProduct", "Previous product / format"],
+                      ["toProduct", "Next product / format"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <Field key={key} label={label}>
+                      <input
+                        aria-label={label}
+                        required
+                        maxLength={150}
+                        value={changeoverDetails[key]}
+                        onChange={(e) =>
+                          setChangeoverDetails((v) => ({
+                            ...v,
+                            [key]: e.target.value,
+                          }))
+                        }
+                      />
+                    </Field>
+                  ))}
+                  <Field label="Changeover type">
+                    <select
+                      aria-label="Changeover type"
+                      required
+                      value={changeoverDetails.type}
+                      onChange={(e) =>
+                        setChangeoverDetails((v) => ({
+                          ...v,
+                          type: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="">Choose type</option>
+                      {["Minor", "Major", "Other"].map((x) => (
+                        <option key={x}>{x}</option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Changeover notes">
+                    <textarea
+                      maxLength={2000}
+                      value={changeoverDetails.notes}
+                      onChange={(e) =>
+                        setChangeoverDetails((v) => ({
+                          ...v,
+                          notes: e.target.value,
+                        }))
+                      }
+                    />
+                  </Field>
+                </div>
+              </fieldset>
+            )}
             <div className="process-meta">
               <span>
                 ▦ {data.equipment.find((e) => e.id === s.equipmentId)?.name}
@@ -365,9 +448,11 @@ export default function Work({
             <Submit busy={busy || uploading}>
               {leader
                 ? "Complete DL/TL Standard Work"
-                : audit
-                  ? "Complete standard-work audit"
-                  : "Complete standard work"}
+                : changeover
+                  ? "Complete changeover"
+                  : audit
+                    ? "Complete process verification"
+                    : "Complete standard work"}
             </Submit>
           </form>
         )}
@@ -377,8 +462,10 @@ export default function Work({
           {leader
             ? "DL/TL Standard Work history"
             : audit
-              ? "Standard work audit history"
-              : "Completed verifications"}
+              ? "Process verification history"
+              : changeover
+                ? "Changeover history"
+                : "Completed verifications"}
         </h2>
         <span className="muted">Historical revisions preserved</span>
       </div>

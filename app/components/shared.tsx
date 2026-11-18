@@ -134,6 +134,13 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
                     <details>
                       <summary>View record</summary>
                       {r.data.operator && <p>Operator: {r.data.operator}</p>}
+                      {r.data.changeover && (
+                        <p>
+                          Changeover: {r.data.changeover.fromProduct} →{" "}
+                          {r.data.changeover.toProduct} ·{" "}
+                          {r.data.changeover.type} · {r.data.changeover.notes}
+                        </p>
+                      )}
                       {r.data.handoff && (
                         <div>
                           <p>Shift: {r.data.handoff.shift}</p>

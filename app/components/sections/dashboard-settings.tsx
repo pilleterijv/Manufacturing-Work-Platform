@@ -1,4 +1,5 @@
 "use client";
+import { sectionLabel } from "@/lib/navigation";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client-api";
 import {

@@ -269,6 +269,7 @@ model ProblemAction {
 }
 
 model WorkSchedule {
+ crewNames Json @default("[]")
  kind String @default("run")
  id String @id @default(uuid())
  family String

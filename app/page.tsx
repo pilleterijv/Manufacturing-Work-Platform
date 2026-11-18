@@ -1,4 +1,5 @@
 "use client";
+import { sectionLabel } from "@/lib/navigation";
 import {
   PublicAccessForms,
   ResetPasswordForm,
@@ -103,6 +104,7 @@ const Leadership = dynamic(
 const platformViews: Record<string, string> = {
   Overview: "overview",
   "Standard work": "work",
+  "Changeover standards": "changeovers",
   "DL/TL Standard Work": "leaders",
   "Standard work audits": "audits",
   "Time studies": "studies",
@@ -683,7 +685,9 @@ export default function Home() {
     ["Machines", null, "▣"],
     ["Dashboard settings", null, "⚙"],
     ["Assistant", null, "?"],
+    ["DL/TL Standard Work", "audits", "◎"],
     ["Standard work", "work", "☑"],
+    ["Changeover standards", "work", "⇄"],
     ["Time studies", "studies", "◷"],
     ["Preventive maintenance", "maintenance", "⚒"],
     ["Centerlines", "centerlines", "≋"],
@@ -691,7 +695,6 @@ export default function Home() {
     ["5S audits", "fiveS", "◎"],
     ["Defect reporting", "defects", "◇"],
     ["Production results", "analytics", "▥"],
-    ["DL/TL Standard Work", "audits", "◎"],
     ["Standard work audits", "audits", "◉"],
     ["Training", null, "▷"],
     ["Troubleshooting", null, "◇"],
@@ -787,7 +790,9 @@ export default function Home() {
                     className="nav-group"
                     hidden={
                       navSearch
-                        ? !name.toLowerCase().includes(navSearch.toLowerCase())
+                        ? !`${sectionLabel(name)} ${name}`
+                            .toLowerCase()
+                            .includes(navSearch.toLowerCase())
                         : !moreTools &&
                           name !== tab &&
                           ![
@@ -818,7 +823,7 @@ export default function Home() {
                       }}
                     >
                       <span>{icon}</span>
-                      {name}
+                      {sectionLabel(name)}
                       {name === "Notifications" &&
                         operations.notifications.some((n) => !n.readAt) && (
                           <span className="notification-count">
@@ -940,7 +945,7 @@ export default function Home() {
                   <h1>
                     {tab === "Overview"
                       ? `Welcome, ${user.name.split(" ")[0]}.`
-                      : tab}
+                      : sectionLabel(tab)}
                   </h1>
                   <p className="muted">{descriptions[tab]}</p>
                 </div>
@@ -966,7 +971,17 @@ export default function Home() {
                                   ? "/api/external-data?section=Production%20results&format=xlsx"
                                   : tab === "Problem solving"
                                     ? "/api/problems?format=xlsx"
-                                    : "/api/export",
+                                    : tab === "DL/TL Standard Work"
+                                      ? "/api/export?section=leaders"
+                                      : tab === "Standard work"
+                                        ? "/api/export?section=operator"
+                                        : tab === "Standard work audits"
+                                          ? "/api/export?section=process"
+                                          : tab === "Changeover standards"
+                                            ? "/api/export?section=changeovers"
+                                            : tab === "Time studies"
+                                              ? "/api/export?section=studies"
+                                              : "/api/export",
                     )}
                   >
                     ↓ Export Excel
@@ -1167,6 +1182,16 @@ export default function Home() {
                     initialStandardId={filters.standard}
                   />
                 )}
+                {tab === "Changeover standards" && sectionReady && (
+                  <Work
+                    data={data}
+                    save={save}
+                    busy={busy}
+                    audit={false}
+                    changeover
+                    initialStandardId={filters.standard}
+                  />
+                )}
                 {tab === "DL/TL Standard Work" && sectionReady && (
                   <Work
                     data={data}
@@ -1175,7 +1200,11 @@ export default function Home() {
                     audit
                     leader
                     initialStandardId={filters.standard}
-                    shiftNames={operations.config.shifts.map((s) => s.name)}
+                    shiftNames={
+                      operations.config.crews?.length
+                        ? operations.config.crews.map((c: any) => c.name)
+                        : operations.config.shifts.map((s) => s.name)
+                    }
                   />
                 )}
                 {tab === "Standard work audits" && sectionReady && (

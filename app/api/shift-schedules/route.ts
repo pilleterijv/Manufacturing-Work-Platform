@@ -60,6 +60,7 @@ export async function GET(req: Request) {
       ]);
     return Response.json({
       schedules,
+      canConfigureCrews: u.role === "Admin" && !u.customRole,
       people: people.map(({ id, name, role, hasEmail }) => ({
         id,
         name,
@@ -79,7 +80,29 @@ export async function POST(req: Request) {
   try {
     const u = await requireDelegated("schedules.manage", "manage"),
       b = await jsonBody(req);
-    if (b.action === "create") {
+    if (b.action === "configureCrews") {
+      if (u.role !== "Admin" || u.customRole)
+        throw new HttpError(
+          403,
+          "Only Admin can configure plant shift times and crew rotations",
+        );
+      const config = shiftConfigSchema.parse(b.config);
+      if (
+        !config.crews?.length ||
+        config.shifts.length !== 2 ||
+        Math.abs(
+          config.shifts[0].startMinute - config.shifts[1].startMinute,
+        ) !== 720
+      )
+        throw new HttpError(
+          400,
+          "Rotating crews require two start times 12 hours apart",
+        );
+      await db.setting.update({
+        where: { key: "shifts" },
+        data: { value: config },
+      });
+    } else if (b.action === "create") {
       const v = workScheduleSchema.parse(b),
         setting = await db.setting.findUniqueOrThrow({
           where: { key: "shifts" },
@@ -108,6 +131,13 @@ export async function POST(req: Request) {
         v.shiftNames.some((name) => !config.shifts.some((s) => s.name === name))
       )
         throw new HttpError(400, "Choose valid shifts");
+      if (
+        v.crewNames.some((name) => !config.crews?.some((c) => c.name === name))
+      )
+        throw new HttpError(
+          400,
+          "Configure and choose a valid crew rotation first",
+        );
       const ids = [...new Set(v.managerIds)],
         managers = await db.user.findMany({
           where: {

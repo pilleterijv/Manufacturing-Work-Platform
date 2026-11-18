@@ -1,3 +1,4 @@
+import { scheduleWindowMatches } from "./crew-rotation";
 import { endedShiftWindows } from "./shift-schedule-rules";
 import { shiftConfigSchema } from "./operations-rules";
 export type QueueItem = {
@@ -74,8 +75,7 @@ export function scheduledQueue({
     for (const window of windows.get(configKey)!) {
       if (
         +window.start < +schedule.effectiveFrom ||
-        !schedule.shiftNames.includes(window.name) ||
-        !schedule.weekdays.includes(window.weekday)
+        !scheduleWindowMatches(schedule, window)
       )
         continue;
       const expected = versions.find(
@@ -112,7 +112,9 @@ export function scheduledQueue({
         counts[status] = (counts[status] || 0) + 1;
         const tab =
           latest.kind === "run"
-            ? "Standard work"
+            ? latest.workflow === "changeover"
+              ? "Changeover standards"
+              : "Standard work"
             : latest.workflow === "leader"
               ? "DL/TL Standard Work"
               : "Standard work audits";
@@ -148,7 +150,7 @@ export function scheduledQueue({
             !latest.archived &&
             (person === "station" || person === userId) &&
             grants.includes(schedule.kind === "audit" ? "audits" : "work"),
-          detail: `${window.name} · ${window.date} · ${schedule.config.timezone}`,
+          detail: `${(schedule.crewNames || []).join(" / ") || window.name} · ${window.date} · ${schedule.config.timezone}`,
           timezone: schedule.config.timezone,
         });
         if (rows.length >= 1000) {
