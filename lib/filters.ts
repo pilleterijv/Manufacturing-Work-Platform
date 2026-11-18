@@ -29,7 +29,13 @@ export function recordFilters(
     ...(search
       ? {
           OR: [
-            ...extraPaths.map((path) => ({
+            ...[
+              ...extraPaths,
+              ["changeover", "fromProduct"],
+              ["changeover", "toProduct"],
+              ["changeover", "type"],
+              ["changeover", "notes"],
+            ].map((path) => ({
               data: {
                 path,
                 string_contains: search,

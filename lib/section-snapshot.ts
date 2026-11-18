@@ -105,6 +105,7 @@ export function sectionSnapshot(section: string, d: any): SectionSnapshot {
     d.overview &&
     [
       "Standard work",
+      "Changeover standards",
       "Time studies",
       "DL/TL Standard Work",
       "Standard work audits",
@@ -124,7 +125,11 @@ export function sectionSnapshot(section: string, d: any): SectionSnapshot {
             ? "Saved studies"
             : section === "DL/TL Standard Work"
               ? "Completed leader checklists"
-              : "Completed runs",
+              : section === "Changeover standards"
+                ? "Completed changeovers"
+                : section === "Standard work audits"
+                  ? "Completed process verifications"
+                  : "Completed runs",
         value:
           section === "DL/TL Standard Work"
             ? d.overview.leaderWork || 0

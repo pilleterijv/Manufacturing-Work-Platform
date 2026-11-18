@@ -1,10 +1,11 @@
+import { workflowFocus } from "@/lib/workflow-focus";
 import { sectionWorkbook } from "@/lib/section-workbook";
 import { focusedEquipmentIds } from "@/lib/equipment-label";
 import { readFilters, recordFilters } from "@/lib/filters";
 import { equipmentIds, recordScope } from "@/lib/location-access";
 import { streamWorkbook, paged } from "@/lib/excel-stream";
 import { db } from "@/lib/db";
-import { requireUser, grants, failure } from "@/lib/security";
+import { requireUser, grants, failure, HttpError } from "@/lib/security";
 import { stats } from "@/lib/rules";
 import { addOperationsSheets } from "@/lib/operations-export";
 const locationColumns = [
@@ -38,6 +39,26 @@ export async function GET(req: Request) {
           .map((e) => e.id)
       : [];
     const section = new URL(req.url).searchParams.get("section");
+    if (section === "downtime" || section === "ideas") {
+      const cap = section === "downtime" ? "downtime" : "ideas";
+      if (!g.includes(cap))
+        throw new HttpError(403, "Section export is not permitted");
+      const ideasWhere =
+        section === "ideas"
+          ? await workflowFocus(req.url, "ideas", u.id)
+          : undefined;
+      return await streamWorkbook(
+        `floorwork-${section}.xlsx`,
+        (book) =>
+          addOperationsSheets(book, [cap], u, {
+            person,
+            search,
+            equipmentIds: ids,
+            ideasWhere,
+          }),
+        req.signal,
+      );
+    }
     if (section)
       return await sectionWorkbook(
         req,

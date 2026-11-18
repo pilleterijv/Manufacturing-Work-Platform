@@ -225,6 +225,11 @@ async function main() {
     .getByLabel("Changeover type", { exact: true })
     .selectOption("Major");
   await page.getByRole("button", { name: "✓ Yes", exact: true }).click();
+  await fs.mkdir("docs/screenshots/crew-changeover-flow", { recursive: true });
+  await page.screenshot({
+    path: "docs/screenshots/crew-changeover-flow/changeover.png",
+    fullPage: true,
+  });
   await page
     .getByRole("button", { name: "Complete changeover", exact: true })
     .click();
@@ -322,6 +327,57 @@ async function main() {
   assert.equal(study.getWorksheet("Time observations").rowCount, 3);
   assert.equal(study.getWorksheet("Statistics").getRow(2).getCell(4).value, 3);
   assert.equal(study.getWorksheet("Leader handoff"), undefined);
+  const productMatches = await req(
+    leader,
+    "/api/platform?view=changeovers&search=" + encodeURIComponent("Product A"),
+  );
+  assert.equal(productMatches.records.length, 1);
+  const productExport = await workbook(
+    manager,
+    "/api/export?section=changeovers&search=" + encodeURIComponent("Product A"),
+  );
+  assert.equal(productExport.getWorksheet("Changeovers").rowCount, 2);
+  const downtimeExport = await workbook(
+    manager,
+    "/api/export?section=downtime&equipment=" + eq[0].id,
+  );
+  assert.deepEqual(
+    downtimeExport.worksheets.map((s) => s.name),
+    ["Downtime events", "Downtime shifts"],
+  );
+  const ideasExport = await workbook(
+    manager,
+    "/api/export?section=ideas&equipment=" + eq[0].id,
+  );
+  assert.deepEqual(
+    ideasExport.worksheets.map((s) => s.name),
+    ["Improvement ideas"],
+  );
+  for (const [status, owner] of [
+    ["Open", users[2].id],
+    ["Closed", users[2].id],
+    ["Open", users[0].id],
+  ])
+    await db.idea.create({
+      data: {
+        title: "Focused idea " + randomUUID(),
+        equipmentId: eq[0].id,
+        equipmentSnapshot: eq[0],
+        currentState: "Before",
+        proposal: "After",
+        dueDate: "2030-01-01",
+        status,
+        createdBy: owner,
+        submitterId: owner,
+        pilotId: owner,
+        validatorId: owner,
+      },
+    });
+  const personalIdeas = await workbook(
+    manager,
+    "/api/export?section=ideas&focus=personal-open&equipment=" + eq[0].id,
+  );
+  assert.equal(personalIdeas.getWorksheet("Improvement ideas").rowCount, 2);
   const adminPage = await admin.newPage();
   adminPage.on("pageerror", (e) => errors.push(e.message));
   await adminPage.goto(origin);
