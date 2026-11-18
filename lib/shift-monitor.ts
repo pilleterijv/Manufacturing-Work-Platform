@@ -1,3 +1,4 @@
+import { scheduleWindowMatches } from "./crew-rotation";
 import { allowedDowntimeEquipment } from "./downtime-access-rules";
 import { db } from "./db";
 import { endedShiftWindows } from "./shift-schedule-rules";
@@ -27,8 +28,7 @@ export async function checkShiftWork(now = new Date()) {
           if (!current.active || +current.checkedThrough >= +window.end) return;
           if (
             +window.start >= +current.effectiveFrom &&
-            names.includes(window.name) &&
-            (current.weekdays as number[]).includes(window.weekday)
+            scheduleWindowMatches(current, window)
           ) {
             const assignees = current.assigneeIds as string[],
               managerIds = current.managerIds as string[];

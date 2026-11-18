@@ -80,6 +80,7 @@ export async function GET(req: Request) {
         "work",
         "audits",
         "leaders",
+        "changeovers",
         "studies",
         "manage",
         "analytics",
@@ -126,6 +127,7 @@ export async function GET(req: Request) {
       "work",
       "audits",
       "leaders",
+      "changeovers",
       "studies",
       "analytics",
       "records",
@@ -135,6 +137,7 @@ export async function GET(req: Request) {
       "work",
       "audits",
       "leaders",
+      "changeovers",
       "manage",
     ].includes(view);
     const contentNeeded = ["full", "training", "guides"].includes(view);
@@ -148,9 +151,9 @@ export async function GET(req: Request) {
     const scope = {
       AND: [recordScope(ids), recordFilters(person, search, matchingEquipment)],
       ...(g.includes("analytics") ? {} : { userId: u.id }),
-      ...(historyKind === "leaders"
-        ? { data: { path: ["snapshot", "workflow"], equals: "leader" } }
-        : historyKind === "audits"
+      ...(historyKind === "changeovers"
+        ? { data: { path: ["snapshot", "workflow"], equals: "changeover" } }
+        : historyKind === "work"
           ? {
               OR: [
                 { data: { path: ["snapshot", "workflow"], equals: "process" } },
@@ -162,10 +165,29 @@ export async function GET(req: Request) {
                 },
               ],
             }
-          : {}),
+          : historyKind === "leaders"
+            ? { data: { path: ["snapshot", "workflow"], equals: "leader" } }
+            : historyKind === "audits"
+              ? {
+                  OR: [
+                    {
+                      data: {
+                        path: ["snapshot", "workflow"],
+                        equals: "process",
+                      },
+                    },
+                    {
+                      data: {
+                        path: ["snapshot", "workflow"],
+                        equals: Prisma.AnyNull,
+                      },
+                    },
+                  ],
+                }
+              : {}),
       kind: {
         in:
-          historyKind === "work"
+          historyKind === "work" || historyKind === "changeovers"
             ? kinds.filter((k) => k === "run")
             : historyKind === "audits" || historyKind === "leaders"
               ? kinds.filter((k) => k === "audit")
@@ -223,7 +245,9 @@ export async function GET(req: Request) {
           ) latest ON s.family=latest.family AND s.revision=latest.revision
           WHERE s."equipmentId" = ANY(${assignmentIds}::text[])
           AND (NOT s.archived)
-          AND (${view} NOT IN ('work','audits','leaders') OR s.kind=CASE WHEN ${view} IN ('audits','leaders') THEN 'audit' ELSE 'run' END)
+          AND (${view} NOT IN ('work','changeovers','audits','leaders') OR s.kind=CASE WHEN ${view} IN ('audits','leaders') THEN 'audit' ELSE 'run' END)
+          AND (${view} <> 'changeovers' OR s.workflow='changeover')
+          AND (${view} <> 'work' OR s.workflow='process')
           AND (${view} NOT IN ('audits','leaders') OR s.workflow=CASE WHEN ${view}='leaders' THEN 'leader' ELSE 'process' END)
           AND (${view} NOT IN ('audits','leaders') OR ${u.role}='Admin' OR s."assigneeIds"='[]'::jsonb OR s."assigneeIds" @> ${JSON.stringify([u.id])}::jsonb)
           AND (${person ?? ""}='' OR s."assigneeIds"='[]'::jsonb OR s."assigneeIds" @> ${JSON.stringify(person ? [person] : [])}::jsonb)
@@ -844,6 +868,14 @@ export async function POST(req: Request) {
             )
             .max(100),
           cycles: cyclesSchema.optional(),
+          changeover: z
+            .object({
+              fromProduct: z.string().trim().min(1).max(150),
+              toProduct: z.string().trim().min(1).max(150),
+              type: z.enum(["Minor", "Major", "Other"]),
+              notes: z.string().max(2000),
+            })
+            .optional(),
           handoff: leaderHandoffSchema.optional(),
         })
         .parse(b);
@@ -851,6 +883,16 @@ export async function POST(req: Request) {
         where: { id: v.standardId },
       });
       if (!standard) throw new HttpError(404, "Standard not found");
+      if (standard.workflow === "changeover" && !v.changeover)
+        throw new HttpError(
+          400,
+          "Record the previous/next product and changeover type",
+        );
+      if (standard.workflow !== "changeover" && v.changeover)
+        throw new HttpError(
+          400,
+          "Changeover details require a changeover standard",
+        );
       if (standard.archived)
         throw new HttpError(
           409,

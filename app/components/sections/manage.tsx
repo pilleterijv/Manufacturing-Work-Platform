@@ -209,21 +209,33 @@ export default function Manage({
             <div className="form-grid">
               <Field label="Task type">
                 <select
-                  value={workflow === "leader" ? "leader" : kind}
+                  value={
+                    workflow === "leader" || workflow === "changeover"
+                      ? workflow
+                      : kind
+                  }
                   disabled={!!editing}
                   onChange={(e) => {
                     setKind(
-                      e.target.value === "leader" ? "audit" : e.target.value,
+                      e.target.value === "leader"
+                        ? "audit"
+                        : e.target.value === "changeover"
+                          ? "run"
+                          : e.target.value,
                     );
                     setWorkflow(
-                      e.target.value === "leader" ? "leader" : "process",
+                      e.target.value === "leader" ||
+                        e.target.value === "changeover"
+                        ? e.target.value
+                        : "process",
                     );
                   }}
                 >
-                  <option value="run">Operator Standard Work</option>
+                  <option value="run">Operator task</option>
+                  <option value="changeover">Changeover standard</option>
                   <option value="leader">DL/TL Standard Work</option>
                   <option value="audit">
-                    Standard work audit (timed process check)
+                    Process verification (timed check)
                   </option>
                 </select>
               </Field>

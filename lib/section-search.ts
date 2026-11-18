@@ -9,6 +9,15 @@ export type SectionSearch = {
   areas?: boolean;
 };
 export const sectionSearch: Record<string, SectionSearch> = {
+  "Changeover standards": {
+    label: "Search changeover standards",
+    placeholder: "Changeover title, machine, product or format",
+    kind: "Changeover standard",
+    help: "Find changeover instructions and completed changeovers for your machines.",
+    personLabel: "Changeover recorder",
+    personHelp: "Filters completion history by recorder.",
+    equipment: true,
+  },
   "Standard work": {
     label: "Search standard work",
     placeholder: "Standard title, machine, department or area",

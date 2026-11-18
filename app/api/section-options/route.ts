@@ -65,6 +65,7 @@ export async function GET(req: Request) {
     if (
       [
         "Standard work",
+        "Changeover standards",
         "DL/TL Standard Work",
         "Standard work audits",
         "Manage",
@@ -72,7 +73,7 @@ export async function GET(req: Request) {
     ) {
       const rows = await db.$queryRaw<
         { title: string }[]
-      >`SELECT s.title FROM "Standard" s JOIN (SELECT family,max(revision) revision FROM "Standard" GROUP BY family) latest ON s.family=latest.family AND s.revision=latest.revision WHERE NOT s.archived AND s."equipmentId"=ANY(${ids}::text[]) AND (${section}='Manage' OR s.kind=CASE WHEN ${section}='Standard work' THEN 'run' ELSE 'audit' END) AND (${section} NOT IN ('DL/TL Standard Work','Standard work audits') OR s.workflow=CASE WHEN ${section}='DL/TL Standard Work' THEN 'leader' ELSE 'process' END) AND (${section} NOT IN ('DL/TL Standard Work','Standard work audits') OR ${u.role}='Admin' OR s."assigneeIds"='[]'::jsonb OR s."assigneeIds" @> ${JSON.stringify([u.id])}::jsonb) AND s.title ILIKE ${like} ORDER BY s.title LIMIT 35`;
+      >`SELECT s.title FROM "Standard" s JOIN (SELECT family,max(revision) revision FROM "Standard" GROUP BY family) latest ON s.family=latest.family AND s.revision=latest.revision WHERE NOT s.archived AND s."equipmentId"=ANY(${ids}::text[]) AND (${section}='Manage' OR s.kind=CASE WHEN ${section} IN ('Standard work','Changeover standards') THEN 'run' ELSE 'audit' END) AND (${section}<>'Changeover standards' OR s.workflow='changeover') AND (${section}<>'Standard work' OR s.workflow='process') AND (${section} NOT IN ('DL/TL Standard Work','Standard work audits') OR s.workflow=CASE WHEN ${section}='DL/TL Standard Work' THEN 'leader' ELSE 'process' END) AND (${section} NOT IN ('DL/TL Standard Work','Standard work audits') OR ${u.role}='Admin' OR s."assigneeIds"='[]'::jsonb OR s."assigneeIds" @> ${JSON.stringify([u.id])}::jsonb) AND s.title ILIKE ${like} ORDER BY s.title LIMIT 35`;
       for (const r of rows) add(r.title);
     } else if (section === "Time studies" || section === "Analytics") {
       const records = await db.record.findMany({

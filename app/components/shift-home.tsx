@@ -1,4 +1,5 @@
 "use client";
+import { sectionLabel } from "@/lib/navigation";
 import { roleHome } from "@/lib/floor-navigation";
 import { canOpenSection } from "@/lib/navigation";
 import type { NavigationUser } from "@/lib/navigation";
@@ -35,7 +36,7 @@ export default function ShiftHome({
             className="primary"
             onClick={() => go("Standard work")}
           >
-            Start standard work →
+            Open operator tasks →
           </button>
         )}
       <div className="button-row role-shortcuts">
@@ -46,9 +47,7 @@ export default function ShiftHome({
             key={name}
             onClick={() => go(name)}
           >
-            <strong>
-              {name === "Standard work" ? "Start standard work" : name}
-            </strong>
+            <strong>{sectionLabel(name)}</strong>
             <span>Open →</span>
           </button>
         ))}

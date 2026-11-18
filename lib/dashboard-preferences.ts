@@ -18,6 +18,7 @@ export const homeSections = [
   "Machines",
   "Overview",
   "Standard work",
+  "Changeover standards",
   "DL/TL Standard Work",
   "Standard work audits",
   "Time studies",

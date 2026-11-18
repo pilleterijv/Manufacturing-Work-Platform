@@ -1,5 +1,5 @@
 "use client";
-import { referenceDepartments, referenceAreas } from "@/lib/reference-catalog";
+import SearchPicker from "./search-picker";
 import { useState } from "react";
 import type { Data, Location } from "@/lib/workspace-types";
 import { Field } from "./shared";
@@ -95,7 +95,9 @@ export function LocationsEditor({
   busy: boolean;
 }) {
   const [mode, setMode] = useState("department"),
-    [parent, setParent] = useState("");
+    [parent, setParent] = useState(""),
+    [locationSearch, setLocationSearch] = useState(""),
+    [selectedLocation, setSelectedLocation] = useState("");
   const rows = data.locations ?? [],
     parents = rows.filter(
       (r, i) =>
@@ -115,49 +117,11 @@ export function LocationsEditor({
         Create the official names here, then use the dropdowns throughout the
         app. Existing equipment names and historical records are retained.
       </p>
-      <details>
-        <summary>
-          Load departments and known areas from the supplied forms
-        </summary>
-        <p>{referenceDepartments.join(" · ")}</p>
-        <p>
-          All departments use the area names you supplied.
-          Maintenance/Facilities is the maintenance department name retained
-          from your workbooks. Existing entries and access permissions are
-          preserved.
-        </p>
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            const f = e.currentTarget;
-            if (
-              await save({
-                action: "seed-catalog",
-                plant: new FormData(f).get("plant"),
-              })
-            )
-              f.reset();
-          }}
-        >
-          <Field label="Plant / site for reference catalog">
-            <input
-              name="plant"
-              required
-              maxLength={100}
-              list="reference-catalog-sites"
-              aria-label="Plant / site for reference catalog"
-            />
-          </Field>
-          <datalist id="reference-catalog-sites">
-            {[...new Set(rows.map((r) => r.plant))].map((plant) => (
-              <option key={plant} value={plant} />
-            ))}
-          </datalist>
-          <button className="outline" disabled={busy}>
-            Add reference department / area catalog
-          </button>
-        </form>
-      </details>
+      <datalist id="reference-catalog-sites">
+        {[...new Set(rows.map((r) => r.plant))].map((plant) => (
+          <option key={plant} value={plant} />
+        ))}
+      </datalist>
       {canInstall && (
         <details>
           <summary>
@@ -297,15 +261,30 @@ export function LocationsEditor({
           Add {mode}
         </button>
       </form>
-      <ul>
-        {rows.map((r) => (
-          <li key={r.id}>
-            {[r.plant, r.department, r.area, r.line]
+      <div className="panel">
+        <SearchPicker
+          label="Find an existing location"
+          value={locationSearch}
+          onChange={setLocationSearch}
+          selection={selectedLocation}
+          placeholder="Choose or search site, department, area or line"
+          choices={rows.map((r) => ({
+            value: r.id,
+            label: [r.plant, r.department, r.area, r.line]
               .filter(Boolean)
-              .join(" / ")}
-          </li>
-        ))}
-      </ul>
+              .join(" / "),
+            detail: r.active ? "Active" : "Inactive",
+          }))}
+          onSelect={(choice) => {
+            setSelectedLocation(choice.value);
+            setLocationSearch(choice.label);
+          }}
+        />
+        <p className="small muted">
+          {rows.length} locations. Choose one to view its official name; the
+          full catalog stays inside the dropdown.
+        </p>
+      </div>
     </section>
   );
 }

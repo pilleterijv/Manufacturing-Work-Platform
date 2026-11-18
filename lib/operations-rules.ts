@@ -1,3 +1,4 @@
+import { crewSchema } from "./crew-rotation";
 import { Temporal } from "@js-temporal/polyfill";
 import { z } from "zod";
 export const shiftConfigSchema = z
@@ -13,6 +14,7 @@ export const shiftConfigSchema = z
           return false;
         }
       }, "Choose a valid IANA time zone"),
+    crews: z.array(crewSchema).max(8).optional(),
     shifts: z
       .array(
         z.object({
@@ -24,6 +26,16 @@ export const shiftConfigSchema = z
       .max(8),
   })
   .superRefine((c, ctx) => {
+    if (
+      new Set((c.crews || []).map((x) => x.name.toLowerCase())).size !==
+        (c.crews || []).length ||
+      c.crews?.some((x) => !c.shifts.some((s) => s.name === x.shiftName))
+    )
+      ctx.addIssue({
+        code: "custom",
+        message: "Each crew needs a unique name and an existing shift time",
+      });
+
     if (
       new Set(c.shifts.map((s) => s.startMinute)).size !== c.shifts.length ||
       new Set(c.shifts.map((s) => s.name.toLowerCase())).size !==
