@@ -74,7 +74,8 @@ export async function checkShiftWork(now = new Date()) {
                   scheduleId: current.id,
                   shiftStart: window.start,
                   shiftEnd: window.end,
-                  shiftName: window.name,
+                  shiftName:
+                    (current.crewNames as string[]).join(" / ") || window.name,
                   assigneeKey,
                   missed: !record,
                   completedRecordId: record?.id,
@@ -94,7 +95,7 @@ export async function checkShiftWork(now = new Date()) {
                         where: { id: assigneeKey },
                         select: { name: true },
                       });
-                const message = `Standard work not completed: ${current.title}. ${equipment.plant} / ${equipment.department} / ${equipment.area} / ${equipment.name}. ${window.name} (${window.date}, ${config.timezone}), ending ${window.end.toISOString()}. ${assignee ? `Assigned to ${assignee.name}.` : "One station completion was required."} Alert ID: ${check.id}.`;
+                const message = `Standard work not completed: ${current.title}. ${equipment.plant} / ${equipment.department} / ${equipment.area} / ${equipment.name}. ${(current.crewNames as string[]).join(" / ") || window.name} · ${window.name} (${window.date}, ${config.timezone}), ending ${window.end.toISOString()}. ${assignee ? `Assigned to ${assignee.name}.` : "One station completion was required."} Alert ID: ${check.id}.`;
                 const managers = await tx.user.findMany({
                   where: {
                     id: { in: managerIds },

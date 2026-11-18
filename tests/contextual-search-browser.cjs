@@ -4,6 +4,7 @@ const {
   planningTools,
 } = require("./ui-workspace.cjs");
 require("tsx/cjs");
+const { sectionLabel } = require("../lib/navigation.ts");
 require("dotenv").config({ quiet: true });
 const { db } = require("../lib/db.ts"),
   { hashPassword } = require("../lib/security.ts"),
@@ -396,11 +397,15 @@ async function main() {
     await page
       .locator(".sidebar nav > div")
       .getByRole("button", {
-        name: new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$"),
+        name: new RegExp(
+          sectionLabel(name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$",
+        ),
       })
       .first()
       .click();
-    await page.getByRole("heading", { name, level: 1, exact: true }).waitFor();
+    await page
+      .getByRole("heading", { name: sectionLabel(name), level: 1, exact: true })
+      .waitFor();
   }
   for (const name of Object.keys(sectionSearch)) {
     await nav(name);

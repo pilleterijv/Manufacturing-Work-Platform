@@ -1,3 +1,4 @@
+const { expandTools } = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const { db } = require("../lib/db.ts"),
@@ -199,10 +200,7 @@ async function main() {
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(origin);
-  const more = page
-    .locator("nav")
-    .getByRole("button", { name: "More tools and history", exact: true });
-  if (await more.isVisible()) await more.click();
+  await expandTools(page);
   await page
     .locator("nav")
     .getByRole("button", { name: /Changeover standards/ })
@@ -284,9 +282,46 @@ async function main() {
     "/api/export?section=changeovers&equipment=" + eq[0].id,
   );
   assert.equal(
-    co.getWorksheet("Changeovers").getRow(2).getCell(16).value,
+    co.getWorksheet("Changeovers").getRow(2).getCell(14).value,
     "Product A",
   );
+  const searched = await workbook(
+    manager,
+    "/api/export?section=leaders&equipment=" +
+      eq[0].id +
+      "&person=" +
+      users[1].id +
+      "&search=" +
+      encodeURIComponent(eq[0].name),
+  );
+  assert.equal(searched.getWorksheet("Task answers").rowCount, 2);
+  const otherPerson = await workbook(
+    manager,
+    "/api/export?section=leaders&person=" + users[0].id,
+  );
+  assert.equal(otherPerson.getWorksheet("Task answers").rowCount, 1);
+  await db.record.create({
+    data: {
+      kind: "study",
+      userId: users[1].id,
+      data: {
+        title: "Study " + suffix,
+        equipmentId: eq[0].id,
+        equipmentSnapshot: eq[0],
+        cycles: [
+          { element: "Stage", seconds: 2, at: new Date().toISOString() },
+          { element: "Stage", seconds: 4, at: new Date().toISOString() },
+        ],
+      },
+    },
+  });
+  const study = await workbook(
+    manager,
+    "/api/export?section=studies&equipment=" + eq[0].id,
+  );
+  assert.equal(study.getWorksheet("Time observations").rowCount, 3);
+  assert.equal(study.getWorksheet("Statistics").getRow(2).getCell(4).value, 3);
+  assert.equal(study.getWorksheet("Leader handoff"), undefined);
   const adminPage = await admin.newPage();
   adminPage.on("pageerror", (e) => errors.push(e.message));
   await adminPage.goto(origin);
