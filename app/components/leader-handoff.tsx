@@ -159,6 +159,7 @@ export default function LeaderHandoff({
                     {label} · row {i + 1}
                   </span>
                   <input
+                    aria-label={`${label} · row ${i + 1}`}
                     maxLength={max}
                     readOnly={profile !== "generic" && key === "room"}
                     value={r[key] || ""}
@@ -172,6 +173,7 @@ export default function LeaderHandoff({
                     {label} · row {i + 1}
                   </span>
                   <select
+                    aria-label={`${label} · row ${i + 1}`}
                     value={r[key] || ""}
                     onChange={(e) => update(i, key, e.target.value)}
                   >
