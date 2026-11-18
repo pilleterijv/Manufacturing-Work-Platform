@@ -13,9 +13,12 @@ const { db } = require("../lib/db.ts"),
 const origin = process.env.APP_URL,
   suffix = randomUUID().slice(0, 8),
   plant = "Flow " + suffix;
-let browser;
+let browser, originalConfig;
 async function main() {
   assert(["localhost", "127.0.0.1"].includes(new URL(origin).hostname));
+  originalConfig = (
+    await db.setting.findUniqueOrThrow({ where: { key: "shifts" } })
+  ).value;
   const pass = "Fixture " + randomUUID() + "!",
     hash = await hashPassword(pass),
     eq = [];
@@ -443,5 +446,10 @@ main()
   })
   .finally(async () => {
     if (browser) await browser.close();
+    if (originalConfig)
+      await db.setting.update({
+        where: { key: "shifts" },
+        data: { value: originalConfig },
+      });
     await db.$disconnect();
   });
