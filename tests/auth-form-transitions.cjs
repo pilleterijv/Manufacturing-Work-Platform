@@ -113,9 +113,7 @@ async function main() {
   await page
     .getByRole("heading", { name: "Welcome, Transition.", exact: true })
     .waitFor();
-  await page
-    .getByRole("button", { name: "Sign out / Change operator", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await page
     .getByRole("heading", { name: "Welcome back", exact: true })
     .waitFor();
