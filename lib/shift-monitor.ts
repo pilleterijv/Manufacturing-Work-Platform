@@ -12,8 +12,7 @@ export async function checkShiftWork(now = new Date()) {
   let evaluated = 0,
     missed = 0;
   for (const schedule of schedules) {
-    const config = shiftConfigSchema.parse(schedule.config),
-      names = schedule.shiftNames as string[];
+    const config = shiftConfigSchema.parse(schedule.config);
     for (const window of endedShiftWindows(
       config,
       schedule.checkedThrough,
@@ -95,7 +94,13 @@ export async function checkShiftWork(now = new Date()) {
                         where: { id: assigneeKey },
                         select: { name: true },
                       });
-                const message = `Standard work not completed: ${current.title}. ${equipment.plant} / ${equipment.department} / ${equipment.area} / ${equipment.name}. ${(current.crewNames as string[]).join(" / ") || window.name} · ${window.name} (${window.date}, ${config.timezone}), ending ${window.end.toISOString()}. ${assignee ? `Assigned to ${assignee.name}.` : "One station completion was required."} Alert ID: ${check.id}.`;
+                const crewDescription = (current.crewNames as string[]).join(
+                  " / ",
+                );
+                const shiftDescription = crewDescription
+                  ? `${crewDescription} · ${window.name}`
+                  : window.name;
+                const message = `Standard work not completed: ${current.title}. ${equipment.plant} / ${equipment.department} / ${equipment.area} / ${equipment.name}. ${shiftDescription} (${window.date}, ${config.timezone}), ending ${window.end.toISOString()}. ${assignee ? `Assigned to ${assignee.name}.` : "One station completion was required."} Alert ID: ${check.id}.`;
                 const managers = await tx.user.findMany({
                   where: {
                     id: { in: managerIds },
