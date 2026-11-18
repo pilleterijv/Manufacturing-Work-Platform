@@ -26,6 +26,7 @@ async function main() {
           username: "template-" + suffix + "-" + users.length,
           name: role + " Fixture",
           password: hash,
+          mustChange: false,
           role,
           workspaceAccess: {
             mode: "restricted",
@@ -173,31 +174,27 @@ async function main() {
       });
     }
   }
-  const coating = standards.find((s) => s.handoffProfile === "coating"),
-    config = await db.setting.findUniqueOrThrow({ where: { key: "shifts" } });
-  const handoff = {
-    shift: config.value.shifts[0].name,
-    notes: "Synthetic handoff",
-    rooms: handoffRooms("coating"),
-  };
-  Object.assign(handoff.rooms[2], {
-    round: "3",
-    totalRounds: "6",
-    solutionMixed: "Yes",
-    lastFourRecalculated: "No",
-  });
-  await req(leader, "/api/platform", {
-    action: "audit",
-    standardId: coating.id,
-    started: new Date(Date.now() - 5000).toISOString(),
-    handoff,
-    responses: coating.steps.map((s) => ({
-      stepId: s.id,
-      answer: true,
-      photo: null,
-      comment: "Fixture",
-    })),
-  });
+  const coating = standards.find((s) => s.handoffProfile === "coating");
+  await page
+    .getByLabel("Leader-work shift", { exact: true })
+    .selectOption({ index: 1 });
+  await page
+    .getByLabel("Leader pass-down notes", { exact: true })
+    .fill("Synthetic handoff");
+  await page
+    .getByLabel("Last four rounds recalculated · row 3", { exact: true })
+    .selectOption("No");
+  for (const button of await page
+    .getByRole("button", { name: "✓ Yes", exact: true })
+    .all())
+    await button.click();
+  await page
+    .getByRole("button", { name: "Complete DL/TL Standard Work", exact: true })
+    .click();
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Saved to the database." })
+    .waitFor();
   const record = await db.record.findFirstOrThrow({
     where: { standardId: coating.id },
   });

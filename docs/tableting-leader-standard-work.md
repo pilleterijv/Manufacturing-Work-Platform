@@ -38,3 +38,5 @@ The installer must be run in your app database; updating GitHub source alone doe
 Verification uses synthetic users and randomly named disposable PostgreSQL databases. See the accompanying tests for template completeness, saved handoffs, scope checks, repeat/concurrent installation and revision/history preservation. Company systems and actual production machines are not contacted by those tests. Screenshot: [Coating handoff on a tablet](screenshots/tableting-leader/coating-tablet.png).
 
 This update also pins Next.js to 16.4.6, the security release offered by the earlier Codespaces prompt.
+
+Verified for this release: production build on Next.js 16.4.6; TypeScript checks; all 80 unit tests; fresh migrations and upgrades from 001/003 through 018; the new Tableting browser suite; existing reference catalog/leader-work suite. The new browser suite completes a Coating checklist through the tablet UI, checks saved round/solution fields and the immutable snapshot, confirms revision compatibility, and verifies that failed installation into an inactive area rolls back the catalog changes.
