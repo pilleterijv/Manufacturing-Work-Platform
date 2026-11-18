@@ -600,6 +600,9 @@ export default function Home() {
             </div>
           )}
           <form
+            key={user ? `temporary-password:${user.id}` : "sign-in"}
+            aria-label={user ? "Set your own password" : "Sign in"}
+            autoComplete={user ? "off" : "on"}
             onSubmit={(e) => {
               e.preventDefault();
               const f = new FormData(e.currentTarget);
@@ -621,14 +624,22 @@ export default function Home() {
           >
             {!user ? (
               <Field label="Username">
-                <input name="username" autoComplete="username" required />
+                <input
+                  id="sign-in-username"
+                  name="username"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  required
+                />
               </Field>
             ) : (
               <Field label="Temporary password">
                 <input
+                  id="temporary-password-current"
                   name="current"
                   type="password"
-                  autoComplete="current-password"
+                  autoComplete="off"
                   required
                 />
               </Field>
@@ -637,6 +648,7 @@ export default function Home() {
               label={user ? "New password · 12–128 characters" : "Password"}
             >
               <input
+                id={user ? "temporary-password-new" : "sign-in-password"}
                 name="password"
                 type="password"
                 minLength={user ? 12 : undefined}
