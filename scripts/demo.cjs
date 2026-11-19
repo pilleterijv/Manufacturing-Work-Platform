@@ -24,6 +24,13 @@ async function main() {
     const vars = require("dotenv").parse(fs.readFileSync(envFile));
     validateDemoUrl(vars.DATABASE_URL);
     const env = demoEnvironment({ ...process.env, ...vars }, vars.DATABASE_URL, folder);
+    const verification = new Pool({ connectionString: env.DATABASE_URL, max: 1 });
+    try {
+      const m = await verification.query('SELECT value FROM "Setting" WHERE key=$1', ["demo-dataset"]);
+      if (m.rows[0]?.value?.synthetic !== true) throw Error("Refusing to start an unmarked demo database.");
+    } finally {
+      await verification.end();
+    }
     env.APP_ORIGIN = demoOrigin(env);
     env.FLOORWORK_ENV_FILE = envFile;
     console.log("DEMO ONLY. Open " + env.APP_ORIGIN + " (keep the forwarded port Private).");

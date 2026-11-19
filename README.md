@@ -194,3 +194,7 @@ Migration 008 adds these tables and preserves existing users and records. `npm s
 ## Floor workflow update (migration 016)
 
 Overview now prioritizes tasks for each role. The workspace adds machine/shift context, machine-label entry/scanning where supported, guarded unsaved forms, server-confirmed save feedback, scoped existing-issue suggestions and retry protection for new defect/problem reports. Dashboard assignment links retain their open/assignment filters; PM and CIL counts are separate. See [the floor workflow guide](docs/floor-workflows.md) for behavior, camera support, limits and upgrade steps. Run database generation/setup before rebuilding and starting the updated app.
+
+### Separate sample-data demo
+
+A fictional plant demo is available on its own database and port 3001, with generated practice logins and outbound email/company integrations disabled. See [demo setup, role logins and reset instructions](docs/demo-and-personal-dashboard.md). Demo setup never seeds the operational database.

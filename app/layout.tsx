@@ -8,7 +8,10 @@ export const viewport = {
 };
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "Floorwork | Manufacturing work platform",
+  title:
+    process.env.FLOORWORK_DEMO_MODE === "true"
+      ? "DEMO | Floorwork — fictional sample data"
+      : "Floorwork | Manufacturing work platform",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "Floorwork", statusBarStyle: "default" },
   icons: { apple: "/apple-touch-icon.png" },

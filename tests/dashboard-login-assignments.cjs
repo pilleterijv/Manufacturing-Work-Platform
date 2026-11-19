@@ -164,6 +164,47 @@ async function main() {
   await page.getByRole("button", { name: /Refresh section/ }).click();
   await page.getByLabel("Username", { exact: true }).waitFor();
   assert.equal(await page.locator(".work-queue").count(), 0);
+  const manager = await db.user.create({
+    data: {
+      username: "manager-home-" + tag,
+      name: "Manager fixture",
+      role: "Manager",
+      password: hash,
+      mustChange: false,
+      workspaceAccess: { mode: "restricted", locations: [], equipmentIds: [e.id] },
+    },
+  });
+  await db.maintenancePlan.createMany({
+    data: Array.from({ length: 13 }, (_, i) => ({
+      title: "Manager assigned PM " + i,
+      equipmentId: e.id,
+      assigneeId: manager.id,
+      steps: [],
+      intervalDays: 7,
+      nextDue: "2050-12-31",
+      createdBy: users[0].id,
+      history: [],
+    })),
+  });
+  const managerContext = await browser.newContext({ serviceWorkers: "block" });
+  assert.equal(
+    (
+      await managerContext.request.post(origin + "/api/account", {
+        headers: { Origin: origin },
+        data: { action: "login", username: manager.username, password, remember: false },
+      })
+    ).status(),
+    200
+  );
+  const managerPage = await managerContext.newPage();
+  await managerPage.goto(origin);
+  await managerPage.getByRole("button", { name: /View full work queue/ }).click();
+  assert.equal(
+    await managerPage.getByLabel("Queue scope", { exact: true }).inputValue(),
+    "my",
+    "Opening all personal assignments must preserve personal scope for managers"
+  );
+  await managerContext.close();
   assert.deepEqual(errors, []);
   console.log(
     "PASS: one failed login dashboard read recovers without repeating login; stale refresh 401 cannot overwrite new navigation; expired session returns to login; Admin home lists own standalone checklist and future PM/investigation, excludes another account's checklist."

@@ -13,7 +13,12 @@ export default function WorkQueue({ user, compact = false }: { user: User; compa
         user.grants.includes("leadership") ||
         user.grants.includes("analytics"));
   const [scope, setScope] = useState(
-      !compact && canTeam && ["manager", "supervisor"].includes(profile) ? "team" : "my"
+      !compact &&
+        getSectionFilters().focus !== "personal-open" &&
+        canTeam &&
+        ["manager", "supervisor"].includes(profile)
+        ? "team"
+        : "my"
     ),
     [location, setLocation] = useState(""),
     [filter, setFilter] = useState(compact ? "assigned" : "action"),
@@ -280,7 +285,16 @@ export default function WorkQueue({ user, compact = false }: { user: User; compa
             </p>
           )}
           {compact && rows.length > 12 && (
-            <button type="button" className="primary" onClick={() => openWorkflow({ tab: "Work queue" })}>
+            <button
+              type="button"
+              className="primary"
+              onClick={() =>
+                openWorkflow({
+                  tab: "Work queue",
+                  filters: { focus: scope === "my" ? "personal-open" : "department-open" },
+                })
+              }
+            >
               View full work queue ({rows.length} loaded)
             </button>
           )}
