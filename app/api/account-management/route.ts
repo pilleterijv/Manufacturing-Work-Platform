@@ -1,3 +1,4 @@
+import { accountIdentity } from "@/lib/account-identity";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import {
@@ -129,6 +130,8 @@ export async function GET(req: Request) {
           id: p.id,
           username: p.username,
           name: p.name,
+          firstName: p.firstName,
+          lastName: p.lastName,
           email: p.email,
           role: p.customRole || p.role,
           workflow: p.role,
@@ -328,7 +331,11 @@ export async function POST(req: Request) {
       };
       let audit: object = {};
       if (action === "create") {
-        const v = profile.parse(b),
+        if (b.firstName !== undefined) z.email().max(254).parse(b.email);
+        const v = {
+            ...profile.parse({ ...b, name: accountIdentity(b).name }),
+            ...accountIdentity(b),
+          },
           assignment = await resolveRole(v.role, tx),
           username = z
             .string()
@@ -388,7 +395,10 @@ export async function POST(req: Request) {
         });
         audit = v;
       } else if (action === "profile") {
-        const v = profile.parse(b),
+        const v = {
+            ...profile.parse({ ...b, name: accountIdentity(b).name }),
+            ...accountIdentity(b),
+          },
           assignment = await resolveRole(v.role, tx);
         if (assignment.role === "Admin")
           throw new HttpError(400, "Use the protected Admin account editor");

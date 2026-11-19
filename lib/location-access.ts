@@ -112,12 +112,13 @@ export async function notificationScope(
     ];
   const notices = await db.$queryRaw<{ id: string }[]>(Prisma.sql`
     SELECT n.id FROM "Notification" n
+    LEFT JOIN "AssignmentDelivery" a ON a.id=n."sourceId" AND n.kind='assignment'
     LEFT JOIN "Idea" i ON i.id=n."ideaId"
     LEFT JOIN "ShiftCheck" c ON c.id=n."sourceId" AND n.kind='missed-work'
     LEFT JOIN "WorkSchedule" s ON s.id=c."scheduleId"
     LEFT JOIN "Reminder" m ON m.id=n."sourceId" AND n.kind='overdue'
     WHERE n."userId"=${u.id}
-    AND ((${u.role === "Admin"} AND n.kind='registration') OR i."equipmentId"=ANY(${ids}::text[]) OR s."equipmentId"=ANY(${ids}::text[]) OR (m."equipmentId"=ANY(${ids}::text[]) AND m."entityType"=ANY(${types}::text[])))
+    AND ((a."userId"=${u.id} AND a."equipmentId"=ANY(${ids}::text[]) AND a.status<>'Cancelled') OR (${u.role === "Admin"} AND n.kind='registration') OR i."equipmentId"=ANY(${ids}::text[]) OR s."equipmentId"=ANY(${ids}::text[]) OR (m."equipmentId"=ANY(${ids}::text[]) AND m."entityType"=ANY(${types}::text[])))
     ORDER BY n."createdAt" DESC,n.id DESC LIMIT 100`);
   return { userId: u.id, id: { in: notices.map((n) => n.id) } };
 }

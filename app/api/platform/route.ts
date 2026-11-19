@@ -1,3 +1,5 @@
+import { queueAssignments } from "@/lib/assignment-notifications";
+import { accountIdentity } from "@/lib/account-identity";
 import { leaderHandoffSchema } from "@/lib/leader-handoff-rules";
 import { installTableting } from "@/lib/tableting-install";
 import { referenceDepartments, referenceAreas } from "@/lib/reference-catalog";
@@ -311,6 +313,8 @@ export async function GET(req: Request) {
                 id: true,
                 username: true,
                 name: true,
+                firstName: true,
+                lastName: true,
                 role: true,
                 customRole: true,
                 active: true,
@@ -742,7 +746,7 @@ export async function POST(req: Request) {
                 "A linked 5S plan was retired. Reload and revise the checklist.",
               );
           }
-          await tx.standard.create({
+          const assignedStandard = await tx.standard.create({
             data: {
               ...v,
               handoffProfile:
@@ -753,6 +757,14 @@ export async function POST(req: Request) {
               revision: (last?.revision ?? 0) + 1,
               steps: v.steps,
             },
+          });
+          await queueAssignments(tx, {
+            type: "standard",
+            id: assignedStandard.id,
+            equipmentId: v.equipmentId,
+            assignees: v.assigneeIds,
+            previous: (last?.assigneeIds as string[] | undefined) || [],
+            revision: assignedStandard.revision,
           });
         },
         // Family writers share the advisory lock; ReadCommitted observes the state after waiting.
@@ -1098,6 +1110,9 @@ export async function POST(req: Request) {
       });
     }
     if (action === "user") {
+      const identity = accountIdentity(b);
+      if (!b.id && b.firstName !== undefined) z.email().max(254).parse(b.email);
+      b.name = identity.name;
       const v = z
         .object({
           id: z.string().optional(),
@@ -1112,7 +1127,8 @@ export async function POST(req: Request) {
           password: z.string().max(128).optional(),
         })
         .parse(b);
-      const { id, password, ...fields } = v;
+      const { id, password, ...parsedFields } = v;
+      const fields = { ...parsedFields, ...identity };
       if (u.role !== "Admin" && v.role === "Admin")
         throw new HttpError(403, "Only Admin can assign the Admin role");
       if (id === u.id && (!v.active || v.role !== u.role))

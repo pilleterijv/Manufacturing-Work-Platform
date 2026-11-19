@@ -1,3 +1,4 @@
+import { queueAssignments } from "@/lib/assignment-notifications";
 import { readFilters } from "@/lib/filters";
 import { workflowFocus } from "@/lib/workflow-focus";
 import { withSubmission } from "@/lib/submission";
@@ -397,6 +398,13 @@ export async function POST(req: Request) {
             history: [{ ...entry, event: "Created", values: input }],
           },
         });
+        await queueAssignments(tx, {
+          type: "problem",
+          id: saved.id,
+          equipmentId: input.equipmentId,
+          assignees: [input.ownerId, input.reviewerId],
+          revision: 1,
+        });
         return { id: saved.id, reference: saved.reference };
       });
       return Response.json(record);
@@ -449,6 +457,14 @@ export async function POST(req: Request) {
               values: input,
             }),
           },
+        });
+        await queueAssignments(tx, {
+          type: "action",
+          id: aid,
+          equipmentId: r.equipmentId,
+          assignees: [input.ownerId],
+          previous: [old.ownerId],
+          revision: old.version + 1,
         });
         return tx.problem.update({
           where: { id: r.id },
@@ -528,12 +544,19 @@ export async function POST(req: Request) {
           throw new HttpError(400, "Choose an active action owner");
         if (input.type === "Checkpoint" && r.method === "2D")
           throw new HttpError(400, "Checkpoints apply to 4D and 8D");
-        await tx.problemAction.create({
+        const assignedAction = await tx.problemAction.create({
           data: {
             ...input,
             problemId: id,
             history: [{ ...entry, event: "Created", values: input }],
           },
+        });
+        await queueAssignments(tx, {
+          type: "action",
+          id: assignedAction.id,
+          equipmentId: r.equipmentId,
+          assignees: [input.ownerId],
+          revision: 1,
         });
         return tx.problem.update({
           where: { id },
@@ -596,6 +619,15 @@ export async function POST(req: Request) {
         if (missing.length)
           throw new HttpError(400, "Before closing: " + missing.join("; "));
       }
+      if (status !== "Closed")
+        await queueAssignments(tx, {
+          type: "problem",
+          id,
+          equipmentId: r.equipmentId,
+          assignees: [input.ownerId, input.reviewerId],
+          previous: [r.ownerId, r.reviewerId],
+          revision: r.version + 1,
+        });
       return tx.problem.update({
         where: { id },
         data: {

@@ -63,8 +63,21 @@ export function PublicAccessForms() {
                   maxLength={80}
                 />
               </Field>
-              <Field label="Your full name">
-                <input name="name" required maxLength={150} />
+              <Field label="First name">
+                <input
+                  name="firstName"
+                  required
+                  autoComplete="given-name"
+                  maxLength={75}
+                />
+              </Field>
+              <Field label="Last name">
+                <input
+                  name="lastName"
+                  required
+                  autoComplete="family-name"
+                  maxLength={75}
+                />
               </Field>
               <Field label="Company email">
                 <input name="email" type="email" required maxLength={254} />

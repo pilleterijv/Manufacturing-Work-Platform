@@ -1,3 +1,4 @@
+import { queueAssignments } from "@/lib/assignment-notifications";
 import { requireDelegated } from "@/lib/security";
 import { readFilters } from "@/lib/filters";
 import {
@@ -164,19 +165,28 @@ export async function POST(req: Request) {
       )
         throw new HttpError(400, "Choose active assignees");
       const now = new Date();
-      await db.workSchedule.create({
-        data: {
-          ...v,
-          kind: latest.kind,
-          assigneeIds: assignees,
-          managerIds: ids,
+      await db.$transaction(async (tx) => {
+        const assignedSchedule = await tx.workSchedule.create({
+          data: {
+            ...v,
+            kind: latest.kind,
+            assigneeIds: assignees,
+            managerIds: ids,
+            equipmentId: latest.equipmentId,
+            title: latest.title,
+            config,
+            createdBy: u.id,
+            effectiveFrom: now,
+            checkedThrough: now,
+          },
+        });
+        await queueAssignments(tx, {
+          type: "schedule",
+          id: assignedSchedule.id,
           equipmentId: latest.equipmentId,
-          title: latest.title,
-          config,
-          createdBy: u.id,
-          effectiveFrom: now,
-          checkedThrough: now,
-        },
+          assignees,
+          revision: 1,
+        });
       });
     } else if (b.action === "update") {
       const v = z

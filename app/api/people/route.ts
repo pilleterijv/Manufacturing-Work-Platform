@@ -18,6 +18,8 @@ export async function GET(req: Request) {
       select: {
         id: true,
         name: true,
+        firstName: true,
+        lastName: true,
         username: true,
         active: true,
         role: true,
