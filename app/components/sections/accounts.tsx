@@ -1,4 +1,5 @@
 "use client";
+import AccountNameFields from "../account-name-fields";
 import { confirmDraftChange } from "../floor-safety";
 import DelegationEditor from "../delegation-editor";
 import { AccessRequests } from "../access-forms";
@@ -8,14 +9,7 @@ import { useState, useEffect, useRef } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
 import type { Data, Step, Cycle, Standard } from "@/lib/workspace-types";
 import { api } from "@/lib/client-api";
-import {
-  Field,
-  Submit,
-  fmt,
-  Metric,
-  History,
-  EquipmentSelect,
-} from "../shared";
+import { Field, Submit, fmt, Metric, History, EquipmentSelect } from "../shared";
 type Save = (body: unknown) => Promise<boolean>;
 export default function Accounts({
   data,
@@ -31,6 +25,7 @@ export default function Accounts({
   reload: () => void;
 }) {
   const [accountSearch, setAccountSearch] = useState("");
+  const [identityKey, setIdentityKey] = useState(0);
   const [id, setId] = useState(""),
     [username, setUsername] = useState(""),
     [name, setName] = useState(""),
@@ -41,6 +36,7 @@ export default function Accounts({
   function select(id: string, check = true) {
     if (check && !confirmDraftChange()) return;
     setId(id);
+    setIdentityKey((k) => k + 1);
     const u = data.users.find((u) => u.id === id);
     setUsername(u?.username ?? "");
     setName(u?.name ?? "");
@@ -63,19 +59,12 @@ export default function Accounts({
           />
         </Field>
         <Field label="Account">
-          <select
-            aria-label="Account"
-            value={id}
-            onChange={(e) => select(e.target.value)}
-          >
+          <select aria-label="Account" value={id} onChange={(e) => select(e.target.value)}>
             <option value="">New account</option>
             {data.users
               .filter(
                 (u) =>
-                  u.id === id ||
-                  `${u.name} ${u.username}`
-                    .toLowerCase()
-                    .includes(accountSearch.toLowerCase()),
+                  u.id === id || `${u.name} ${u.username}`.toLowerCase().includes(accountSearch.toLowerCase())
               )
               .map((u) => (
                 <option key={u.id} value={u.id}>
@@ -93,6 +82,8 @@ export default function Accounts({
                 ...(id ? { id } : {}),
                 username,
                 name,
+                firstName: new FormData(e.currentTarget).get("firstName"),
+                lastName: new FormData(e.currentTarget).get("lastName"),
                 email,
                 role,
                 active,
@@ -112,21 +103,21 @@ export default function Accounts({
                 autoComplete="off"
               />
             </Field>
-            <Field label="Display name">
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                maxLength={150}
-              />
-            </Field>
+            <AccountNameFields
+              key={identityKey}
+              name={name}
+              initialFirstName={data.users.find((u) => u.id === id)?.firstName}
+              initialLastName={data.users.find((u) => u.id === id)?.lastName}
+              onChange={setName}
+            />
             <Field label="Email address">
               <input
                 type="email"
+                required={!id}
                 value={email}
                 maxLength={254}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="For shift notifications"
+                placeholder="Work email for assignment notifications"
               />
             </Field>
             <Field label="Role">
@@ -140,13 +131,7 @@ export default function Accounts({
                   ))}
               </select>
             </Field>
-            <Field
-              label={
-                id
-                  ? "Reset password (leave empty to keep)"
-                  : "Temporary password"
-              }
-            >
+            <Field label={id ? "Reset password (leave empty to keep)" : "Temporary password"}>
               <input
                 type="password"
                 value={password}
@@ -159,20 +144,14 @@ export default function Accounts({
             </Field>
           </div>
           <label className="check">
-            <input
-              type="checkbox"
-              checked={active}
-              onChange={(e) => setActive(e.target.checked)}
-            />
+            <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
             Account active
           </label>
           <p className="small muted">
-            Temporary passwords must be changed at first sign-in. Updating an
-            account revokes its existing sessions.
+            Temporary passwords must be changed at first sign-in. Updating an account revokes its existing
+            sessions.
           </p>
-          <Submit busy={busy}>
-            {id ? "Update account" : "Create account"}
-          </Submit>
+          <Submit busy={busy}>{id ? "Update account" : "Create account"}</Submit>
         </form>
       </section>
       {admin && id && <DelegationEditor key={id} userId={id} />}
@@ -189,7 +168,7 @@ export default function Accounts({
                 alert(
                   r.emailSent
                     ? "Password email sent"
-                    : "Email was not sent. Check the account email and SMTP configuration.",
+                    : "Email was not sent. Check the account email and SMTP configuration."
                 );
               } catch (e) {
                 alert((e as Error).message);
@@ -199,31 +178,21 @@ export default function Accounts({
             Send password setup/reset email
           </button>
           {["Admin", "Manager", "DL/TL"].includes(
-            data.policies.find((p) => p.role === role)?.baseRole || role,
+            data.policies.find((p) => p.role === role)?.baseRole || role
           ) && (
             <Field label="Assign department dashboard">
               <select
-                key={
-                  id +
-                  JSON.stringify(
-                    data.users.find((u) => u.id === id)?.dashboardDepartment,
-                  )
-                }
+                key={id + JSON.stringify(data.users.find((u) => u.id === id)?.dashboardDepartment)}
                 defaultValue={
                   data.users.find((u) => u.id === id)?.dashboardDepartment
-                    ? JSON.stringify(
-                        data.users.find((u) => u.id === id)
-                          ?.dashboardDepartment,
-                      )
+                    ? JSON.stringify(data.users.find((u) => u.id === id)?.dashboardDepartment)
                     : ""
                 }
                 onChange={async (e) => {
                   try {
                     await api("/api/personal-dashboard", {
                       userId: id,
-                      department: e.target.value
-                        ? JSON.parse(e.target.value)
-                        : null,
+                      department: e.target.value ? JSON.parse(e.target.value) : null,
                     });
                   } catch (err) {
                     alert((err as Error).message);
@@ -240,7 +209,7 @@ export default function Accounts({
                         department: e.department,
                       }),
                       e,
-                    ]),
+                    ])
                   ).entries(),
                 ].map(([key, e]) => (
                   <option value={key} key={key}>
@@ -274,8 +243,8 @@ export default function Accounts({
       )}
       {admin && !id && (
         <p className="small muted">
-          Create the account, then select it to assign its departments, areas,
-          downtime locations and machines.
+          Create the account, then select it to assign its departments, areas, downtime locations and
+          machines.
         </p>
       )}
       <section className="panel table-wrap">

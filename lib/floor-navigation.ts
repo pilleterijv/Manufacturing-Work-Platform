@@ -26,30 +26,11 @@ export function roleHome(u: NavigationUser) {
               : "My shift";
   const primary =
     profile === "admin"
-      ? [
-          "DL/TL Standard Work",
-          "Accounts",
-          "Permissions",
-          "Locations",
-          "Manage",
-          "Integrations",
-        ]
+      ? ["DL/TL Standard Work", "Accounts", "Permissions", "Locations", "Manage", "Integrations"]
       : profile === "maintenance"
-        ? [
-            "Work queue",
-            "Machines",
-            "Preventive maintenance",
-            "Defect reporting",
-            "TPM / CIL",
-          ]
+        ? ["Work queue", "Machines", "Preventive maintenance", "Defect reporting", "TPM / CIL"]
         : profile === "supervisor"
-          ? [
-              "Work queue",
-              "DL/TL Standard Work",
-              "Notifications",
-              "Problem solving",
-              "Machines",
-            ]
+          ? ["Work queue", "DL/TL Standard Work", "Notifications", "Problem solving", "Machines"]
           : profile === "manager"
             ? [
                 "Work queue",
@@ -59,13 +40,7 @@ export function roleHome(u: NavigationUser) {
                 "Improvement ideas",
               ]
             : profile === "leader"
-              ? [
-                  "Work queue",
-                  "DL/TL Standard Work",
-                  "5S audits",
-                  "Defect reporting",
-                  "Problem solving",
-                ]
+              ? ["Work queue", "DL/TL Standard Work", "5S audits", "Defect reporting", "Problem solving"]
               : [
                   "Work queue",
                   "Standard work",
@@ -94,7 +69,5 @@ export type WorkflowTarget = {
   };
 };
 export function openWorkflow(target: WorkflowTarget) {
-  window.dispatchEvent(
-    new CustomEvent("floorwork:navigate", { detail: target }),
-  );
+  window.dispatchEvent(new CustomEvent("floorwork:navigate", { detail: target }));
 }

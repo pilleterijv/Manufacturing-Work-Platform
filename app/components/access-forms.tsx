@@ -17,11 +17,7 @@ export function PublicAccessForms() {
         >
           Request an account
         </button>
-        <button
-          className="outline"
-          type="button"
-          onClick={() => setMode(mode === "forgot" ? "" : "forgot")}
-        >
+        <button className="outline" type="button" onClick={() => setMode(mode === "forgot" ? "" : "forgot")}>
           Forgot my password
         </button>
       </div>
@@ -48,23 +44,17 @@ export function PublicAccessForms() {
             }
           }}
         >
-          <h3>
-            {mode === "register"
-              ? "Request company access"
-              : "Request a password reset"}
-          </h3>
+          <h3>{mode === "register" ? "Request company access" : "Request a password reset"}</h3>
           {mode === "register" ? (
             <>
               <Field label="Requested username">
-                <input
-                  name="username"
-                  required
-                  pattern="[a-z0-9._\-]{3,80}"
-                  maxLength={80}
-                />
+                <input name="username" required pattern="[a-z0-9._\-]{3,80}" maxLength={80} />
               </Field>
-              <Field label="Your full name">
-                <input name="name" required maxLength={150} />
+              <Field label="First name">
+                <input name="firstName" required autoComplete="given-name" maxLength={75} />
+              </Field>
+              <Field label="Last name">
+                <input name="lastName" required autoComplete="family-name" maxLength={75} />
               </Field>
               <Field label="Company email">
                 <input name="email" type="email" required maxLength={254} />
@@ -82,9 +72,7 @@ export function PublicAccessForms() {
             </Field>
           )}
           <button className="outline" disabled={busy}>
-            {mode === "register"
-              ? "Submit registration request"
-              : "Email password link"}
+            {mode === "register" ? "Submit registration request" : "Email password link"}
           </button>
         </form>
       )}
@@ -117,9 +105,7 @@ export function ResetPasswordForm() {
             setBusy(true);
             setError("");
             try {
-              const token = new URLSearchParams(location.hash.slice(1)).get(
-                "reset",
-              );
+              const token = new URLSearchParams(location.hash.slice(1)).get("reset");
               const r = await api("/api/access-requests", {
                 action: "reset",
                 token,
@@ -217,7 +203,7 @@ export function AccessRequests({ reload }: { reload: () => void }) {
                       setNotice(
                         decision === "Approved"
                           ? `Account approved. ${result.emailSent ? "Password invitation sent." : "Email was not sent; configure SMTP or set a temporary password in Accounts."} Assign the account's departments and areas before use.`
-                          : "Request rejected.",
+                          : "Request rejected."
                       );
                       await load();
                       reload();
@@ -228,9 +214,7 @@ export function AccessRequests({ reload }: { reload: () => void }) {
                     }
                   }}
                 >
-                  {decision === "Approved"
-                    ? "Approve request"
-                    : "Reject request"}
+                  {decision === "Approved" ? "Approve request" : "Reject request"}
                 </button>
               ))}
             </div>

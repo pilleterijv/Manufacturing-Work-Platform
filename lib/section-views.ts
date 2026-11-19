@@ -17,8 +17,7 @@ export const sectionEndpoints: Record<string, string> = {
   "Improvement ideas": "/api/operations?view=ideas",
   "Problem solving": "/api/problems",
 };
-export const hasSectionViews = (name: string) =>
-  Object.hasOwn(sectionEndpoints, name);
+export const hasSectionViews = (name: string) => Object.hasOwn(sectionEndpoints, name);
 
 export const hasSectionSearch = (name: string) =>
   hasSectionViews(name) || ["Manage", "Leadership dashboard"].includes(name);

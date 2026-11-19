@@ -1,6 +1,4 @@
-export async function* paged<T extends { id: string }>(
-  load: (cursor: string | undefined) => Promise<T[]>,
-) {
+export async function* paged<T extends { id: string }>(load: (cursor: string | undefined) => Promise<T[]>) {
   let cursor: string | undefined;
   while (true) {
     const batch = await load(cursor);

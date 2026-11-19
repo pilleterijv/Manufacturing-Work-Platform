@@ -8,8 +8,7 @@ export type HelpTopic = {
 export const helpTopics: HelpTopic[] = [
   {
     section: "Centerlines",
-    keywords:
-      "centerline machine settings target tolerance range setup audit readings",
+    keywords: "centerline machine settings target tolerance range setup audit readings",
     text: "Set approved machine parameters, then compare actual readings with the original limits.",
     steps: [
       "Open Centerlines. Managers or delegated centerline editors can add settings for a permitted machine and product/setup.",
@@ -30,8 +29,7 @@ export const helpTopics: HelpTopic[] = [
   },
   {
     section: "Dashboard settings",
-    keywords:
-      "customize personalise personalize dashboard widgets hide show login default home",
+    keywords: "customize personalise personalize dashboard widgets hide show login default home",
     text: "Dashboard choices are saved independently for your account.",
     steps: [
       "Choose the section to open when you log in.",
@@ -41,8 +39,7 @@ export const helpTopics: HelpTopic[] = [
   },
   {
     section: "Standard work",
-    keywords:
-      "standard work task complete photo picture evidence steps verification",
+    keywords: "standard work task complete photo picture evidence steps verification",
     text: "Complete the approved standard and save its evidence.",
     steps: [
       "Open Operator tasks and choose the process/machine.",
@@ -72,8 +69,7 @@ export const helpTopics: HelpTopic[] = [
   },
   {
     section: "TPM / CIL",
-    keywords:
-      "tpm cil clean cleaning inspect inspection lubricate lubrication machine",
+    keywords: "tpm cil clean cleaning inspect inspection lubricate lubrication machine",
     text: "CIL checks are separate machine cleaning, inspection and lubrication plans.",
     steps: [
       "Open TPM / CIL and select a due plan assigned to you.",
@@ -103,8 +99,7 @@ export const helpTopics: HelpTopic[] = [
   },
   {
     section: "Downtime",
-    keywords:
-      "downtime stoppage stop start reason trak traksys running department area machine",
+    keywords: "downtime stoppage stop start reason trak traksys running department area machine",
     text: "Record downtime against the exact department, area and machine.",
     steps: [
       "Choose department, then area, then machine from the permitted dropdowns.",
@@ -124,8 +119,7 @@ export const helpTopics: HelpTopic[] = [
   },
   {
     section: "Problem solving",
-    keywords:
-      "problem solving 2d 4d 8d facilitator reviewer corrective containment preventive action",
+    keywords: "problem solving 2d 4d 8d facilitator reviewer corrective containment preventive action",
     text: "Problem solving tracks structured investigations and assigned actions.",
     steps: [
       "Choose the appropriate 2D, 4D or 8D methodology and equipment.",
@@ -185,8 +179,7 @@ export const helpTopics: HelpTopic[] = [
   },
   {
     section: "Accounts",
-    keywords:
-      "account user employee disable password reset role department access delegation permission",
+    keywords: "account user employee disable password reset role department access delegation permission",
     text: "Account administration is limited by department and privilege authority.",
     steps: [
       "Search Accounts for a person's name or username.",
@@ -265,8 +258,7 @@ export const helpTopics: HelpTopic[] = [
     ],
   },
 ];
-export const permittedHelp = (u: NavigationUser) =>
-  helpTopics.filter((t) => canOpenSection(u, t.section));
+export const permittedHelp = (u: NavigationUser) => helpTopics.filter((t) => canOpenSection(u, t.section));
 export function guideAnswer(question: string, topics: HelpTopic[]) {
   const stop = new Set([
     "how",
@@ -295,19 +287,16 @@ export function guideAnswer(question: string, topics: HelpTopic[]) {
     "an",
     "of",
   ]);
-  const words = [
-    ...new Set(question.toLowerCase().match(/[a-z0-9]+/g) ?? []),
-  ].filter((w) => w.length >= 2 && !stop.has(w));
+  const words = [...new Set(question.toLowerCase().match(/[a-z0-9]+/g) ?? [])].filter(
+    (w) => w.length >= 2 && !stop.has(w)
+  );
   const scored = topics
     .map((t) => {
       const title = new Set(t.section.toLowerCase().match(/[a-z0-9]+/g) ?? []),
         keywords = new Set(t.keywords.toLowerCase().match(/[a-z0-9]+/g) ?? []);
       return {
         t,
-        score: words.reduce(
-          (n, w) => n + (title.has(w) ? 2 : keywords.has(w) ? 1 : 0),
-          0,
-        ),
+        score: words.reduce((n, w) => n + (title.has(w) ? 2 : keywords.has(w) ? 1 : 0), 0),
       };
     })
     .filter((x) => x.score > 0)
@@ -316,10 +305,7 @@ export function guideAnswer(question: string, topics: HelpTopic[]) {
   return {
     answer: found.length
       ? found
-          .map(
-            (t) =>
-              `${t.section}\n${t.text}\n${t.steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}`,
-          )
+          .map((t) => `${t.section}\n${t.text}\n${t.steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}`)
           .join("\n\n")
       : "I can help you find and use the sections available to your account. Choose a topic below or ask about a task. If a section is missing, ask Admin to review your access.",
     links: found.map((t) => t.section),

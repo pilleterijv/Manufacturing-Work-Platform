@@ -9,14 +9,7 @@ import { useState, useEffect, useRef } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
 import type { Data, Step, Cycle, Standard } from "@/lib/workspace-types";
 import { api } from "@/lib/client-api";
-import {
-  Field,
-  Submit,
-  fmt,
-  Metric,
-  History,
-  EquipmentSelect,
-} from "../shared";
+import { Field, Submit, fmt, Metric, History, EquipmentSelect } from "../shared";
 type Save = (body: unknown) => Promise<boolean>;
 import { Timer } from "../timer";
 export default function Work({
@@ -54,9 +47,7 @@ export default function Work({
     (s) =>
       !s.archived &&
       s.kind === (audit ? "audit" : "run") &&
-      (audit
-        ? (s.workflow === "leader") === leader
-        : (s.workflow === "changeover") === changeover),
+      (audit ? (s.workflow === "leader") === leader : (s.workflow === "changeover") === changeover)
   );
   const [id, setId] = useState(""),
     [responses, setResponses] = useState<
@@ -101,14 +92,11 @@ export default function Work({
     setHandoff({
       shift: "",
       notes: "",
-      rooms: handoffRooms(
-        data.standards.find((s) => s.id === id)?.handoffProfile || "generic",
-      ),
+      rooms: handoffRooms(data.standards.find((s) => s.id === id)?.handoffProfile || "generic"),
     });
   }
   useEffect(() => {
-    if (initialStandardId && latest.some((s) => s.id === initialStandardId))
-      select(initialStandardId, false);
+    if (initialStandardId && latest.some((s) => s.id === initialStandardId)) select(initialStandardId, false);
   }, [initialStandardId]);
   function update(step: string, patch: object) {
     setResponses((prev) => ({
@@ -134,21 +122,11 @@ export default function Work({
                   : "Start a verification"}
           </h2>
           <span className="badge">
-            {leader
-              ? "DL/TL"
-              : changeover
-                ? "CHANGEOVER"
-                : audit
-                  ? "PROCESS VERIFICATION"
-                  : "OPERATOR TASK"}
+            {leader ? "DL/TL" : changeover ? "CHANGEOVER" : audit ? "PROCESS VERIFICATION" : "OPERATOR TASK"}
           </span>
         </div>
         <Field label="Standard work">
-          <select
-            aria-label="Standard work"
-            value={id}
-            onChange={(e) => select(e.target.value)}
-          >
+          <select aria-label="Standard work" value={id} onChange={(e) => select(e.target.value)}>
             <option value="">Select a process</option>
             {latest.map((s) => (
               <option key={s.id} value={s.id}>
@@ -156,9 +134,7 @@ export default function Work({
                 {(() => {
                   const e = data.equipment.find((e) => e.id === s.equipmentId);
                   return e
-                    ? [e.plant, e.department, e.area, e.line, e.name]
-                        .filter(Boolean)
-                        .join(" / ")
+                    ? [e.plant, e.department, e.area, e.line, e.name].filter(Boolean).join(" / ")
                     : s.equipmentId;
                 })()}
               </option>
@@ -178,14 +154,10 @@ export default function Work({
                 s.steps.some(
                   (step) =>
                     responses[step.id]?.answer == null ||
-                    (step.photo &&
-                      !responses[step.id]?.photo &&
-                      !responses[step.id]?.video),
+                    (step.photo && !responses[step.id]?.photo && !responses[step.id]?.video)
                 )
               ) {
-                setLocalError(
-                  "Answer every step and attach each required photo or video",
-                );
+                setLocalError("Answer every step and attach each required photo or video");
                 return;
               }
               if (
@@ -267,9 +239,7 @@ export default function Work({
               </fieldset>
             )}
             <div className="process-meta">
-              <span>
-                ▦ {data.equipment.find((e) => e.id === s.equipmentId)?.name}
-              </span>
+              <span>▦ {data.equipment.find((e) => e.id === s.equipmentId)?.name}</span>
               <span>Revision {s.revision}</span>
               {!leader && <span>Target {s.target}s</span>}
             </div>
@@ -294,9 +264,7 @@ export default function Work({
                       </p>
                     )}
                     <div className="step-heading">
-                      <span className="step-number">
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
+                      <span className="step-number">{String(i + 1).padStart(2, "0")}</span>
                       <div>
                         <h3>{step.text}</h3>
                         {step.fiveSPlanId && (
@@ -311,14 +279,11 @@ export default function Work({
                               }
                             >
                               <option value="">
-                                Complete the linked audit in 5S audits, then
-                                return here
+                                Complete the linked audit in 5S audits, then return here
                               </option>
                               {fiveS?.records
                                 .filter(
-                                  (r: any) =>
-                                    r.planId === step.fiveSPlanId &&
-                                    r.userId === fiveS.userId,
+                                  (r: any) => r.planId === step.fiveSPlanId && r.userId === fiveS.userId
                                 )
                                 .map((r: any) => (
                                   <option key={r.id} value={r.id}>
@@ -383,18 +348,13 @@ export default function Work({
                           : []),
                       ]}
                       onBusy={(b) => {
-                        uploads.current = Math.max(
-                          0,
-                          uploads.current + (b ? 1 : -1),
-                        );
+                        uploads.current = Math.max(0, uploads.current + (b ? 1 : -1));
                         setUploading(uploads.current > 0);
                       }}
                       onChange={(items) =>
                         update(step.id, {
-                          photo:
-                            items.find((m) => m.kind === "photo")?.id ?? null,
-                          video:
-                            items.find((m) => m.kind === "video")?.id ?? null,
+                          photo: items.find((m) => m.kind === "photo")?.id ?? null,
+                          video: items.find((m) => m.kind === "video")?.id ?? null,
                         })
                       }
                     />
@@ -403,9 +363,7 @@ export default function Work({
                         maxLength={1000}
                         rows={2}
                         value={responses[step.id]?.comment ?? ""}
-                        onChange={(e) =>
-                          update(step.id, { comment: e.target.value })
-                        }
+                        onChange={(e) => update(step.id, { comment: e.target.value })}
                         placeholder="Add context or describe an issue"
                       />
                     </Field>
@@ -422,8 +380,7 @@ export default function Work({
                     tolerance={s.tolerance}
                   />
                   <p className="small muted">
-                    Optional cycle timestamps and the current standard criteria
-                    are preserved with this audit.
+                    Optional cycle timestamps and the current standard criteria are preserved with this audit.
                   </p>
                 </div>
               )}
@@ -469,12 +426,7 @@ export default function Work({
         </h2>
         <span className="muted">Historical revisions preserved</span>
       </div>
-      <History
-        data={data}
-        records={data.records.filter(
-          (r) => r.kind === (audit ? "audit" : "run"),
-        )}
-      />
+      <History data={data} records={data.records.filter((r) => r.kind === (audit ? "audit" : "run"))} />
     </>
   );
 }

@@ -8,17 +8,9 @@ import { db } from "@/lib/db";
 import { requireUser, grants, failure, HttpError } from "@/lib/security";
 import { stats } from "@/lib/rules";
 import { addOperationsSheets } from "@/lib/operations-export";
-const locationColumns = [
-  "Plant",
-  "Department",
-  "Area",
-  "Line",
-  "Equipment name",
-];
+const locationColumns = ["Plant", "Department", "Area", "Line", "Equipment name"];
 const locationValues = (equipment: any) =>
-  ["plant", "department", "area", "line", "name"].map(
-    (key) => equipment?.[key] ?? "",
-  );
+  ["plant", "department", "area", "line", "name"].map((key) => equipment?.[key] ?? "");
 export async function GET(req: Request) {
   try {
     const u = await requireUser("export");
@@ -34,19 +26,15 @@ export async function GET(req: Request) {
             [e.name, e.plant, e.department, e.area, e.line]
               .join(" ")
               .toLowerCase()
-              .includes(search.toLowerCase()),
+              .includes(search.toLowerCase())
           )
           .map((e) => e.id)
       : [];
     const section = new URL(req.url).searchParams.get("section");
     if (section === "downtime" || section === "ideas") {
       const cap = section === "downtime" ? "downtime" : "ideas";
-      if (!g.includes(cap))
-        throw new HttpError(403, "Section export is not permitted");
-      const ideasWhere =
-        section === "ideas"
-          ? await workflowFocus(req.url, "ideas", u.id)
-          : undefined;
+      if (!g.includes(cap)) throw new HttpError(403, "Section export is not permitted");
+      const ideasWhere = section === "ideas" ? await workflowFocus(req.url, "ideas", u.id) : undefined;
       return await streamWorkbook(
         `floorwork-${section}.xlsx`,
         (book) =>
@@ -56,38 +44,21 @@ export async function GET(req: Request) {
             equipmentIds: ids,
             ideasWhere,
           }),
-        req.signal,
+        req.signal
       );
     }
-    if (section)
-      return await sectionWorkbook(
-        req,
-        u,
-        g,
-        ids,
-        person,
-        search,
-        matchingEquipment,
-        section,
-      );
+    if (section) return await sectionWorkbook(req, u, g, ids, person, search, matchingEquipment, section);
     const asOf = new Date();
     const records = paged((cursor) =>
       db.record.findMany({
         where: {
-          AND: [
-            recordScope(ids),
-            recordFilters(person, search, matchingEquipment),
-          ],
-          ...(g.includes("analytics") || g.includes("history")
-            ? {}
-            : { userId: u.id }),
+          AND: [recordScope(ids), recordFilters(person, search, matchingEquipment)],
+          ...(g.includes("analytics") || g.includes("history") ? {} : { userId: u.id }),
           created: { lte: asOf },
           kind: {
             in: [
               ...(g.includes("work") || g.includes("analytics") ? ["run"] : []),
-              ...(g.includes("studies") || g.includes("analytics")
-                ? ["study"]
-                : []),
+              ...(g.includes("studies") || g.includes("analytics") ? ["study"] : []),
               ...(g.includes("audits") ? ["audit"] : []),
             ],
           },
@@ -96,7 +67,7 @@ export async function GET(req: Request) {
         orderBy: { id: "asc" },
         take: 100,
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-      }),
+      })
     );
     return await streamWorkbook(
       "floorwork.xlsx",
@@ -109,7 +80,7 @@ export async function GET(req: Request) {
             "Statistics",
             "DL-TL Standard Work",
             "DL-TL cycles",
-          ].map((name) => [name, book.addWorksheet(name)]),
+          ].map((name) => [name, book.addWorksheet(name)])
         );
         await sheets["Standard work"].addRow([
           "ID",
@@ -168,20 +139,11 @@ export async function GET(req: Request) {
           "Pass-down",
           "Room / machine handoff JSON",
         ]);
-        await sheets["DL-TL cycles"].addRow([
-          "Audit",
-          "Element",
-          "Seconds",
-          "Timestamp",
-          "Meets target",
-        ]);
+        await sheets["DL-TL cycles"].addRow(["Audit", "Element", "Seconds", "Timestamp", "Meets target"]);
         for await (const r of records) {
           book.check();
           const d = r.data as any;
-          if (
-            r.kind === "run" &&
-            (g.includes("work") || g.includes("analytics"))
-          )
+          if (r.kind === "run" && (g.includes("work") || g.includes("analytics")))
             await sheets["Standard work"].addRow([
               r.id,
               r.created,
@@ -206,9 +168,7 @@ export async function GET(req: Request) {
               d.snapshot.workflow === "leader" ? null : d.snapshot.target,
               d.snapshot.workflow === "leader" ? null : d.snapshot.tolerance,
               d.followUp,
-              d.snapshot.workflow === "leader"
-                ? "DL/TL leader work"
-                : "Standard work audit",
+              d.snapshot.workflow === "leader" ? "DL/TL leader work" : "Standard work audit",
               d.handoff?.shift || "",
               d.handoff?.notes || "",
               d.handoff ? JSON.stringify(d.handoff.rooms) : "",
@@ -219,13 +179,11 @@ export async function GET(req: Request) {
                 c.element,
                 c.seconds,
                 c.at,
-                c.seconds <=
-                  d.snapshot.target * (1 + d.snapshot.tolerance / 100),
+                c.seconds <= d.snapshot.target * (1 + d.snapshot.tolerance / 100),
               ]);
           }
           if (
-            (r.kind === "run" &&
-              (g.includes("work") || g.includes("analytics"))) ||
+            (r.kind === "run" && (g.includes("work") || g.includes("analytics"))) ||
             (r.kind === "audit" && g.includes("audits"))
           )
             for (const a of d.responses)
@@ -238,10 +196,7 @@ export async function GET(req: Request) {
                 a.photo,
                 a.video ?? "",
               ]);
-          if (
-            r.kind === "study" &&
-            (g.includes("studies") || g.includes("analytics"))
-          ) {
+          if (r.kind === "study" && (g.includes("studies") || g.includes("analytics"))) {
             for (const c of d.cycles ?? [])
               await sheets["Time observations"].addRow([
                 r.id,
@@ -252,14 +207,8 @@ export async function GET(req: Request) {
                 c.seconds,
                 c.at,
               ]);
-            for (const element of new Set<string>(
-              d.cycles.map((c: any) => c.element),
-            )) {
-              const s = stats(
-                d.cycles
-                  .filter((c: any) => c.element === element)
-                  .map((c: any) => c.seconds),
-              )!;
+            for (const element of new Set<string>(d.cycles.map((c: any) => c.element))) {
+              const s = stats(d.cycles.filter((c: any) => c.element === element).map((c: any) => c.seconds))!;
               await sheets.Statistics.addRow([
                 r.id,
                 element,
@@ -280,7 +229,7 @@ export async function GET(req: Request) {
           equipmentIds: ids,
         });
       },
-      req.signal,
+      req.signal
     );
   } catch (e) {
     return failure(e);

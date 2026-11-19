@@ -4,10 +4,7 @@ import { equipmentLabel } from "@/lib/equipment-label";
 import { confirmDraftChange } from "../floor-safety";
 import { useEffect, useRef, useState } from "react";
 import { api, filterUrl } from "@/lib/client-api";
-import {
-  readingResult,
-  type CenterlineParameter,
-} from "@/lib/centerline-rules";
+import { readingResult, type CenterlineParameter } from "@/lib/centerline-rules";
 import type { Evidence } from "@/lib/evidence-schema";
 import EvidenceInput, { EvidenceView } from "../evidence-input";
 import RefreshControl, { useSectionRefresh } from "../refresh-control";
@@ -57,11 +54,7 @@ export default function Centerlines() {
     setData((old: any) => ({
       ...result,
       plans:
-        mode === "plans"
-          ? [...old.plans, ...result.plans]
-          : mode === "history"
-            ? old.plans
-            : result.plans,
+        mode === "plans" ? [...old.plans, ...result.plans] : mode === "history" ? old.plans : result.plans,
       records:
         mode === "history"
           ? [...old.records, ...result.records]
@@ -69,8 +62,7 @@ export default function Centerlines() {
             ? old.records
             : result.records,
       cursor: mode === "history" ? old.cursor : result.cursor,
-      historyCursor:
-        mode === "plans" ? old.historyCursor : result.historyCursor,
+      historyCursor: mode === "plans" ? old.historyCursor : result.historyCursor,
     }));
   }
   useEffect(() => {
@@ -81,7 +73,7 @@ export default function Centerlines() {
   }, []);
   useSectionRefresh(
     () => load(),
-    (e) => setError(e.message),
+    (e) => setError(e.message)
   );
   async function save(body: any) {
     setBusy(true);
@@ -96,7 +88,7 @@ export default function Centerlines() {
           ? "Centerline audit saved."
           : body.action === "retire"
             ? "Centerline retired. Audit history preserved."
-            : "Centerline settings saved.",
+            : "Centerline settings saved."
       );
       try {
         await load();
@@ -125,7 +117,7 @@ export default function Centerlines() {
     setDraft({
       ...draft,
       parameters: draft.parameters.map((p: CenterlineParameter, i: number) =>
-        i === index ? { ...p, ...patch } : p,
+        i === index ? { ...p, ...patch } : p
       ),
     });
   return (
@@ -133,9 +125,8 @@ export default function Centerlines() {
       <section className="panel">
         <h2>Machine centerlines</h2>
         <p>
-          Define machine settings for a product or setup, then audit the actual
-          readings. Limits are inclusive; text settings match without regard to
-          letter case.
+          Define machine settings for a product or setup, then audit the actual readings. Limits are
+          inclusive; text settings match without regard to letter case.
         </p>
         {error && (
           <p role="alert" className="error">
@@ -168,10 +159,7 @@ export default function Centerlines() {
       {draft && (
         <section className="panel">
           <h2>{draft.id ? "Edit centerline" : "New centerline"}</h2>
-          <p>
-            Save a new revision when settings change. Existing audit readings
-            keep the original limits.
-          </p>
+          <p>Save a new revision when settings change. Existing audit readings keep the original limits.</p>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -184,9 +172,7 @@ export default function Centerlines() {
                   required
                   maxLength={150}
                   value={draft.title}
-                  onChange={(e) =>
-                    setDraft({ ...draft, title: e.target.value })
-                  }
+                  onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                 />
               </Field>
               <Field label="Centerline machine">
@@ -195,9 +181,7 @@ export default function Centerlines() {
                   required
                   disabled={!!draft.id}
                   value={draft.equipmentId}
-                  onChange={(e) =>
-                    setDraft({ ...draft, equipmentId: e.target.value })
-                  }
+                  onChange={(e) => setDraft({ ...draft, equipmentId: e.target.value })}
                 >
                   <option value="">Choose machine</option>
                   {data.equipment.map((e: any) => (
@@ -211,18 +195,14 @@ export default function Centerlines() {
                 <input
                   maxLength={150}
                   value={draft.setup}
-                  onChange={(e) =>
-                    setDraft({ ...draft, setup: e.target.value })
-                  }
+                  onChange={(e) => setDraft({ ...draft, setup: e.target.value })}
                 />
               </Field>
               <Field label="Centerline instructions">
                 <textarea
                   maxLength={3000}
                   value={draft.notes}
-                  onChange={(e) =>
-                    setDraft({ ...draft, notes: e.target.value })
-                  }
+                  onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
                 />
               </Field>
             </div>
@@ -267,10 +247,7 @@ export default function Centerlines() {
                             value={p[key] ?? ""}
                             onChange={(e) =>
                               parameter(i, {
-                                [key]:
-                                  e.target.value === ""
-                                    ? null
-                                    : Number(e.target.value),
+                                [key]: e.target.value === "" ? null : Number(e.target.value),
                               })
                             }
                           />
@@ -281,9 +258,7 @@ export default function Centerlines() {
                           maxLength={40}
                           placeholder="rpm, °C, bar…"
                           value={p.unit}
-                          onChange={(e) =>
-                            parameter(i, { unit: e.target.value })
-                          }
+                          onChange={(e) => parameter(i, { unit: e.target.value })}
                         />
                       </Field>
                     </>
@@ -294,9 +269,7 @@ export default function Centerlines() {
                         maxLength={150}
                         placeholder="e.g. Closed or Position A"
                         value={p.expected}
-                        onChange={(e) =>
-                          parameter(i, { expected: e.target.value })
-                        }
+                        onChange={(e) => parameter(i, { expected: e.target.value })}
                       />
                     </Field>
                   )}
@@ -304,9 +277,7 @@ export default function Centerlines() {
                     <textarea
                       maxLength={1000}
                       value={p.instructions}
-                      onChange={(e) =>
-                        parameter(i, { instructions: e.target.value })
-                      }
+                      onChange={(e) => parameter(i, { instructions: e.target.value })}
                     />
                   </Field>
                 </div>
@@ -325,9 +296,7 @@ export default function Centerlines() {
                   onClick={() =>
                     setDraft({
                       ...draft,
-                      parameters: draft.parameters.filter(
-                        (_: any, n: number) => n !== i,
-                      ),
+                      parameters: draft.parameters.filter((_: any, n: number) => n !== i),
                     })
                   }
                 >
@@ -352,12 +321,7 @@ export default function Centerlines() {
               <button className="primary" disabled={busy}>
                 Save centerline
               </button>
-              <button
-                type="button"
-                className="outline"
-                disabled={busy}
-                onClick={() => setDraft(null)}
-              >
+              <button type="button" className="outline" disabled={busy} onClick={() => setDraft(null)}>
                 Cancel settings
               </button>
             </div>
@@ -368,11 +332,7 @@ export default function Centerlines() {
         <section className="panel">
           <h2>Centerline settings</h2>
           <label className="check">
-            <input
-              type="checkbox"
-              checked={retired}
-              onChange={(e) => setRetired(e.target.checked)}
-            />
+            <input type="checkbox" checked={retired} onChange={(e) => setRetired(e.target.checked)} />
             Show retired centerlines
           </label>
           <div className="table-wrap">
@@ -462,7 +422,7 @@ export default function Centerlines() {
                                 onClick={() => {
                                   if (
                                     confirm(
-                                      `Retire ${c.title}? Completed audits and evidence will remain available.`,
+                                      `Retire ${c.title}? Completed audits and evidence will remain available.`
                                     )
                                   )
                                     void save({
@@ -484,18 +444,13 @@ export default function Centerlines() {
             </table>
           </div>
           {!data.plans.some((c: any) => c.active || retired) && (
-            <p>
-              No matching centerlines. A manager can add settings for a
-              permitted machine.
-            </p>
+            <p>No matching centerlines. A manager can add settings for a permitted machine.</p>
           )}
           {data.cursor && (
             <button
               className="outline"
               disabled={busy}
-              onClick={() =>
-                void load("plans").catch((e) => setError(e.message))
-              }
+              onClick={() => void load("plans").catch((e) => setError(e.message))}
             >
               Load more centerlines
             </button>
@@ -506,8 +461,7 @@ export default function Centerlines() {
         <section className="panel">
           <h2>Audit: {selected.title}</h2>
           <p>
-            {machine(selected.equipmentId)} · Revision {selected.version} ·{" "}
-            {selected.setup || "All setups"}
+            {machine(selected.equipmentId)} · Revision {selected.version} · {selected.setup || "All setups"}
           </p>
           <p>{selected.notes}</p>
           <form
@@ -519,25 +473,19 @@ export default function Centerlines() {
                 version: selected.version,
                 submissionId: submissionId.current,
                 context,
-                responses: selected.parameters.map(
-                  (p: CenterlineParameter) => ({
-                    parameterId: p.id,
-                    ...(responses[p.id] || {
-                      actual: "",
-                      comment: "",
-                      media: [],
-                    }),
+                responses: selected.parameters.map((p: CenterlineParameter) => ({
+                  parameterId: p.id,
+                  ...(responses[p.id] || {
+                    actual: "",
+                    comment: "",
+                    media: [],
                   }),
-                ),
+                })),
               });
             }}
           >
             <Field label="Shift / batch / order (optional)">
-              <input
-                maxLength={150}
-                value={context}
-                onChange={(e) => setContext(e.target.value)}
-              />
+              <input maxLength={150} value={context} onChange={(e) => setContext(e.target.value)} />
             </Field>
             {selected.parameters.map((p: CenterlineParameter) => {
               const r = responses[p.id] || {
@@ -567,13 +515,8 @@ export default function Centerlines() {
                     />
                   </Field>
                   {result && (
-                    <p
-                      role="status"
-                      className={result.withinLimits ? "notice" : "error"}
-                    >
-                      {result.withinLimits
-                        ? "Within limits"
-                        : "Out of limits — follow up required"}
+                    <p role="status" className={result.withinLimits ? "notice" : "error"}>
+                      {result.withinLimits ? "Within limits" : "Out of limits — follow up required"}
                     </p>
                   )}
                   <Field label={`Comment / action taken · ${p.name}`}>
@@ -581,9 +524,7 @@ export default function Centerlines() {
                       required={result?.withinLimits === false}
                       maxLength={1000}
                       value={r.comment}
-                      onChange={(e) =>
-                        update(p.id, { comment: e.target.value })
-                      }
+                      onChange={(e) => update(p.id, { comment: e.target.value })}
                     />
                   </Field>
                   <EvidenceInput
@@ -598,11 +539,7 @@ export default function Centerlines() {
                 </fieldset>
               );
             })}
-            <RecordingContext
-              equipment={data.equipment.find(
-                (e: any) => e.id === selected.equipmentId,
-              )}
-            />
+            <RecordingContext equipment={data.equipment.find((e: any) => e.id === selected.equipmentId)} />
             <div className="button-row">
               <button className="primary" disabled={busy || uploading}>
                 Save centerline audit
@@ -624,23 +561,21 @@ export default function Centerlines() {
           <h2>Centerline audit history</h2>
           <RefreshControl onRefresh={() => load()} />
           <p>
-            {data.summary.total} matching audits · {data.summary.followUps} with
-            out-of-limit readings. Original settings and readings are preserved.
+            {data.summary.total} matching audits · {data.summary.followUps} with out-of-limit readings.
+            Original settings and readings are preserved.
           </p>
-          {!data.records.length && (
-            <p>No audits recorded for the current filters.</p>
-          )}
+          {!data.records.length && <p>No audits recorded for the current filters.</p>}
           {data.records.map((r: any) => {
             const d = r.data;
             return (
               <details key={r.id} className="panel">
                 <summary>
-                  {d.title} · {new Date(r.created).toLocaleString()} ·{" "}
-                  {r.user.name} · {d.followUp ? "Follow up" : "Within limits"}
+                  {d.title} · {new Date(r.created).toLocaleString()} · {r.user.name} ·{" "}
+                  {d.followUp ? "Follow up" : "Within limits"}
                 </summary>
                 <p>
-                  {d.equipmentSnapshot.name} · {d.centerlineSnapshot.setup} ·
-                  Revision {d.centerlineSnapshot.version} · {d.context}
+                  {d.equipmentSnapshot.name} · {d.centerlineSnapshot.setup} · Revision{" "}
+                  {d.centerlineSnapshot.version} · {d.context}
                 </p>
                 <p>{d.centerlineSnapshot.notes}</p>
                 <div className="table-wrap">
@@ -657,7 +592,7 @@ export default function Centerlines() {
                     <tbody>
                       {d.responses.map((a: any) => {
                         const p = d.centerlineSnapshot.parameters.find(
-                          (x: CenterlineParameter) => x.id === a.parameterId,
+                          (x: CenterlineParameter) => x.id === a.parameterId
                         );
                         return (
                           <tr key={a.parameterId}>
@@ -670,11 +605,7 @@ export default function Centerlines() {
                             <td>
                               {a.actual} {p.unit}
                             </td>
-                            <td>
-                              {a.withinLimits
-                                ? "Within limits"
-                                : "Out of limits"}
-                            </td>
+                            <td>{a.withinLimits ? "Within limits" : "Out of limits"}</td>
                             <td>
                               {a.comment}
                               <EvidenceView media={a.media} />
@@ -692,9 +623,7 @@ export default function Centerlines() {
             <button
               className="outline"
               disabled={busy}
-              onClick={() =>
-                void load("history").catch((e) => setError(e.message))
-              }
+              onClick={() => void load("history").catch((e) => setError(e.message))}
             >
               Load older audits
             </button>

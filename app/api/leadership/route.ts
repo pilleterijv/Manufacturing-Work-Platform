@@ -8,7 +8,7 @@ export async function GET(req: Request) {
     const params = new URL(req.url).searchParams;
     if (params.get("format") === "xlsx") await requireUser("export");
     return await withReportSlot(async () =>
-      reportResponse(await leadershipReport(params, user), params, req.signal),
+      reportResponse(await leadershipReport(params, user), params, req.signal)
     );
   } catch (e) {
     return failure(e);

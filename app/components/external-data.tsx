@@ -28,16 +28,14 @@ export default function ExternalData({
         new URLSearchParams({
           section,
           ...(more ? { cursor: data?.cursor ?? "" } : {}),
-        }),
+        })
     );
     if (sequence !== loadSequence.current) return;
-    setData((old: any) =>
-      more ? { ...d, items: [...old.items, ...d.items] } : d,
-    );
+    setData((old: any) => (more ? { ...d, items: [...old.items, ...d.items] } : d));
   }
   useSectionRefresh(
     () => load(),
-    (e) => setError(e.message),
+    (e) => setError(e.message)
   );
   useEffect(() => {
     load().catch((e) => setError(e.message));
@@ -50,18 +48,14 @@ export default function ExternalData({
       {canExport && (
         <a
           className="outline"
-          href={filterUrl(
-            "/api/external-data?" +
-              new URLSearchParams({ section, format: "xlsx" }),
-          )}
+          href={filterUrl("/api/external-data?" + new URLSearchParams({ section, format: "xlsx" }))}
         >
           Export connected results
         </a>
       )}
       <p className="small muted">
-        Read-only source records, scoped to your departments and areas.
-        Importing does not overwrite app checklists, actions or completion
-        history.
+        Read-only source records, scoped to your departments and areas. Importing does not overwrite app
+        checklists, actions or completion history.
       </p>
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
@@ -89,17 +83,13 @@ export default function ExternalData({
                   setBusy(true);
                   setError("");
                   try {
-                    if (file.size > 8 * 1024 * 1024)
-                      throw Error("Workbook must be under 8 MB");
-                    const workbook = await new Promise<string>(
-                      (resolve, reject) => {
-                        const r = new FileReader();
-                        r.onload = () => resolve(String(r.result));
-                        r.onerror = () =>
-                          reject(Error("Could not read workbook"));
-                        r.readAsDataURL(file);
-                      },
-                    );
+                    if (file.size > 8 * 1024 * 1024) throw Error("Workbook must be under 8 MB");
+                    const workbook = await new Promise<string>((resolve, reject) => {
+                      const r = new FileReader();
+                      r.onload = () => resolve(String(r.result));
+                      r.onerror = () => reject(Error("Could not read workbook"));
+                      r.readAsDataURL(file);
+                    });
                     const r = await api("/api/external-data/import", {
                       feedId: f.id,
                       workbook,
@@ -113,9 +103,7 @@ export default function ExternalData({
                   }
                 }}
               />
-              <a href="/api/external-data/template">
-                Download Excel template and machine IDs
-              </a>
+              <a href="/api/external-data/template">Download Excel template and machine IDs</a>
             </label>
           )}
         </div>
@@ -155,9 +143,7 @@ export default function ExternalData({
               <label className="field">
                 <span>Integration source</span>
                 <select name="sourceId" required>
-                  <option value="">
-                    Create a source in Integrations, then select it
-                  </option>
+                  <option value="">Create a source in Integrations, then select it</option>
                   {data?.sources?.map((s: any) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
@@ -182,16 +168,9 @@ export default function ExternalData({
       {data?.items.map((r: any) => (
         <details key={r.id}>
           <summary>
-            {r.title} ·{" "}
-            {data.equipment?.find((e: any) => e.id === r.equipmentId)?.name ??
-              r.equipmentId}{" "}
-            ·{" "}
+            {r.title} · {data.equipment?.find((e: any) => e.id === r.equipmentId)?.name ?? r.equipmentId} ·{" "}
             <time
-              dateTime={
-                typeof r.values.productionDate === "string"
-                  ? r.values.productionDate
-                  : r.occurredAt
-              }
+              dateTime={typeof r.values.productionDate === "string" ? r.values.productionDate : r.occurredAt}
             >
               {typeof r.values.productionDate === "string"
                 ? r.values.productionDate
@@ -200,17 +179,10 @@ export default function ExternalData({
           </summary>
           <p>{r.details}</p>
           <p className="small">
-            {data.feeds.find((f: any) => f.id === r.feedId)?.name} · external ID{" "}
-            {r.externalId} ·{" "}
+            {data.feeds.find((f: any) => f.id === r.feedId)?.name} · external ID {r.externalId} ·{" "}
             {(() => {
-              const e = data.equipment?.find(
-                (e: any) => e.id === r.equipmentId,
-              );
-              return e
-                ? [e.plant, e.department, e.area, e.line]
-                    .filter(Boolean)
-                    .join(" / ")
-                : "";
+              const e = data.equipment?.find((e: any) => e.id === r.equipmentId);
+              return e ? [e.plant, e.department, e.area, e.line].filter(Boolean).join(" / ") : "";
             })()}{" "}
             · machine ID {r.equipmentId}
           </p>
@@ -224,9 +196,7 @@ export default function ExternalData({
           </dl>
         </details>
       ))}
-      {data && !data.items.length && (
-        <p className="muted">No imported records match the current filters.</p>
-      )}
+      {data && !data.items.length && <p className="muted">No imported records match the current filters.</p>}
       {data?.hasMore && (
         <button onClick={() => load(true).catch((e) => setError(e.message))}>
           Load more connected records

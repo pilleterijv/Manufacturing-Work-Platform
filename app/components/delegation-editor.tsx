@@ -20,17 +20,14 @@ export default function DelegationEditor({ userId }: { userId: string }) {
   const toggle = (key: string, value: string, checked: boolean) =>
     setTarget((u: any) => ({
       ...u,
-      [key]: checked
-        ? [...u[key], value]
-        : u[key].filter((v: string) => v !== value),
+      [key]: checked ? [...u[key], value] : u[key].filter((v: string) => v !== value),
     }));
   return (
     <section className="panel">
       <h2>Individual permissions and delegated administration</h2>
       <p>
-        Only Admin can change these assignments. They apply within this
-        account's workspace access and do not grant Admin status. Managers
-        already manage ordinary accounts wholly within their departments.
+        Only Admin can change these assignments. They apply within this account's workspace access and do not
+        grant Admin status. Managers already manage ordinary accounts wholly within their departments.
       </p>
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
@@ -48,9 +45,7 @@ export default function DelegationEditor({ userId }: { userId: string }) {
               adminPrivileges: target.adminPrivileges,
             });
             await load();
-            setNotice(
-              "Delegation saved. Existing sessions for this person were revoked.",
-            );
+            setNotice("Delegation saved. Existing sessions for this person were revoked.");
           } catch (e) {
             setError((e as Error).message);
           } finally {
@@ -96,18 +91,13 @@ export default function DelegationEditor({ userId }: { userId: string }) {
               type="checkbox"
               checked={
                 target.adminPrivileges.includes(key) ||
-                (target.role === "Manager" &&
-                  managerAccountPrivileges.includes(key as any))
+                (target.role === "Manager" && managerAccountPrivileges.includes(key as any))
               }
-              disabled={
-                target.role === "Manager" &&
-                managerAccountPrivileges.includes(key as any)
-              }
+              disabled={target.role === "Manager" && managerAccountPrivileges.includes(key as any)}
               onChange={(e) => toggle("adminPrivileges", key, e.target.checked)}
             />
             {String(label)}{" "}
-            {target.role === "Manager" &&
-            managerAccountPrivileges.includes(key as any)
+            {target.role === "Manager" && managerAccountPrivileges.includes(key as any)
               ? "· Manager default"
               : ""}
           </label>

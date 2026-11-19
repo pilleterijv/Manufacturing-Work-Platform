@@ -14,15 +14,7 @@ export default function ShiftSchedules() {
     [shifts, setShifts] = useState<string[]>([]),
     [cadence, setCadence] = useState("crew"),
     [crews, setCrews] = useState<string[]>([]),
-    [weekdays, setWeekdays] = useState<string[]>([
-      "1",
-      "2",
-      "3",
-      "4",
-      "5",
-      "6",
-      "7",
-    ]);
+    [weekdays, setWeekdays] = useState<string[]>(["1", "2", "3", "4", "5", "6", "7"]);
   async function load() {
     try {
       setData(await api("/api/shift-schedules"));
@@ -32,7 +24,7 @@ export default function ShiftSchedules() {
   }
   useSectionRefresh(
     () => load(),
-    (e) => setError(e.message),
+    (e) => setError(e.message)
   );
   useEffect(() => {
     void load();
@@ -45,7 +37,7 @@ export default function ShiftSchedules() {
       await api("/api/shift-schedules", body);
       await load();
       setNotice(
-        "Schedule saved. Channel switches apply to future alerts; disabling email also cancels queued messages.",
+        "Schedule saved. Channel switches apply to future alerts; disabling email also cancels queued messages."
       );
       return true;
     } catch (e) {
@@ -59,7 +51,7 @@ export default function ShiftSchedules() {
     label: string,
     items: { id: string; name: string }[],
     selected: string[],
-    set: (v: string[]) => void,
+    set: (v: string[]) => void
   ) => (
     <fieldset className="participant-fieldset field">
       <legend>{label}</legend>
@@ -71,11 +63,7 @@ export default function ShiftSchedules() {
               aria-label={`${label}: ${p.name}`}
               checked={selected.includes(p.id)}
               onChange={(e) =>
-                set(
-                  e.target.checked
-                    ? [...selected, p.id]
-                    : selected.filter((id) => id !== p.id),
-                )
+                set(e.target.checked ? [...selected, p.id] : selected.filter((id) => id !== p.id))
               }
             />
             {p.name}
@@ -90,9 +78,8 @@ export default function ShiftSchedules() {
         <span className="eyebrow">SHIFT ACCOUNTABILITY</span>
         <h2>Know what was missed before the next shift.</h2>
         <p>
-          Define which standard work is due each shift and who receives the
-          exception. Required photo evidence must be present before the app
-          accepts a completed verification.
+          Define which standard work is due each shift and who receives the exception. Required photo evidence
+          must be present before the app accepts a completed verification.
         </p>
       </section>
       {error && (
@@ -109,9 +96,7 @@ export default function ShiftSchedules() {
         <p>Loading schedules…</p>
       ) : (
         <>
-          {data.canConfigureCrews && (
-            <CrewRotationEditor config={data.config} save={save} busy={busy} />
-          )}
+          {data.canConfigureCrews && <CrewRotationEditor config={data.config} save={save} busy={busy} />}
           <details className="panel">
             <summary>Notification service status</summary>
             {data.email.failed > 0 && (
@@ -138,18 +123,16 @@ export default function ShiftSchedules() {
               . {data.email.pending} queued; {data.email.failed} failed.
             </p>
             <p className="small muted">
-              The app’s server must stay running. The standard launcher starts
-              the background worker; custom hosting must run the worker too.
-              Email delivery is retried, with a maximum of ten attempts.
+              The app’s server must stay running. The standard launcher starts the background worker; custom
+              hosting must run the worker too. Email delivery is retried, with a maximum of ten attempts.
             </p>
           </details>
           <section className="panel">
             <h2>Create shift requirement</h2>
             <p>
-              1. Choose the checklist. 2. Choose the working crew. 3. Choose the
-              people responsible and who receives missed-work alerts. Each
-              selected person must complete it during that crew’s working shift;
-              off days are excluded.
+              1. Choose the checklist. 2. Choose the working crew. 3. Choose the people responsible and who
+              receives missed-work alerts. Each selected person must complete it during that crew’s working
+              shift; off days are excluded.
             </p>
             <form
               onSubmit={async (e) => {
@@ -164,10 +147,7 @@ export default function ShiftSchedules() {
                     assigneeIds: assignees,
                     shiftNames: cadence === "crew" ? [] : shifts,
                     crewNames: cadence === "crew" ? crews : [],
-                    weekdays:
-                      cadence === "crew"
-                        ? [1, 2, 3, 4, 5, 6, 7]
-                        : weekdays.map(Number),
+                    weekdays: cadence === "crew" ? [1, 2, 3, 4, 5, 6, 7] : weekdays.map(Number),
                     notifyInApp: f.get("inApp") === "on",
                     notifyEmail: f.get("email") === "on",
                   })
@@ -202,20 +182,16 @@ export default function ShiftSchedules() {
                   value={cadence}
                   onChange={(e) => setCadence(e.target.value)}
                 >
-                  <option value="crew">
-                    Rotating crew — follows on/off roster
-                  </option>
-                  <option value="weekly">
-                    Fixed weekly schedule — advanced / legacy
-                  </option>
+                  <option value="crew">Rotating crew — follows on/off roster</option>
+                  <option value="weekly">Fixed weekly schedule — advanced / legacy</option>
                 </select>
               </Field>
               {cadence === "crew" && (
                 <>
                   {!data.config.crews?.length ? (
                     <p role="status">
-                      Ask Admin to configure crews 4–7 and their start dates
-                      above before adding rotating requirements.
+                      Ask Admin to configure crews 4–7 and their start dates above before adding rotating
+                      requirements.
                     </p>
                   ) : (
                     <Field label="Working crew">
@@ -223,9 +199,7 @@ export default function ShiftSchedules() {
                         required
                         aria-label="Working crew"
                         value={crews[0] || ""}
-                        onChange={(e) =>
-                          setCrews(e.target.value ? [e.target.value] : [])
-                        }
+                        onChange={(e) => setCrews(e.target.value ? [e.target.value] : [])}
                       >
                         <option value="">Choose crew</option>
                         {data.config.crews.map((c: any) => (
@@ -247,46 +221,31 @@ export default function ShiftSchedules() {
                       name: s.name,
                     })),
                     shifts,
-                    setShifts,
+                    setShifts
                   )}
                   {picker(
                     "Weekdays",
-                    [
-                      "Monday",
-                      "Tuesday",
-                      "Wednesday",
-                      "Thursday",
-                      "Friday",
-                      "Saturday",
-                      "Sunday",
-                    ].map((name, i) => ({ id: String(i + 1), name })),
+                    ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(
+                      (name, i) => ({ id: String(i + 1), name })
+                    ),
                     weekdays,
-                    setWeekdays,
+                    setWeekdays
                   )}
                 </>
               )}
               {picker(
                 "Notify managers",
-                data.people.filter((p: any) =>
-                  ["Admin", "Manager", "DL/TL"].includes(p.role),
-                ),
+                data.people.filter((p: any) => ["Admin", "Manager", "DL/TL"].includes(p.role)),
                 managers,
-                setManagers,
+                setManagers
               )}
-              {picker(
-                "People responsible (optional)",
-                data.people,
-                assignees,
-                setAssignees,
-              )}
+              {picker("People responsible (optional)", data.people, assignees, setAssignees)}
               <p className="small muted">
-                Create one requirement per crew so each crew has its own
-                responsible people. No assigned people means one completion for
-                the machine per selected shift. When operators are selected,
-                each must complete the standard once. Monitoring begins with the
-                first full shift after activation. Shift boundaries and timezone
-                are saved with the schedule; create a new schedule if the shift
-                definition changes.
+                Create one requirement per crew so each crew has its own responsible people. No assigned
+                people means one completion for the machine per selected shift. When operators are selected,
+                each must complete the standard once. Monitoring begins with the first full shift after
+                activation. Shift boundaries and timezone are saved with the schedule; create a new schedule
+                if the shift definition changes.
               </p>
               <div className="button-row">
                 <label className="check">
@@ -299,13 +258,9 @@ export default function ShiftSchedules() {
                 </label>
               </div>
               <p className="small muted">
-                Email recipients need an address in Accounts. Both channels can
-                be switched off independently.
+                Email recipients need an address in Accounts. Both channels can be switched off independently.
               </p>
-              <button
-                className="primary"
-                disabled={busy || (cadence === "crew" && !crews.length)}
-              >
+              <button className="primary" disabled={busy || (cadence === "crew" && !crews.length)}>
                 Create shift requirement
               </button>
             </form>
@@ -317,8 +272,7 @@ export default function ShiftSchedules() {
                 <h3>{s.title}</h3>
                 {!s.crewNames?.length && (
                   <p className="small muted">
-                    Fixed weekday requirement — review/pause this if replacing
-                    it with the rotating roster.
+                    Fixed weekday requirement — review/pause this if replacing it with the rotating roster.
                   </p>
                 )}
                 <p className="small">
@@ -326,18 +280,13 @@ export default function ShiftSchedules() {
                   {s.assigneeIds.length
                     ? s.assigneeIds
                         .map(
-                          (id: string) =>
-                            data.people.find((p: any) => p.id === id)?.name ||
-                            "Inactive person",
+                          (id: string) => data.people.find((p: any) => p.id === id)?.name || "Inactive person"
                         )
                         .join(", ")
                     : "One shared completion per machine"}
                 </p>
                 <p className="small">
-                  {(s.crewNames?.length ? s.crewNames : s.shiftNames).join(
-                    ", ",
-                  )}{" "}
-                  · {s.config.timezone} ·{" "}
+                  {(s.crewNames?.length ? s.crewNames : s.shiftNames).join(", ")} · {s.config.timezone} ·{" "}
                   {s.assigneeIds.length
                     ? `${s.assigneeIds.length} assigned people`
                     : "One completion per machine"}
@@ -346,9 +295,7 @@ export default function ShiftSchedules() {
                   Recipients:{" "}
                   {s.managerIds
                     .map(
-                      (id: string) =>
-                        data.people.find((p: any) => p.id === id)?.name ??
-                        "Inactive recipient",
+                      (id: string) => data.people.find((p: any) => p.id === id)?.name ?? "Inactive recipient"
                     )
                     .join(", ")}
                 </p>
@@ -404,9 +351,7 @@ export default function ShiftSchedules() {
                 </div>
               </article>
             ))}
-            {!data.schedules.length && (
-              <p className="empty">No shift requirements yet.</p>
-            )}
+            {!data.schedules.length && <p className="empty">No shift requirements yet.</p>}
             <button className="outline" onClick={() => void load()}>
               Refresh notification status
             </button>

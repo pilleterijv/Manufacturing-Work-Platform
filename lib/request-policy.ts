@@ -10,9 +10,7 @@ export function configuredOrigin(value: string | undefined) {
     url.pathname !== "/" ||
     !(url.protocol === "https:" || (url.protocol === "http:" && local))
   )
-    throw Error(
-      "APP_ORIGIN must be an HTTPS origin (HTTP is allowed only on loopback)",
-    );
+    throw Error("APP_ORIGIN must be an HTTPS origin (HTTP is allowed only on loopback)");
   return url;
 }
 type TunnelEnvironment = {
@@ -31,11 +29,7 @@ function codespacesPreview(origin: URL, tunnel: TunnelEnvironment) {
   );
 }
 const tunnelHosts = ["localhost:3000", "127.0.0.1:3000", "[::1]:3000"];
-export function requestOriginAllowed(
-  headers: Headers,
-  origin: URL,
-  tunnel: TunnelEnvironment = {},
-) {
+export function requestOriginAllowed(headers: Headers, origin: URL, tunnel: TunnelEnvironment = {}) {
   const received = headers.get("origin");
   if (received === origin.origin) return true;
   // GitHub may rewrite Origin as well as Host. A browser-supplied custom header
@@ -56,38 +50,24 @@ export function requestAllowed(
   headers: Headers,
   pathname: string,
   origin: URL,
-  tunnel: TunnelEnvironment = {},
+  tunnel: TunnelEnvironment = {}
 ) {
   const host = headers.get("host")?.toLowerCase();
   let hostAllowed = host === origin.host.toLowerCase();
   // Codespaces terminates HTTPS and may forward to the loopback HTTP listener.
   // Enable this only for this running Codespace's exact HTTPS preview address.
-  if (
-    !hostAllowed &&
-    codespacesPreview(origin, tunnel) &&
-    tunnelHosts.includes(host || "")
-  ) {
+  if (!hostAllowed && codespacesPreview(origin, tunnel) && tunnelHosts.includes(host || "")) {
     const forwarded = headers.get("x-forwarded-host");
     // Next.js fills X-Forwarded-Host from Host when the tunnel omits it.
-    hostAllowed =
-      !forwarded ||
-      forwarded.toLowerCase() === origin.host ||
-      forwarded.toLowerCase() === host;
+    hostAllowed = !forwarded || forwarded.toLowerCase() === origin.host || forwarded.toLowerCase() === host;
   }
   if (!hostAllowed) return false;
-  if (
-    pathname.startsWith("/api/") &&
-    headers.get("sec-fetch-site") === "cross-site"
-  )
-    return false;
+  if (pathname.startsWith("/api/") && headers.get("sec-fetch-site") === "cross-site") return false;
   return true;
 }
 
 // Diagnostics contain addresses only, never request bodies, cookies or URL credentials.
-export function originCheckDiagnostic(
-  req: Request,
-  configured: string | undefined,
-) {
+export function originCheckDiagnostic(req: Request, configured: string | undefined) {
   const address = (value: string | null | undefined) => {
     if (!value) return "<missing>";
     try {
@@ -101,9 +81,7 @@ export function originCheckDiagnostic(
     expectedOrigin: address(configured),
     receivedOrigin: address(req.headers.get("origin")),
     requestOrigin: address(req.url),
-    fetchSite: ["same-origin", "same-site", "cross-site", "none"].includes(
-      site || "",
-    )
+    fetchSite: ["same-origin", "same-site", "cross-site", "none"].includes(site || "")
       ? site
       : "<missing or invalid>",
   };

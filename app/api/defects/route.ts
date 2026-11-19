@@ -1,29 +1,14 @@
+import { queueAssignments } from "@/lib/assignment-notifications";
 import { z } from "zod";
 import { focusedEquipmentIds } from "@/lib/equipment-label";
 import { workflowFocus } from "@/lib/workflow-focus";
 import { withSubmission } from "@/lib/submission";
 import { db } from "@/lib/db";
-import {
-  requireUser,
-  grants,
-  jsonBody,
-  failure,
-  HttpError,
-} from "@/lib/security";
-import {
-  equipmentIds,
-  assertEquipmentAccess,
-  eligiblePeople,
-  visiblePeople,
-} from "@/lib/location-access";
+import { requireUser, grants, jsonBody, failure, HttpError } from "@/lib/security";
+import { equipmentIds, assertEquipmentAccess, eligiblePeople, visiblePeople } from "@/lib/location-access";
 import { ownEvidence } from "@/lib/evidence";
 import { defectSchema } from "@/lib/floor-rules";
-import {
-  maintainxReady,
-  maintainxMapping,
-  maintainxMappingSchema,
-  submitMaintainx,
-} from "@/lib/maintainx";
+import { maintainxReady, maintainxMapping, maintainxMappingSchema, submitMaintainx } from "@/lib/maintainx";
 import { readFilters } from "@/lib/filters";
 import { paged, streamWorkbook } from "@/lib/excel-stream";
 export async function GET(req: Request) {
@@ -39,9 +24,7 @@ export async function GET(req: Request) {
         equipmentId: { in: ids },
         AND: [
           await workflowFocus(req.url, "defects", u.id),
-          ...(person
-            ? [{ OR: [{ reportedBy: person }, { assigneeId: person }] }]
-            : []),
+          ...(person ? [{ OR: [{ reportedBy: person }, { assigneeId: person }] }] : []),
           ...(search
             ? [
                 {
@@ -60,7 +43,7 @@ export async function GET(req: Request) {
                             [e.name, e.plant, e.department, e.area]
                               .join(" ")
                               .toLowerCase()
-                              .includes(search.toLowerCase()),
+                              .includes(search.toLowerCase())
                           )
                           .map((e) => e.id),
                       },
@@ -106,7 +89,7 @@ export async function GET(req: Request) {
               orderBy: { id: "asc" },
               take: 100,
               ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-            }),
+            })
           ))
             await s.addRow([
               d.id,
@@ -123,7 +106,7 @@ export async function GET(req: Request) {
               JSON.stringify(d.media),
             ]);
         },
-        req.signal,
+        req.signal
       );
     }
     const p = new URL(req.url).searchParams,
@@ -146,11 +129,7 @@ export async function GET(req: Request) {
       people: await visiblePeople(u, ids),
       canManage: (await grants(u)).includes("manage"),
       maintainxConfigured: maintainxReady(),
-      assets: Object.fromEntries(
-        Object.entries(await maintainxMapping()).filter(([id]) =>
-          ids.includes(id),
-        ),
-      ),
+      assets: Object.fromEntries(Object.entries(await maintainxMapping()).filter(([id]) => ids.includes(id))),
     });
   } catch (e) {
     return failure(e);
@@ -163,8 +142,7 @@ export async function POST(req: Request) {
       actorGrants = await grants(u),
       entry = { at: new Date().toISOString(), by: u.id, name: u.name };
     if (b.action === "mapping") {
-      if (u.role !== "Admin")
-        throw new HttpError(403, "Only Admin can configure MaintainX mappings");
+      if (u.role !== "Admin") throw new HttpError(403, "Only Admin can configure MaintainX mappings");
       const assets = maintainxMappingSchema.parse(b.assets);
       if (
         (await db.equipment.count({
@@ -202,15 +180,8 @@ export async function POST(req: Request) {
         if (!d) throw new HttpError(404, "Defect not found");
         await assertEquipmentAccess(u, d.equipmentId, tx);
         const g = actorGrants;
-        if (!(
-          g.includes("manage") ||
-          d.reportedBy === u.id ||
-          d.assigneeId === u.id
-        ))
-          throw new HttpError(
-            403,
-            "Only the reporter, assignee or manager can update this defect",
-          );
+        if (!(g.includes("manage") || d.reportedBy === u.id || d.assigneeId === u.id))
+          throw new HttpError(403, "Only the reporter, assignee or manager can update this defect");
         if (b.action === "update") {
           const v = z
             .object({
@@ -220,12 +191,10 @@ export async function POST(req: Request) {
               comment: z.string().max(2000),
             })
             .parse(b);
-          if (v.version !== d.version)
-            throw new HttpError(409, "Defect changed; reload");
+          if (v.version !== d.version) throw new HttpError(409, "Defect changed; reload");
           if (v.assigneeId !== d.assigneeId && !g.includes("manage"))
             throw new HttpError(403, "Only managers can change assignments");
-          if (v.assigneeId)
-            await eligiblePeople(d.equipmentId, [v.assigneeId], tx);
+          if (v.assigneeId) await eligiblePeople(d.equipmentId, [v.assigneeId], tx);
           await tx.defect.update({
             where: { id },
             data: {
@@ -235,47 +204,34 @@ export async function POST(req: Request) {
               history: [...(d.history as any[]), { ...entry, ...v }],
             },
           });
+          if (v.status === "Open" && v.assigneeId)
+            await queueAssignments(tx, {
+              type: "defect",
+              id,
+              equipmentId: d.equipmentId,
+              assignees: [v.assigneeId],
+              previous: d.assigneeId ? [d.assigneeId] : [],
+              revision: d.version + 1,
+            });
         } else if (b.action === "reconcile") {
-          if (u.role !== "Admin")
-            throw new HttpError(
-              403,
-              "Only Admin can reconcile MaintainX submissions",
-            );
+          if (u.role !== "Admin") throw new HttpError(403, "Only Admin can reconcile MaintainX submissions");
           if (!["Review required", "Sending"].includes(d.maintainxStatus))
-            throw new HttpError(
-              409,
-              "This submission does not need reconciliation",
-            );
-          if (
-            d.maintainxStatus === "Sending" &&
-            d.submissionAt &&
-            Date.now() - +d.submissionAt < 120000
-          )
+            throw new HttpError(409, "This submission does not need reconciliation");
+          if (d.maintainxStatus === "Sending" && d.submissionAt && Date.now() - +d.submissionAt < 120000)
             throw new HttpError(409, "Submission is still running");
-          const workOrderId = z
-            .string()
-            .regex(/^\d+$/)
-            .nullable()
-            .parse(b.workOrderId);
+          const workOrderId = z.string().regex(/^\d+$/).nullable().parse(b.workOrderId);
           if (!workOrderId && b.confirmedAbsent !== true)
-            throw new HttpError(
-              400,
-              "Confirm that no matching work order exists before allowing a retry",
-            );
+            throw new HttpError(400, "Confirm that no matching work order exists before allowing a retry");
           await tx.defect.update({
             where: { id },
             data: {
               maintainxStatus: workOrderId ? "Submitted" : "Not submitted",
               maintainxId: workOrderId,
               submissionError: null,
-              history: [
-                ...(d.history as any[]),
-                { ...entry, event: "MaintainX reconciled", workOrderId },
-              ],
+              history: [...(d.history as any[]), { ...entry, event: "MaintainX reconciled", workOrderId }],
             },
           });
-        } else if (b.action !== "submit")
-          throw new HttpError(400, "Unknown defect action");
+        } else if (b.action !== "submit") throw new HttpError(400, "Unknown defect action");
       });
       if (b.action === "submit") {
         try {
@@ -284,7 +240,7 @@ export async function POST(req: Request) {
           if (e instanceof HttpError) throw e;
           throw new HttpError(
             409,
-            "Work order submission could not be confirmed. Check the machine mapping and MaintainX before retrying.",
+            "Work order submission could not be confirmed. Check the machine mapping and MaintainX before retrying."
           );
         }
       }

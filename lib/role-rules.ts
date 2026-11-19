@@ -12,23 +12,13 @@ export const roleNameSchema = z
   .trim()
   .min(2)
   .max(60)
-  .regex(
-    /^[A-Za-z][A-Za-z0-9 /_-]*$/,
-    "Use a clear role name with letters, spaces, numbers, /, - or _",
-  );
+  .regex(/^[A-Za-z][A-Za-z0-9 /_-]*$/, "Use a clear role name with letters, spaces, numbers, /, - or _");
 export const roleSchema = z
   .object({
     name: roleNameSchema,
     baseRole: z.enum(["Operator", "DL/TL", "Manager"]),
     homeProfile: z
-      .enum([
-        "auto",
-        "operator",
-        "leader",
-        "supervisor",
-        "maintenance",
-        "manager",
-      ])
+      .enum(["auto", "operator", "leader", "supervisor", "maintenance", "manager"])
       .default("auto"),
     description: z.string().trim().max(500),
     grants: z.array(z.enum(capabilities)).max(capabilities.length),
@@ -38,7 +28,7 @@ export const roleSchema = z
   })
   .refine(
     (v) => !v.grants.some((g) => g === "users" || g === "permissions"),
-    "Global account/role administration stays with Admin",
+    "Global account/role administration stays with Admin"
   );
 export type RolePolicy = {
   role: string;
@@ -53,46 +43,28 @@ export type RoleAccount = {
   extraGrants?: unknown;
   adminPrivileges?: unknown;
 };
-export function roleAuthority(
-  user: RoleAccount,
-  policy: RolePolicy | undefined,
-) {
+export function roleAuthority(user: RoleAccount, policy: RolePolicy | undefined) {
   if (user.role === "Admin" && !user.customRole)
     return {
       grants: effectiveGrants("Admin", [], []),
       privileges: effectivePrivileges("Admin", []),
     };
-  if (
-    !policy ||
-    policy.active === false ||
-    (user.customRole && policy.baseRole !== user.role)
-  )
+  if (!policy || policy.active === false || (user.customRole && policy.baseRole !== user.role))
     return { grants: [], privileges: [] };
   const privileges = effectivePrivileges(
     user.role,
-    [
-      ...validPrivileges(policy.adminPrivileges),
-      ...validPrivileges(user.adminPrivileges),
-    ],
-    !user.customRole,
+    [...validPrivileges(policy.adminPrivileges), ...validPrivileges(user.adminPrivileges)],
+    !user.customRole
   );
   return {
-    grants: effectiveGrants(
-      user.role,
-      policy.grants,
-      user.extraGrants,
-      privileges,
-    ),
+    grants: effectiveGrants(user.role, policy.grants, user.extraGrants, privileges),
     privileges,
   };
 }
 export function builtinRole(name: string) {
   return (roles as readonly string[]).includes(name);
 }
-export const capabilityLabels: Record<
-  (typeof capabilities)[number],
-  { label: string; detail: string }
-> = {
+export const capabilityLabels: Record<(typeof capabilities)[number], { label: string; detail: string }> = {
   history: {
     label: "Area submission history — read only",
     detail:
@@ -117,8 +89,7 @@ export const capabilityLabels: Record<
   },
   manage: {
     label: "Broad scoped content editing",
-    detail:
-      "Edit equipment, standards and other managed content. Prefer specific editing privileges below",
+    detail: "Edit equipment, standards and other managed content. Prefer specific editing privileges below",
   },
   training: {
     label: "Training content",

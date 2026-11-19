@@ -1,3 +1,4 @@
+import { smtpReady } from "@/lib/email-delivery";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { db } from "@/lib/db";
@@ -6,8 +7,7 @@ import { createIntegrationToken } from "@/lib/integrations";
 import { companySqlConfigured } from "@/lib/company-sql";
 async function admin() {
   const u = await requireUser();
-  if (u.role !== "Admin")
-    throw new HttpError(403, "Only Admin can manage integrations");
+  if (u.role !== "Admin") throw new HttpError(403, "Only Admin can manage integrations");
   return u;
 }
 export async function GET() {
@@ -35,6 +35,16 @@ export async function GET() {
       db.setting.findUnique({ where: { key: "company-sql-health" } }),
     ]);
     return Response.json({
+      assignmentEmail: {
+        configured: smtpReady(),
+        pending: await db.assignmentDelivery.count({
+          where: { status: "Pending" },
+        }),
+        failed: await db.assignmentDelivery.count({
+          where: { status: "Failed" },
+        }),
+        sent: await db.assignmentDelivery.count({ where: { status: "Sent" } }),
+      },
       sources,
       bindings,
       equipment,
@@ -53,6 +63,19 @@ export async function POST(req: Request) {
   try {
     const u = await admin(),
       b = await jsonBody(req);
+    if (b.action === "retryAssignmentEmails") {
+      await db.assignmentDelivery.updateMany({
+        where: { status: "Failed" },
+        data: {
+          status: "Pending",
+          attempts: 0,
+          claimedUntil: null,
+          nextAttemptAt: new Date(),
+          lastError: null,
+        },
+      });
+      return Response.json({ ok: true });
+    }
     if (b.action === "createSource") {
       const name = z.string().trim().min(1).max(100).parse(b.name),
         id = randomUUID(),
@@ -102,7 +125,7 @@ export async function POST(req: Request) {
     if ((e as { code?: string })?.code === "P2002")
       return Response.json(
         { error: "This machine or external machine ID is already mapped" },
-        { status: 409 },
+        { status: 409 }
       );
     return failure(e);
   }

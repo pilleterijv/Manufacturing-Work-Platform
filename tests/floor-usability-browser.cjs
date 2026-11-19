@@ -1,8 +1,4 @@
-const {
-  expandTools,
-  assignmentPanels,
-  planningTools,
-} = require("./ui-workspace.cjs");
+const { expandTools, assignmentPanels, planningTools } = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const { db } = require("../lib/db.ts"),
@@ -31,7 +27,7 @@ async function main() {
           area: "Packing",
           line: "",
         },
-      }),
+      })
     );
   for (const role of ["Admin", "Manager", "DL/TL", "Operator"])
     users.push(
@@ -48,7 +44,7 @@ async function main() {
             equipmentIds: [equipment[0].id],
           },
         },
-      }),
+      })
     );
   browser = await chromium.launch({
     executablePath: process.env.CHROMIUM_PATH || "/usr/bin/chromium",
@@ -57,7 +53,7 @@ async function main() {
   async function req(c, path, body, status = 200) {
     const r = await c.request[body ? "post" : "get"](
       origin + path,
-      body ? { headers: { Origin: origin }, data: body } : {},
+      body ? { headers: { Origin: origin }, data: body } : {}
     );
     assert.equal(r.status(), status, await r.text());
     return r.json();
@@ -93,20 +89,9 @@ async function main() {
   ]);
   assert.equal(a.id, b.id);
   defects.push(a.id);
-  assert.equal(
-    await db.defect.count({ where: { equipmentId: equipment[0].id } }),
-    1,
-  );
-  await req(
-    operator,
-    "/api/defects",
-    { ...report, title: "Changed after saving" },
-    409,
-  );
-  const related = await req(
-    operator,
-    "/api/related-open?equipment=" + equipment[0].id,
-  );
+  assert.equal(await db.defect.count({ where: { equipmentId: equipment[0].id } }), 1);
+  await req(operator, "/api/defects", { ...report, title: "Changed after saving" }, 409);
+  const related = await req(operator, "/api/related-open?equipment=" + equipment[0].id);
   assert(related.defects.some((d) => d.id === a.id));
   const problem = {
     action: "create",
@@ -130,18 +115,8 @@ async function main() {
   ]);
   assert.equal(p1.id, p2.id);
   assert.equal(p1.reference, p2.reference);
-  await req(
-    operator,
-    "/api/problems",
-    { ...problem, title: "Different condition" },
-    409,
-  );
-  await req(
-    operator,
-    "/api/related-open?equipment=" + equipment[1].id,
-    null,
-    403,
-  );
+  await req(operator, "/api/problems", { ...problem, title: "Different condition" }, 409);
+  await req(operator, "/api/related-open?equipment=" + equipment[1].id, null, 403);
   await db.defect.create({
     data: {
       equipmentId: equipment[0].id,
@@ -158,15 +133,12 @@ async function main() {
   const focused = await req(operator, "/api/defects?focus=personal-open");
   assert(focused.defects.every((d) => d.status === "Open"));
   assert(focused.defects.some((d) => d.id === a.id));
-  const forbidden = await req(
-    operator,
-    "/api/defects?equipment=" + equipment[1].id,
-  );
+  const forbidden = await req(operator, "/api/defects?equipment=" + equipment[1].id);
   assert.equal(forbidden.defects.length, 0);
   const selected = await req(operator, "/api/defects?item=" + a.id);
   assert.deepEqual(
     selected.defects.map((d) => d.id),
-    [a.id],
+    [a.id]
   );
   for (const status of ["Open", "Completed"])
     await db.idea.create({
@@ -184,10 +156,7 @@ async function main() {
         validatorId: users[1].id,
       },
     });
-  const ideas = await req(
-    operator,
-    "/api/operations?view=ideas&focus=personal-open",
-  );
+  const ideas = await req(operator, "/api/operations?view=ideas&focus=personal-open");
   assert(ideas.ideas.every((i) => i.status !== "Completed"));
   assert(ideas.ideas.some((i) => i.title === "Floor idea Open" + suffix));
   for (const kind of ["pm", "cil"])
@@ -206,13 +175,8 @@ async function main() {
     });
   const personal = await req(operator, "/api/personal-dashboard");
   assert.deepEqual(personal.maintenanceCounts, { pm: 1, cil: 1 });
-  const pm = await req(
-    operator,
-    "/api/maintenance?kind=pm&focus=personal-open",
-  );
-  assert(
-    pm.plans.every((p) => p.kind === "pm" && p.assigneeId === users[3].id),
-  );
+  const pm = await req(operator, "/api/maintenance?kind=pm&focus=personal-open");
+  assert(pm.plans.every((p) => p.kind === "pm" && p.assigneeId === users[3].id));
   const dept = new URLSearchParams({
     focus: "department-open",
     plant: equipment[1].plant,
@@ -226,139 +190,79 @@ async function main() {
   await page.goto(origin);
   await expandTools(page);
   await page.getByRole("heading", { name: "My shift", exact: true }).waitFor();
-  await page
-    .locator("nav")
-    .getByRole("button", { name: "Defect reporting", exact: false })
-    .click();
-  await page
-    .getByRole("heading", { name: "Report a machine defect" })
-    .waitFor();
-  await page
-    .getByLabel("Defect machine", { exact: true })
-    .selectOption(equipment[0].id);
+  await page.locator("nav").getByRole("button", { name: "Defect reporting", exact: false }).click();
+  await page.getByRole("heading", { name: "Report a machine defect" }).waitFor();
+  await page.getByLabel("Defect machine", { exact: true }).selectOption(equipment[0].id);
   await page.getByRole("region", { name: "Existing machine issues" }).count();
-  await page
-    .getByRole("button", { name: "Defect: " + report.title, exact: true })
-    .waitFor();
+  await page.getByRole("button", { name: "Defect: " + report.title, exact: true }).waitFor();
   await page.getByLabel("Defect title", { exact: true }).fill("Unsaved test");
   let prompts = 0;
   page.once("dialog", async (d) => {
     prompts++;
     await d.dismiss();
   });
-  await page
-    .locator("nav")
-    .getByRole("button", { name: "Troubleshooting", exact: false })
-    .click();
+  await page.locator("nav").getByRole("button", { name: "Troubleshooting", exact: false }).click();
   assert.equal(prompts, 1);
-  assert.equal(
-    await page.getByLabel("Defect title", { exact: true }).inputValue(),
-    "Unsaved test",
-  );
+  assert.equal(await page.getByLabel("Defect title", { exact: true }).inputValue(), "Unsaved test");
   page.once("dialog", (d) => d.accept());
-  await page
-    .locator("nav")
-    .getByRole("button", { name: "Overview", exact: false })
-    .click();
+  await page.locator("nav").getByRole("button", { name: "Overview", exact: false }).click();
   await page.getByRole("heading", { name: "My shift", exact: true }).waitFor();
   await assignmentPanels(page);
-  await page
-    .getByRole("button", { name: "View Open defects assignments", exact: true })
-    .click();
+  await page.getByRole("button", { name: "View Open defects assignments", exact: true }).click();
   await page.getByLabel("Active dashboard filter").waitFor();
   assert(
     await page
       .getByLabel("Active dashboard filter")
       .innerText()
-      .then((s) => s.includes("your open assignments")),
+      .then((s) => s.includes("your open assignments"))
   );
   await page.getByRole("button", { name: "Clear dashboard filter" }).click();
-  await page
-    .getByLabel("Machine context", { exact: true })
-    .selectOption(equipment[0].id);
+  await page.getByLabel("Machine context", { exact: true }).selectOption(equipment[0].id);
   await page.getByText("Scan or enter machine label", { exact: true }).click();
   await page.getByLabel("Machine label or ID").fill(equipment[1].id);
   await page.getByRole("button", { name: "Find machine", exact: true }).click();
-  await page
-    .getByText("Machine not found in your assigned locations.", { exact: true })
-    .waitFor();
+  await page.getByText("Machine not found in your assigned locations.", { exact: true }).waitFor();
   await fs.mkdir("docs/screenshots/floor-usability", { recursive: true });
-  await page
-    .getByLabel("Defect machine", { exact: true })
-    .selectOption(equipment[0].id);
-  await page
-    .getByLabel("Defect title", { exact: true })
-    .fill("Retry UI " + suffix);
-  await page
-    .getByLabel("Defect description", { exact: true })
-    .fill("Synthetic retry protection check");
+  await page.getByLabel("Defect machine", { exact: true }).selectOption(equipment[0].id);
+  await page.getByLabel("Defect title", { exact: true }).fill("Retry UI " + suffix);
+  await page.getByLabel("Defect description", { exact: true }).fill("Synthetic retry protection check");
   await page.route("**/api/defects", (route) =>
-    route.request().method() === "POST" ? route.abort() : route.continue(),
+    route.request().method() === "POST" ? route.abort() : route.continue()
   );
+  await page.getByRole("button", { name: "Report defect", exact: true }).click();
   await page
-    .getByRole("button", { name: "Report defect", exact: true })
-    .click();
-  await page
-    .getByText(
-      "Save not confirmed. Your entries remain here; check the error before retrying.",
-      { exact: true },
-    )
+    .getByText("Save not confirmed. Your entries remain here; check the error before retrying.", {
+      exact: true,
+    })
     .waitFor();
-  assert.equal(
-    await page.getByLabel("Defect title", { exact: true }).inputValue(),
-    "Retry UI " + suffix,
-  );
+  assert.equal(await page.getByLabel("Defect title", { exact: true }).inputValue(), "Retry UI " + suffix);
   await page.unroute("**/api/defects");
   await page.route("**/api/defects", (route) =>
-    route.request().method() === "GET" ? route.abort() : route.continue(),
+    route.request().method() === "GET" ? route.abort() : route.continue()
   );
+  await page.getByRole("button", { name: "Report defect", exact: true }).click();
   await page
-    .getByRole("button", { name: "Report defect", exact: true })
-    .click();
-  await page
-    .getByText(
-      "Defect saved. Refresh the register before making another entry.",
-      { exact: true },
-    )
+    .getByText("Defect saved. Refresh the register before making another entry.", { exact: true })
     .waitFor();
-  assert.equal(
-    await page.getByLabel("Defect title", { exact: true }).inputValue(),
-    "",
-  );
-  assert.equal(
-    await db.defect.count({ where: { title: "Retry UI " + suffix } }),
-    1,
-  );
+  assert.equal(await page.getByLabel("Defect title", { exact: true }).inputValue(), "");
+  assert.equal(await db.defect.count({ where: { title: "Retry UI " + suffix } }), 1);
   await page.unroute("**/api/defects");
   await page.screenshot({
     path: "docs/screenshots/floor-usability/tablet-context-and-defects.png",
     fullPage: true,
   });
-  await page
-    .locator("nav")
-    .getByRole("button", { name: "Problem solving", exact: false })
-    .click();
-  await page
-    .getByRole("button", { name: "New 2D record", exact: true })
-    .click();
-  await page
-    .getByLabel("Problem title", { exact: true })
-    .fill("Keep this investigation draft");
+  await page.locator("nav").getByRole("button", { name: "Problem solving", exact: false }).click();
+  await page.getByRole("button", { name: "New 2D record", exact: true }).click();
+  await page.getByLabel("Problem title", { exact: true }).fill("Keep this investigation draft");
   page.once("dialog", (d) => d.dismiss());
   await page.getByLabel("Method filter", { exact: true }).selectOption("4D");
   assert.equal(
     await page.getByLabel("Problem title", { exact: true }).inputValue(),
-    "Keep this investigation draft",
+    "Keep this investigation draft"
   );
-  assert.equal(
-    await page.getByLabel("Method filter", { exact: true }).inputValue(),
-    "",
-  );
+  assert.equal(await page.getByLabel("Method filter", { exact: true }).inputValue(), "");
   page.once("dialog", (d) => d.accept());
-  await page
-    .locator("nav")
-    .getByRole("button", { name: "Overview", exact: false })
-    .click();
+  await page.locator("nav").getByRole("button", { name: "Overview", exact: false }).click();
   await page.getByRole("heading", { name: "My shift", exact: true }).waitFor();
   await page.screenshot({
     path: "docs/screenshots/floor-usability/operator-home.png",
@@ -382,7 +286,7 @@ async function main() {
   }
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: role homes, guarded unsaved work, exact open/selected filters, machine context, scoped duplicate suggestions, concurrent report retry protection and tablet layout.",
+    "PASS: role homes, guarded unsaved work, exact open/selected filters, machine context, scoped duplicate suggestions, concurrent report retry protection and tablet layout."
   );
 }
 main()
@@ -410,6 +314,8 @@ main()
     await db.maintenancePlan.deleteMany({
       where: { equipmentId: { in: equipment.map((e) => e.id) } },
     });
+    await db.notification.deleteMany({ where: { userId: { in: ids }, kind: "assignment" } });
+    await db.assignmentDelivery.deleteMany({ where: { userId: { in: ids } } });
     await db.user.deleteMany({ where: { id: { in: ids } } });
     await db.equipment.deleteMany({
       where: { id: { in: equipment.map((e) => e.id) } },

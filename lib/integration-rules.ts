@@ -18,7 +18,6 @@ export function sqlViewName(value: string) {
 }
 export function sqlSequence(value: unknown) {
   const s = String(value);
-  if (!/^\d{1,19}$/.test(s) || BigInt(s) > 9223372036854775807n)
-    throw Error("Invalid SQL event sequence");
+  if (!/^\d{1,19}$/.test(s) || BigInt(s) > 9223372036854775807n) throw Error("Invalid SQL event sequence");
   return s;
 }

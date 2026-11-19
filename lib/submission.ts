@@ -10,7 +10,7 @@ function canonical(value: any): any {
       ? Object.fromEntries(
           Object.keys(value)
             .sort()
-            .map((k) => [k, canonical(value[k])]),
+            .map((k) => [k, canonical(value[k])])
         )
       : value;
 }
@@ -18,7 +18,7 @@ export async function withSubmission<T extends { id: string }>(
   userId: string,
   kind: string,
   body: any,
-  work: (tx: Prisma.TransactionClient) => Promise<T>,
+  work: (tx: Prisma.TransactionClient) => Promise<T>
 ): Promise<T> {
   const key = z.string().uuid().optional().parse(body.requestKey);
   // Existing integration clients may omit a key; the floor forms always supply one.
@@ -35,7 +35,7 @@ export async function withSubmission<T extends { id: string }>(
       if (old.digest !== digest)
         throw new HttpError(
           409,
-          "This submission was already saved with different entries. Refresh the saved record before continuing.",
+          "This submission was already saved with different entries. Refresh the saved record before continuing."
         );
       return old.result as T;
     }

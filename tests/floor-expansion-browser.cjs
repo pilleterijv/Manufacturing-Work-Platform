@@ -1,8 +1,4 @@
-const {
-  expandTools,
-  assignmentPanels,
-  planningTools,
-} = require("./ui-workspace.cjs");
+const { expandTools, assignmentPanels, planningTools } = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const assert = require("node:assert/strict"),
@@ -23,8 +19,7 @@ const origin = process.env.APP_URL || "http://localhost:3000",
   areas = [],
   contexts = [];
 let browser, mappingBefore, createdRegistrationUser;
-const post = (c, path, data) =>
-  c.request.post(origin + path, { headers: { Origin: origin }, data });
+const post = (c, path, data) => c.request.post(origin + path, { headers: { Origin: origin }, data });
 const get = (c, path) => c.request.get(origin + path);
 async function read(r, status = 200) {
   const text = await r.text();
@@ -32,23 +27,15 @@ async function read(r, status = 200) {
   return JSON.parse(text);
 }
 async function main() {
-  assert(
-    !process.env.SMTP_HOST,
-    "Use a local test environment without external SMTP",
-  );
+  assert(!process.env.SMTP_HOST, "Use a local test environment without external SMTP");
   assert(["localhost", "127.0.0.1"].includes(new URL(origin).hostname));
-  assert(
-    ["localhost", "127.0.0.1"].includes(
-      new URL(process.env.DATABASE_URL).hostname,
-    ),
-  );
+  assert(["localhost", "127.0.0.1"].includes(new URL(process.env.DATABASE_URL).hostname));
   mappingBefore = await db.setting.findUnique({
     where: { key: "maintainx-assets" },
   });
   const password = "Pilot " + randomUUID() + "!",
     hash = await hashPassword(password),
-    zone = (await db.setting.findUniqueOrThrow({ where: { key: "shifts" } }))
-      .value.timezone,
+    zone = (await db.setting.findUniqueOrThrow({ where: { key: "shifts" } })).value.timezone,
     today = localToday(zone);
   for (const [role, department, name] of [
     ["Admin", "A", "Admin"],
@@ -72,13 +59,13 @@ async function main() {
             equipmentIds: [],
           },
         },
-      }),
+      })
     );
   for (const department of ["A", "B"]) {
     areas.push(
       await db.location.create({
         data: { plant: prefix, department, area: "Packing", line: "1" },
-      }),
+      })
     );
     equipment.push(
       await db.equipment.create({
@@ -89,7 +76,7 @@ async function main() {
           area: "Packing",
           line: "1",
         },
-      }),
+      })
     );
   }
   browser = await chromium.launch({
@@ -110,13 +97,11 @@ async function main() {
         username: u.username,
         password,
         remember: false,
-      }),
+      })
     );
     return c;
   }
-  const [admin, manager, leader, operator, beta] = await Promise.all(
-      users.map(login),
-    ),
+  const [admin, manager, leader, operator, beta] = await Promise.all(users.map(login)),
     anon = await browser.newContext({ serviceWorkers: "block" });
   contexts.push(anon);
   await read(await get(anon, "/api/five-s"), 401);
@@ -140,24 +125,20 @@ async function main() {
       ...planBody,
       locationId: areas[1].id,
     }),
-    403,
+    403
   );
   await read(
     await post(manager, "/api/five-s", {
       ...planBody,
       questions: questions.map((q) => ({ ...q, pillar: "Sort" })),
     }),
-    400,
+    400
   );
   await read(await post(manager, "/api/five-s", planBody));
   let five = await read(await get(leader, "/api/five-s")),
     plan = five.plans.find((p) => p.title === planBody.title);
   assert(plan);
-  assert(
-    !(await read(await get(beta, "/api/five-s"))).plans.some(
-      (p) => p.id === plan.id,
-    ),
-  );
+  assert(!(await read(await get(beta, "/api/five-s"))).plans.some((p) => p.id === plan.id));
   const responses = questions.map((q) => ({
     questionId: q.id,
     score: 4,
@@ -171,7 +152,7 @@ async function main() {
       version: plan.version,
       responses,
     }),
-    403,
+    403
   );
   await read(
     await post(leader, "/api/five-s", {
@@ -180,7 +161,7 @@ async function main() {
       version: plan.version,
       responses: responses.slice(1),
     }),
-    400,
+    400
   );
   const photo = (
     await read(
@@ -199,7 +180,7 @@ async function main() {
               .png()
               .toBuffer()
           ).toString("base64"),
-      }),
+      })
     )
   ).id;
   plan = await db.fiveSPlan.update({
@@ -215,7 +196,7 @@ async function main() {
       version: plan.version,
       responses,
     }),
-    400,
+    400
   );
   responses[0].media = [{ id: photo, kind: "photo", caption: "Test area" }];
   const auditId = (
@@ -225,7 +206,7 @@ async function main() {
         id: plan.id,
         version: plan.version,
         responses,
-      }),
+      })
     )
   ).id;
   const audit = await db.fiveSAudit.findUniqueOrThrow({
@@ -252,7 +233,7 @@ async function main() {
           fiveSPlanId: plan.id,
         },
       ],
-    }),
+    })
   );
   const standard = await db.standard.findFirstOrThrow({
       where: { title: prefix + " DL 5S" },
@@ -262,16 +243,14 @@ async function main() {
       standardId: standard.id,
       started: new Date().toISOString(),
       operator: "",
-      responses: [
-        { stepId: "5s", answer: true, photo: null, comment: "Verified" },
-      ],
+      responses: [{ stepId: "5s", answer: true, photo: null, comment: "Verified" }],
     };
   await read(await post(leader, "/api/platform", run), 400);
   await read(
     await post(leader, "/api/platform", {
       ...run,
       responses: [{ ...run.responses[0], fiveSAuditId: auditId }],
-    }),
+    })
   );
   const savedAudit = await db.fiveSAudit.findUniqueOrThrow({
     where: { id: auditId },
@@ -282,12 +261,11 @@ async function main() {
       id: plan.id,
       version: plan.version,
       title: planBody.title + " revised",
-    }),
+    })
   );
   assert.deepEqual(
-    (await db.fiveSAudit.findUniqueOrThrow({ where: { id: auditId } }))
-      .snapshot,
-    savedAudit.snapshot,
+    (await db.fiveSAudit.findUniqueOrThrow({ where: { id: auditId } })).snapshot,
+    savedAudit.snapshot
   );
   const cil = {
     action: "save",
@@ -301,15 +279,11 @@ async function main() {
     steps: [{ id: "clean", text: "Clean and inspect guards", photo: false }],
   };
   await read(await post(manager, "/api/maintenance", cil));
-  const cilPlan = (
-    await read(await get(operator, "/api/maintenance?kind=cil"))
-  ).plans.find((p) => p.title === cil.title);
-  assert(cilPlan);
-  assert(
-    !(await read(await get(operator, "/api/maintenance"))).plans.some(
-      (p) => p.id === cilPlan.id,
-    ),
+  const cilPlan = (await read(await get(operator, "/api/maintenance?kind=cil"))).plans.find(
+    (p) => p.title === cil.title
   );
+  assert(cilPlan);
+  assert(!(await read(await get(operator, "/api/maintenance"))).plans.some((p) => p.id === cilPlan.id));
   await read(
     await post(operator, "/api/maintenance", {
       action: "complete",
@@ -323,17 +297,15 @@ async function main() {
           media: [],
         },
       ],
-    }),
+    })
   );
   assert(
     (await read(await get(operator, "/api/maintenance?kind=cil"))).records.some(
-      (r) => r.data.planId === cilPlan.id,
-    ),
+      (r) => r.data.planId === cilPlan.id
+    )
   );
   assert(
-    !(await read(await get(operator, "/api/maintenance"))).records.some(
-      (r) => r.data.planId === cilPlan.id,
-    ),
+    !(await read(await get(operator, "/api/maintenance"))).records.some((r) => r.data.planId === cilPlan.id)
   );
   const defectBody = {
     action: "report",
@@ -344,9 +316,7 @@ async function main() {
     media: [],
   };
   await read(await post(beta, "/api/defects", defectBody), 403);
-  const defectId = (
-    await read(await post(operator, "/api/defects", defectBody))
-  ).id;
+  const defectId = (await read(await post(operator, "/api/defects", defectBody))).id;
   await read(
     await post(beta, "/api/defects", {
       action: "update",
@@ -356,7 +326,7 @@ async function main() {
       assigneeId: null,
       comment: "",
     }),
-    403,
+    403
   );
   await read(
     await post(manager, "/api/defects", {
@@ -366,7 +336,7 @@ async function main() {
       status: "Open",
       assigneeId: users[2].id,
       comment: "Assigned for inspection",
-    }),
+    })
   );
   await read(
     await post(manager, "/api/defects", {
@@ -377,20 +347,20 @@ async function main() {
       assigneeId: users[2].id,
       comment: "",
     }),
-    409,
+    409
   );
   await read(
     await post(operator, "/api/defects", {
       action: "mapping",
       assets: { [equipment[0].id]: 101 },
     }),
-    403,
+    403
   );
   await read(
     await post(admin, "/api/defects", {
       action: "mapping",
       assets: { ...(mappingBefore?.value ?? {}), [equipment[0].id]: 101 },
-    }),
+    })
   );
   // Injectable transport: no request reaches MaintainX, and no real key is used.
   const previousKey = process.env.MAINTAINX_API_KEY;
@@ -400,10 +370,7 @@ async function main() {
     const stub = async (url, options) => {
       sends++;
       assert.equal(url, "https://api.getmaintainx.com/v1/workorders");
-      assert.equal(
-        JSON.parse(options.body).externalData.floorworkDefectId,
-        defectId,
-      );
+      assert.equal(JSON.parse(options.body).externalData.floorworkDefectId, defectId);
       return new Response(JSON.stringify({ workOrder: { id: 1234 } }), {
         status: 200,
       });
@@ -419,18 +386,17 @@ async function main() {
         await post(operator, "/api/defects", {
           ...defectBody,
           title: prefix + " uncertain",
-        }),
+        })
       )
     ).id;
     await assert.rejects(() =>
       submitMaintainx(uncertain, users[3], async () => {
         throw Error("timeout");
-      }),
+      })
     );
     assert.equal(
-      (await db.defect.findUniqueOrThrow({ where: { id: uncertain } }))
-        .maintainxStatus,
-      "Review required",
+      (await db.defect.findUniqueOrThrow({ where: { id: uncertain } })).maintainxStatus,
+      "Review required"
     );
     await assert.rejects(() => submitMaintainx(uncertain, users[3], stub));
     assert.equal(sends, 1);
@@ -441,14 +407,14 @@ async function main() {
         workOrderId: null,
         confirmedAbsent: false,
       }),
-      400,
+      400
     );
     await read(
       await post(admin, "/api/defects", {
         action: "reconcile",
         id: uncertain,
         workOrderId: "4321",
-      }),
+      })
     );
   } finally {
     if (previousKey === undefined) delete process.env.MAINTAINX_API_KEY;
@@ -515,37 +481,28 @@ async function main() {
   assert(!dash.ideas.some((i) => i.id === otherIdea.id));
   assert(dash.problems.some((p) => p.id === problem.id));
   assert(dash.defects.some((d) => d.id === defectId));
-  assert(
-    !(await read(await get(beta, "/api/personal-dashboard"))).ideas.some(
-      (i) => i.id === idea.id,
-    ),
-  );
+  assert(!(await read(await get(beta, "/api/personal-dashboard"))).ideas.some((i) => i.id === idea.id));
   await read(
     await post(manager, "/api/personal-dashboard", {
       department: { plant: prefix, department: "B" },
     }),
-    403,
+    403
   );
   await read(
     await post(admin, "/api/personal-dashboard", {
       userId: users[1].id,
       department: { plant: prefix, department: "A" },
-    }),
+    })
   );
-  const dept = await read(
-    await get(manager, "/api/personal-dashboard?scope=department"),
-  );
+  const dept = await read(await get(manager, "/api/personal-dashboard?scope=department"));
   assert(dept.ideas.some((i) => i.id === otherIdea.id));
   assert(!dept.equipment.some((e) => e.id === equipment[1].id));
   assert(
-    (
-      await read(await get(manager, "/api/people?search=Leader%20Alpha"))
-    ).people.some((p) => p.id === users[2].id),
+    (await read(await get(manager, "/api/people?search=Leader%20Alpha"))).people.some(
+      (p) => p.id === users[2].id
+    )
   );
-  assert(
-    !(await read(await get(manager, "/api/people?search=Operator%20Beta")))
-      .people.length,
-  );
+  assert(!(await read(await get(manager, "/api/people?search=Operator%20Beta"))).people.length);
   const requestName = prefix.toLowerCase() + "-new";
   await read(
     await post(anon, "/api/access-requests", {
@@ -555,7 +512,7 @@ async function main() {
       email: requestName + "@example.invalid",
       department: "A",
       reason: "Pilot access",
-    }),
+    })
   );
   const request = await db.registrationRequest.findFirstOrThrow({
     where: { username: requestName },
@@ -565,7 +522,7 @@ async function main() {
     await post(admin, "/api/access-requests", {
       id: request.id,
       decision: "Approved",
-    }),
+    })
   );
   createdRegistrationUser = approval.userId;
   const newUser = await db.user.findUniqueOrThrow({
@@ -582,14 +539,14 @@ async function main() {
       id: request.id,
       decision: "Approved",
     }),
-    409,
+    409
   );
   const generic = (
     await read(
       await post(anon, "/api/access-requests", {
         action: "forgot",
         identity: prefix + "-missing",
-      }),
+      })
     )
   ).message;
   assert.equal(
@@ -598,10 +555,10 @@ async function main() {
         await post(anon, "/api/access-requests", {
           action: "forgot",
           identity: requestName,
-        }),
+        })
       )
     ).message,
-    generic,
+    generic
   );
   // Capture reset mail locally, assert single-use and disabled-account invalidation.
   const envBefore = {
@@ -618,14 +575,12 @@ async function main() {
           mail = v;
         },
         close: () => {},
-      }),
+      })
     );
     assert.equal(mail.to, newUser.email);
     const token = mail.text.match(/#reset=([a-f0-9]{64})/)[1];
     assert(
-      !JSON.stringify(
-        await db.passwordReset.findMany({ where: { userId: newUser.id } }),
-      ).includes(token),
+      !JSON.stringify(await db.passwordReset.findMany({ where: { userId: newUser.id } })).includes(token)
     );
     const newPassword = "New " + randomUUID() + "!";
     await read(
@@ -633,7 +588,7 @@ async function main() {
         action: "reset",
         token,
         password: newPassword,
-      }),
+      })
     );
     await read(
       await post(anon, "/api/access-requests", {
@@ -641,7 +596,7 @@ async function main() {
         token,
         password: newPassword,
       }),
-      400,
+      400
     );
     await read(
       await post(anon, "/api/account", {
@@ -649,7 +604,7 @@ async function main() {
         username: newUser.username,
         password: newPassword,
         remember: false,
-      }),
+      })
     );
     assert(
       await sendRecovery(newUser.id, {
@@ -657,7 +612,7 @@ async function main() {
           mail = v;
         },
         close: () => {},
-      }),
+      })
     );
     const disabledToken = mail.text.match(/#reset=([a-f0-9]{64})/)[1];
     await read(
@@ -669,7 +624,7 @@ async function main() {
         email: newUser.email,
         role: "Operator",
         active: false,
-      }),
+      })
     );
     assert.equal((await read(await get(anon, "/api/account"))).user, null);
     await read(
@@ -678,7 +633,7 @@ async function main() {
         token: disabledToken,
         password: newPassword,
       }),
-      400,
+      400
     );
   } finally {
     for (const [k, v] of Object.entries(envBefore)) {
@@ -687,42 +642,29 @@ async function main() {
     }
   }
   // Actual desktop/tablet UI, directory search and screenshots.
-  const shots =
-    process.env.FLOORWORK_SCREENSHOTS_DIR || "docs/screenshots/five-s-tpm";
+  const shots = process.env.FLOORWORK_SCREENSHOTS_DIR || "docs/screenshots/five-s-tpm";
   await fs.mkdir(shots, { recursive: true });
   const page = await manager.newPage();
   await page.goto(origin);
   await expandTools(page);
   await assignmentPanels(page);
-  await page
-    .getByRole("heading", { name: "My assignments", exact: true })
-    .waitFor();
+  await page.getByRole("heading", { name: "My assignments", exact: true }).waitFor();
   await page.getByText(otherIdea.title, { exact: true }).waitFor();
   if (process.env.FLOORWORK_SCREENSHOTS_DIR)
     await page.screenshot({
       path: shots + "/desktop-workspace.png",
       fullPage: true,
     });
-  await page
-    .locator(".personal-dashboard")
-    .screenshot({ path: shots + "/personal-dashboard.png" });
-  await page
-    .getByRole("button", { name: "Department dashboard", exact: true })
-    .click();
-  await page
-    .getByRole("heading", { name: "My department at a glance", exact: true })
-    .waitFor();
+  await page.locator(".personal-dashboard").screenshot({ path: shots + "/personal-dashboard.png" });
+  await page.getByRole("button", { name: "Department dashboard", exact: true }).click();
+  await page.getByRole("heading", { name: "My department at a glance", exact: true }).waitFor();
   await page
     .locator(".personal-dashboard")
     .getByRole("button", { name: defectBody.title, exact: true })
     .waitFor();
-  await page
-    .locator(".personal-dashboard")
-    .screenshot({ path: shots + "/department-dashboard.png" });
+  await page.locator(".personal-dashboard").screenshot({ path: shots + "/department-dashboard.png" });
   await page.locator("nav").getByRole("button", { name: "5S audits" }).click();
-  await page
-    .getByRole("heading", { name: "5S area audits", exact: true })
-    .waitFor();
+  await page.getByRole("heading", { name: "5S area audits", exact: true }).waitFor();
   await page.getByText(planBody.title + " revised", { exact: true }).waitFor();
   await page.screenshot({ path: shots + "/five-s-audits.png", fullPage: true });
   await page.locator("nav").getByRole("button", { name: "TPM / CIL" }).click();
@@ -737,24 +679,14 @@ async function main() {
     .first()
     .waitFor();
   await page.screenshot({ path: shots + "/cil-checks.png", fullPage: true });
-  await page
-    .locator("nav")
-    .getByRole("button", { name: "Defect reporting" })
-    .click();
-  await page
-    .getByRole("heading", { name: "Defect register", exact: true })
-    .waitFor();
-  await page
-    .getByText("MaintainX: Submitted · Work order 1234", { exact: true })
-    .waitFor();
+  await page.locator("nav").getByRole("button", { name: "Defect reporting" }).click();
+  await page.getByRole("heading", { name: "Defect register", exact: true }).waitFor();
+  await page.getByText("MaintainX: Submitted · Work order 1234", { exact: true }).waitFor();
   await page.screenshot({
     path: shots + "/defect-register.png",
     fullPage: true,
   });
-  await page
-    .locator("nav")
-    .getByRole("button", { name: "Improvement ideas" })
-    .click();
+  await page.locator("nav").getByRole("button", { name: "Improvement ideas" }).click();
   const searches = page.getByRole("textbox", {
     name: "Search employee directory",
     exact: true,
@@ -762,12 +694,7 @@ async function main() {
   await searches.first().waitFor();
   await searches.first().fill("Leader Alpha");
   assert(
-    await searches
-      .first()
-      .locator("..")
-      .locator("select option")
-      .filter({ hasText: "Leader Alpha" })
-      .count(),
+    await searches.first().locator("..").locator("select option").filter({ hasText: "Leader Alpha" }).count()
   );
   assert.equal(
     await searches
@@ -776,7 +703,7 @@ async function main() {
       .locator("select option")
       .filter({ hasText: "Operator Alpha" })
       .count(),
-    0,
+    0
   );
   const publicPage = await (
     await browser.newContext({
@@ -787,26 +714,20 @@ async function main() {
   contexts.push(publicPage.context());
   await publicPage.goto(origin);
   if (process.env.FLOORWORK_SCREENSHOTS_DIR) {
-    await publicPage
-      .getByRole("heading", { name: "Welcome back", exact: true })
-      .waitFor();
+    await publicPage.getByRole("heading", { name: "Welcome back", exact: true }).waitFor();
     await publicPage.screenshot({
       path: shots + "/tablet-login.png",
       fullPage: true,
     });
   }
-  await publicPage
-    .getByRole("button", { name: "Request an account", exact: true })
-    .click();
-  await publicPage
-    .getByRole("heading", { name: "Request company access", exact: true })
-    .waitFor();
+  await publicPage.getByRole("button", { name: "Request an account", exact: true }).click();
+  await publicPage.getByRole("heading", { name: "Request company access", exact: true }).waitFor();
   await publicPage.screenshot({
     path: shots + "/registration-request.png",
     fullPage: true,
   });
   console.log(
-    "PASS: area-scoped 5S, required media and immutable history, DL/TL 5S gate, separate CIL recurrence/history, defects and scoped assignments, MaintainX duplicate/uncertain handling with fake transport, personal/department dashboards, searchable accounts, registration approval, single-use reset emails and disabled-account protection; desktop/tablet UI.",
+    "PASS: area-scoped 5S, required media and immutable history, DL/TL 5S gate, separate CIL recurrence/history, defects and scoped assignments, MaintainX duplicate/uncertain handling with fake transport, personal/department dashboards, searchable accounts, registration approval, single-use reset emails and disabled-account protection; desktop/tablet UI."
   );
 }
 main()
@@ -817,17 +738,11 @@ main()
   .finally(async () => {
     for (const c of contexts) await c.close().catch(() => {});
     await browser?.close();
-    const ids = [
-        ...users.map((u) => u.id),
-        ...(createdRegistrationUser ? [createdRegistrationUser] : []),
-      ],
+    const ids = [...users.map((u) => u.id), ...(createdRegistrationUser ? [createdRegistrationUser] : [])],
       eqids = equipment.map((e) => e.id);
     await db.notification.deleteMany({
       where: {
-        OR: [
-          { userId: { in: ids } },
-          { kind: "registration", message: { contains: prefix } },
-        ],
+        OR: [{ userId: { in: ids } }, { kind: "registration", message: { contains: prefix } }],
       },
     });
     await db.reminder.deleteMany({ where: { equipmentId: { in: eqids } } });
@@ -857,6 +772,8 @@ main()
       where: { username: { startsWith: prefix.toLowerCase() } },
     });
     await db.session.deleteMany({ where: { userId: { in: ids } } });
+    await db.notification.deleteMany({ where: { userId: { in: ids }, kind: "assignment" } });
+    await db.assignmentDelivery.deleteMany({ where: { userId: { in: ids } } });
     await db.user.deleteMany({ where: { id: { in: ids } } });
     await db.equipment.deleteMany({ where: { id: { in: eqids } } });
     await db.location.deleteMany({

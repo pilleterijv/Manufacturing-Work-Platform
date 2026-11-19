@@ -40,12 +40,7 @@ export const externalRowSchema = z
     values: z
       .record(
         z.string().max(100),
-        z.union([
-          z.string().max(2000),
-          z.number().finite(),
-          z.boolean(),
-          z.null(),
-        ]),
+        z.union([z.string().max(2000), z.number().finite(), z.boolean(), z.null()])
       )
       .refine((v) => Object.keys(v).length <= 30, "Maximum 30 fields")
       .default({}),
@@ -57,19 +52,13 @@ export const feedIdentifier = (view: string) => {
   return view;
 };
 export function validateWorkbookZip(bytes: Buffer) {
-  if (bytes.length > 8 * 1024 * 1024)
-    throw Error("Workbook must be under 8 MB");
+  if (bytes.length > 8 * 1024 * 1024) throw Error("Workbook must be under 8 MB");
   const end = bytes.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
   if (end < 0 || end < bytes.length - 65557 || end + 22 > bytes.length)
     throw Error("Choose a valid XLSX workbook");
   const count = bytes.readUInt16LE(end + 10),
     offset = bytes.readUInt32LE(end + 16);
-  if (
-    bytes.readUInt16LE(end + 4) ||
-    bytes.readUInt16LE(end + 6) ||
-    count > 2000 ||
-    count === 65535
-  )
+  if (bytes.readUInt16LE(end + 4) || bytes.readUInt16LE(end + 6) || count > 2000 || count === 65535)
     throw Error("Unsupported workbook archive");
   let at = offset,
     total = 0,
@@ -81,11 +70,9 @@ export function validateWorkbookZip(bytes: Buffer) {
       n = bytes.readUInt16LE(at + 28),
       extra = bytes.readUInt16LE(at + 30),
       comment = bytes.readUInt16LE(at + 32);
-    if (at + 46 + n + extra + comment > end)
-      throw Error("Invalid workbook directory");
+    if (at + 46 + n + extra + comment > end) throw Error("Invalid workbook directory");
     total += size;
-    if (size === 0xffffffff || total > 32 * 1024 * 1024)
-      throw Error("Workbook expands beyond 32 MB");
+    if (size === 0xffffffff || total > 32 * 1024 * 1024) throw Error("Workbook expands beyond 32 MB");
     const name = bytes.toString("utf8", at + 46, at + 46 + n);
     if (/vbaProject|externalLinks|\.bin$/i.test(name))
       throw Error("Macros and external links are not accepted");
@@ -108,11 +95,7 @@ export function validateWorkbookZip(bytes: Buffer) {
       bytes.toString("utf8", local + 30, local + 30 + localName) !== name
     )
       throw Error("Invalid workbook entry");
-    if (
-      name.split("/").includes("..") ||
-      name.includes("\\") ||
-      name.includes("\0")
-    )
+    if (name.split("/").includes("..") || name.includes("\\") || name.includes("\0"))
       throw Error("Invalid workbook path");
     const packed = bytes.subarray(start, start + compressedSize);
     let expanded: Buffer;

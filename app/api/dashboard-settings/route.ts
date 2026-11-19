@@ -1,16 +1,7 @@
 import { db } from "@/lib/db";
-import {
-  requireUser,
-  grants,
-  jsonBody,
-  failure,
-  HttpError,
-} from "@/lib/security";
+import { requireUser, grants, jsonBody, failure, HttpError } from "@/lib/security";
 import { adminPrivileges } from "@/lib/capabilities";
-import {
-  dashboardPreferences,
-  dashboardPreferencesSchema,
-} from "@/lib/dashboard-preferences";
+import { dashboardPreferences, dashboardPreferencesSchema } from "@/lib/dashboard-preferences";
 import { allowedSections } from "@/lib/navigation";
 export async function GET() {
   try {
@@ -40,14 +31,8 @@ export async function POST(req: Request) {
       });
     if (!sections.includes(preferences.home))
       throw new HttpError(403, "Choose a section you have permission to open");
-    if (
-      preferences.defaultScope === "department" &&
-      !["Admin", "Manager", "DL/TL"].includes(u.role)
-    )
-      throw new HttpError(
-        403,
-        "Department dashboards are for managers and DL/TLs",
-      );
+    if (preferences.defaultScope === "department" && !["Admin", "Manager", "DL/TL"].includes(u.role))
+      throw new HttpError(403, "Department dashboards are for managers and DL/TLs");
     await db.user.update({
       where: { id: u.id },
       data: { dashboardPreferences: preferences },

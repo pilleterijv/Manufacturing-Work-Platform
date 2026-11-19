@@ -24,8 +24,7 @@ export const sectionSearch: Record<string, SectionSearch> = {
     kind: "Operator standard",
     help: "Search available standards and completed work. Machine choices stay within your access.",
     personLabel: "Standard assignee / recorder",
-    personHelp:
-      "Filters standards by assignment and completed runs by recorder.",
+    personHelp: "Filters standards by assignment and completed runs by recorder.",
     equipment: true,
   },
   "Time studies": {
@@ -43,8 +42,7 @@ export const sectionSearch: Record<string, SectionSearch> = {
     kind: "Leader checklist",
     help: "Search DL/TL leader checklists and their completion history.",
     personLabel: "Leader assignee / recorder",
-    personHelp:
-      "Filters assigned leader checklists and the person who recorded a completion.",
+    personHelp: "Filters assigned leader checklists and the person who recorded a completion.",
     equipment: true,
   },
   "Standard work audits": {
@@ -80,8 +78,7 @@ export const sectionSearch: Record<string, SectionSearch> = {
     kind: "Centerline setup",
     help: "Search machine centerline settings and the original setup saved with each audit.",
     personLabel: "Centerline auditor",
-    personHelp:
-      "Filters audit history by recorder. Centerline settings have no assigned owner.",
+    personHelp: "Filters audit history by recorder. Centerline settings have no assigned owner.",
     equipment: true,
   },
   "5S audits": {
@@ -90,8 +87,7 @@ export const sectionSearch: Record<string, SectionSearch> = {
     kind: "5S area plan",
     help: "Search area audit plans and the original titles/locations in audit history.",
     personLabel: "5S assignee / auditor",
-    personHelp:
-      "Plans match their assigned auditor; history matches the person who performed the audit.",
+    personHelp: "Plans match their assigned auditor; history matches the person who performed the audit.",
     areas: true,
   },
   "Defect reporting": {
@@ -100,8 +96,7 @@ export const sectionSearch: Record<string, SectionSearch> = {
     kind: "Defect report",
     help: "Search defects and MaintainX work-order identifiers, within your machine access.",
     personLabel: "Defect reporter / assignee",
-    personHelp:
-      "Matches either the person who reported the defect or its assignee.",
+    personHelp: "Matches either the person who reported the defect or its assignee.",
     equipment: true,
   },
   "Production results": {
@@ -110,8 +105,7 @@ export const sectionSearch: Record<string, SectionSearch> = {
     kind: "Production record",
     help: "Search imported production record identifiers, titles, descriptions and locations.",
     personLabel: "Production record person",
-    personHelp:
-      "Matches the person mapped by the source system, rather than the person who uploaded Excel.",
+    personHelp: "Matches the person mapped by the source system, rather than the person who uploaded Excel.",
     equipment: true,
   },
   Training: {
@@ -120,8 +114,7 @@ export const sectionSearch: Record<string, SectionSearch> = {
     kind: "Training video",
     help: "Find training videos for a permitted machine or shared training resources.",
     personLabel: "Training author",
-    personHelp:
-      "Shows resources created by this account, not training attendance.",
+    personHelp: "Shows resources created by this account, not training attendance.",
     equipment: true,
   },
   Troubleshooting: {
@@ -157,8 +150,7 @@ export const sectionSearch: Record<string, SectionSearch> = {
     kind: "Improvement idea",
     help: "Search idea titles, current situations, proposals and machine locations.",
     personLabel: "Idea pilot / validator / participant",
-    personHelp:
-      "Matches the pilot, validator, submitter, creator or an assigned participant.",
+    personHelp: "Matches the pilot, validator, submitter, creator or an assigned participant.",
     equipment: true,
   },
   "Problem solving": {
@@ -177,8 +169,7 @@ export const sectionSearch: Record<string, SectionSearch> = {
     kind: "Standard revision",
     help: "Filters the revision selector and equipment list. Creation forms retain all permitted machine choices.",
     personLabel: "Assigned user",
-    personHelp:
-      "Narrows equipment to the person's assignments and standards to their checklist assignments.",
+    personHelp: "Narrows equipment to the person's assignments and standards to their checklist assignments.",
     equipment: true,
   },
   "Leadership dashboard": {
@@ -187,8 +178,7 @@ export const sectionSearch: Record<string, SectionSearch> = {
     kind: "Report location",
     help: "Filters recorded work, ideas, problems and downtime. Current equipment/library totals still describe the selected department.",
     personLabel: "Report recorder / owner",
-    personHelp:
-      "Matches the recorder or relevant owner/participant for each operational metric.",
+    personHelp: "Matches the recorder or relevant owner/participant for each operational metric.",
     equipment: true,
   },
 };

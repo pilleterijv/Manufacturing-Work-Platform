@@ -7,13 +7,7 @@ import EvidenceInput, { EvidenceView } from "../evidence-input";
 import { Field } from "../shared";
 import PersonSelect from "../person-select";
 import { confirmDraftChange } from "../floor-safety";
-export default function FiveS({
-  userId,
-  admin,
-}: {
-  userId: string;
-  admin: boolean;
-}) {
+export default function FiveS({ userId, admin }: { userId: string; admin: boolean }) {
   const [showRetired, setShowRetired] = useState(false);
   const [data, setData] = useState<any>(null),
     [draft, setDraft] = useState<any>(null),
@@ -32,7 +26,7 @@ export default function FiveS({
   };
   useSectionRefresh(
     () => load(),
-    (e) => setError(e.message),
+    (e) => setError(e.message)
   );
   useEffect(() => {
     load().catch((e) => setError(e.message));
@@ -58,17 +52,15 @@ export default function FiveS({
   }
   const area = (id: string) => {
     const l = data?.areas.find((l: any) => l.id === id);
-    return l
-      ? [l.plant, l.department, l.area, l.line].filter(Boolean).join(" / ")
-      : id;
+    return l ? [l.plant, l.department, l.area, l.line].filter(Boolean).join(" / ") : id;
   };
   return (
     <>
       <section className="panel">
         <h2>5S area audits</h2>
         <p>
-          Score each item from 0 (not in place) to 5 (fully sustained). Scores
-          and evidence retain the audit’s original questions.
+          Score each item from 0 (not in place) to 5 (fully sustained). Scores and evidence retain the audit’s
+          original questions.
         </p>
         {data?.canManage && (
           <button
@@ -129,9 +121,7 @@ export default function FiveS({
                 required
                 disabled={!!draft.id}
                 value={draft.locationId}
-                onChange={(e) =>
-                  setDraft({ ...draft, locationId: e.target.value })
-                }
+                onChange={(e) => setDraft({ ...draft, locationId: e.target.value })}
               >
                 <option value="">Choose department / area</option>
                 {data.areas.map((l: any) => (
@@ -149,10 +139,7 @@ export default function FiveS({
                 onChange={(e) =>
                   setDraft({
                     ...draft,
-                    assigneeIds: Array.from(
-                      e.target.selectedOptions,
-                      (o) => o.value,
-                    ),
+                    assigneeIds: Array.from(e.target.selectedOptions, (o) => o.value),
                   })
                 }
               />
@@ -161,9 +148,7 @@ export default function FiveS({
               <input
                 type="checkbox"
                 checked={draft.active}
-                onChange={(e) =>
-                  setDraft({ ...draft, active: e.target.checked })
-                }
+                onChange={(e) => setDraft({ ...draft, active: e.target.checked })}
               />
               Plan active
             </label>
@@ -176,7 +161,7 @@ export default function FiveS({
                       setDraft({
                         ...draft,
                         questions: draft.questions.map((x: any, j: number) =>
-                          i === j ? { ...x, pillar: e.target.value } : x,
+                          i === j ? { ...x, pillar: e.target.value } : x
                         ),
                       })
                     }
@@ -195,7 +180,7 @@ export default function FiveS({
                       setDraft({
                         ...draft,
                         questions: draft.questions.map((x: any, j: number) =>
-                          i === j ? { ...x, text: e.target.value } : x,
+                          i === j ? { ...x, text: e.target.value } : x
                         ),
                       })
                     }
@@ -209,7 +194,7 @@ export default function FiveS({
                       setDraft({
                         ...draft,
                         questions: draft.questions.map((x: any, j: number) =>
-                          i === j ? { ...x, photo: e.target.checked } : x,
+                          i === j ? { ...x, photo: e.target.checked } : x
                         ),
                       })
                     }
@@ -223,9 +208,7 @@ export default function FiveS({
                   onClick={() =>
                     setDraft({
                       ...draft,
-                      questions: draft.questions.filter(
-                        (_: any, j: number) => i !== j,
-                      ),
+                      questions: draft.questions.filter((_: any, j: number) => i !== j),
                     })
                   }
                 >
@@ -258,11 +241,7 @@ export default function FiveS({
               <button className="primary" disabled={busy}>
                 Save 5S plan
               </button>
-              <button
-                className="outline"
-                type="button"
-                onClick={() => setDraft(null)}
-              >
+              <button className="outline" type="button" onClick={() => setDraft(null)}>
                 Cancel edit
               </button>
             </div>
@@ -272,11 +251,7 @@ export default function FiveS({
       <section className="panel">
         <h2>Area audit plans</h2>
         <label className="check">
-          <input
-            type="checkbox"
-            checked={showRetired}
-            onChange={(e) => setShowRetired(e.target.checked)}
-          />
+          <input type="checkbox" checked={showRetired} onChange={(e) => setShowRetired(e.target.checked)} />
           Show retired / inactive tasks
         </label>
         {data?.plans
@@ -290,9 +265,7 @@ export default function FiveS({
                   disabled={busy}
                   onClick={() => {
                     if (
-                      confirm(
-                        "Retire this task? Its completed history and evidence will remain available.",
-                      )
+                      confirm("Retire this task? Its completed history and evidence will remain available.")
                     )
                       void save({
                         action: "retire",
@@ -311,30 +284,24 @@ export default function FiveS({
                 {area(p.locationId)} ·{" "}
                 {p.assigneeIds.length
                   ? p.assigneeIds
-                      .map(
-                        (id: string) =>
-                          data.people.find((x: any) => x.id === id)?.name ?? id,
-                      )
+                      .map((id: string) => data.people.find((x: any) => x.id === id)?.name ?? id)
                       .join(", ")
                   : "Any permitted auditor"}
               </p>
               <div className="button-row">
-                {p.active &&
-                  (admin ||
-                    !p.assigneeIds.length ||
-                    p.assigneeIds.includes(userId)) && (
-                    <button
-                      className="primary"
-                      onClick={() => {
-                        if (!confirmDraftChange()) return;
-                        setDraft(null);
-                        setSelected(p);
-                        setResponses({});
-                      }}
-                    >
-                      Perform 5S audit
-                    </button>
-                  )}
+                {p.active && (admin || !p.assigneeIds.length || p.assigneeIds.includes(userId)) && (
+                  <button
+                    className="primary"
+                    onClick={() => {
+                      if (!confirmDraftChange()) return;
+                      setDraft(null);
+                      setSelected(p);
+                      setResponses({});
+                    }}
+                  >
+                    Perform 5S audit
+                  </button>
+                )}
                 {data.canManage && (
                   <button
                     className="outline"
@@ -360,9 +327,7 @@ export default function FiveS({
               e.preventDefault();
               if (
                 selected.questions.some(
-                  (q: any) =>
-                    responses[q.id]?.score == null ||
-                    (q.photo && !responses[q.id]?.media?.length),
+                  (q: any) => responses[q.id]?.score == null || (q.photo && !responses[q.id]?.media?.length)
                 )
               ) {
                 setError("Score each question and attach required evidence");
@@ -398,10 +363,7 @@ export default function FiveS({
                       value={responses[q.id]?.score ?? ""}
                       onChange={(e) =>
                         patch({
-                          score:
-                            e.target.value === ""
-                              ? null
-                              : Number(e.target.value),
+                          score: e.target.value === "" ? null : Number(e.target.value),
                         })
                       }
                     >
@@ -419,18 +381,11 @@ export default function FiveS({
                     />
                   </Field>
                   <EvidenceInput
-                    label={
-                      q.photo
-                        ? "5S photo or video · required"
-                        : "5S photo or video · optional"
-                    }
+                    label={q.photo ? "5S photo or video · required" : "5S photo or video · optional"}
                     value={responses[q.id]?.media ?? []}
                     onChange={(media) => patch({ media })}
                     onBusy={(b) => {
-                      uploads.current = Math.max(
-                        0,
-                        uploads.current + (b ? 1 : -1),
-                      );
+                      uploads.current = Math.max(0, uploads.current + (b ? 1 : -1));
                       setUploading(uploads.current > 0);
                     }}
                   />
@@ -440,11 +395,7 @@ export default function FiveS({
             <button className="primary" disabled={busy || uploading}>
               Save completed 5S audit
             </button>
-            <button
-              className="outline"
-              type="button"
-              onClick={() => setSelected(null)}
-            >
+            <button className="outline" type="button" onClick={() => setSelected(null)}>
               Cancel audit
             </button>
           </form>
@@ -453,28 +404,20 @@ export default function FiveS({
       <section className="panel">
         <h2>5S audit history</h2>
         <RefreshControl onRefresh={() => load()} />
-        <p className="small muted">
-          Latest 100 matching audits. Export includes the full matching history.
-        </p>
+        <p className="small muted">Latest 100 matching audits. Export includes the full matching history.</p>
         {data?.records.map((r: any) => (
           <details key={r.id}>
             <summary>
-              {r.snapshot.title} · {r.score}/{r.maximum} ·{" "}
-              {new Date(r.createdAt).toLocaleString()}
+              {r.snapshot.title} · {r.score}/{r.maximum} · {new Date(r.createdAt).toLocaleString()}
             </summary>
             <p>
               Reference {r.id} · {area(r.locationId)} ·{" "}
-              {data.people.find((p: any) => p.id === r.userId)?.name ??
-                r.userId}
+              {data.people.find((p: any) => p.id === r.userId)?.name ?? r.userId}
             </p>
             {r.responses.map((v: any) => (
               <div key={v.questionId}>
                 <strong>
-                  {
-                    r.snapshot.questions.find((q: any) => q.id === v.questionId)
-                      ?.text
-                  }{" "}
-                  · {v.score}/5
+                  {r.snapshot.questions.find((q: any) => q.id === v.questionId)?.text} · {v.score}/5
                 </strong>
                 <p>{v.comment}</p>
                 <EvidenceView media={v.media} />

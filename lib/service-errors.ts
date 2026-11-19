@@ -5,9 +5,7 @@ export function serviceIssue(error: unknown) {
     const e = current as { code?: unknown; cause?: unknown };
     if (
       typeof e.code === "string" &&
-      /^(P\d{4}|[0-9A-Z]{5}|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|ECONNRESET)$/.test(
-        e.code,
-      )
+      /^(P\d{4}|[0-9A-Z]{5}|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|ECONNRESET)$/.test(e.code)
     )
       codes.push(e.code);
     current = e.cause;
@@ -17,15 +15,13 @@ export function serviceIssue(error: unknown) {
     return {
       code,
       kind: "database",
-      message:
-        "PostgreSQL rejected the configured credentials. Check private database settings.",
+      message: "PostgreSQL rejected the configured credentials. Check private database settings.",
     };
   if (codes.some((c) => ["P2021", "P2022", "42P01", "42703"].includes(c)))
     return {
       code,
       kind: "database",
-      message:
-        "Database schema is missing or out of date. Run npm run db:setup against this same database.",
+      message: "Database schema is missing or out of date. Run npm run db:setup against this same database.",
     };
   if (
     codes.some((c) =>
@@ -42,7 +38,7 @@ export function serviceIssue(error: unknown) {
         "53300",
         "57P03",
         "3D000",
-      ].includes(c),
+      ].includes(c)
     )
   )
     return {

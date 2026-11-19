@@ -9,15 +9,13 @@ export async function GET(req: Request) {
       ids = await equipmentIds(u),
       eq = await db.equipment.findMany({ where: { id: { in: ids } } });
     const areas = await visibleAreas(u);
-    const query =
-      new URL(req.url).searchParams
-        .get("search")
-        ?.slice(0, 150)
-        .toLowerCase() ?? "";
+    const query = new URL(req.url).searchParams.get("search")?.slice(0, 150).toLowerCase() ?? "";
     const people = await db.user.findMany({
       select: {
         id: true,
         name: true,
+        firstName: true,
+        lastName: true,
         username: true,
         active: true,
         role: true,
@@ -32,14 +30,9 @@ export async function GET(req: Request) {
             u.role === "Admin" ||
             p.id === u.id ||
             areas.some((l) => allowedArea(p, l)) ||
-            eq.some((e) =>
-              allowedDowntimeEquipment(p.role, p.workspaceAccess, e),
-            ),
+            eq.some((e) => allowedDowntimeEquipment(p.role, p.workspaceAccess, e))
         )
-        .filter(
-          (p) =>
-            !query || `${p.name} ${p.username}`.toLowerCase().includes(query),
-        )
+        .filter((p) => !query || `${p.name} ${p.username}`.toLowerCase().includes(query))
         .map(({ workspaceAccess, ...p }) => p),
     });
   } catch (e) {

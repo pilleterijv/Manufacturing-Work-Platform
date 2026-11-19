@@ -1,25 +1,14 @@
+import { queueAssignments } from "@/lib/assignment-notifications";
 import { readFilters } from "@/lib/filters";
 import { workflowFocus } from "@/lib/workflow-focus";
 import { withSubmission } from "@/lib/submission";
 import { evidenceSchema, ownEvidence } from "@/lib/evidence";
-import {
-  equipmentIds,
-  assertEquipmentAccess,
-  eligiblePeople,
-  visiblePeople,
-} from "@/lib/location-access";
+import { equipmentIds, assertEquipmentAccess, eligiblePeople, visiblePeople } from "@/lib/location-access";
 import { randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import {
-  requireUser,
-  jsonBody,
-  grants,
-  failure,
-  HttpError,
-  limit,
-} from "@/lib/security";
+import { requireUser, jsonBody, grants, failure, HttpError, limit } from "@/lib/security";
 import {
   problemSchema,
   defaultRequirements,
@@ -90,9 +79,7 @@ export async function GET(req: Request) {
             ]
           : []),
       ],
-      ...(department
-        ? { equipmentSnapshot: { path: ["department"], equals: department } }
-        : {}),
+      ...(department ? { equipmentSnapshot: { path: ["department"], equals: department } } : {}),
       ...(method ? { method } : {}),
       ...(state ? { status: state } : {}),
       ...(search
@@ -104,11 +91,9 @@ export async function GET(req: Request) {
                     await db.equipment.findMany({
                       where: {
                         id: { in: ids },
-                        OR: ["name", "department", "area", "line", "plant"].map(
-                          (k) => ({
-                            [k]: { contains: search, mode: "insensitive" },
-                          }),
-                        ),
+                        OR: ["name", "department", "area", "line", "plant"].map((k) => ({
+                          [k]: { contains: search, mode: "insensitive" },
+                        })),
                       },
                       select: { id: true },
                     })
@@ -169,7 +154,7 @@ export async function GET(req: Request) {
               take: 100,
               ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
               include: { actions: true },
-            }),
+            })
           )) {
             const eq = r.equipmentSnapshot as Record<string, string>;
             await records.addRow([
@@ -189,9 +174,7 @@ export async function GET(req: Request) {
               r.previousId,
               r.closedAt?.toISOString(),
             ]);
-            for (const [key, value] of Object.entries(
-              r.answers as Record<string, string>,
-            ))
+            for (const [key, value] of Object.entries(r.answers as Record<string, string>))
               await fields.addRow([r.reference, key, value]);
             for (const e of r.history as object[])
               await audit.addRow([r.reference, "Record", JSON.stringify(e)]);
@@ -214,7 +197,7 @@ export async function GET(req: Request) {
             }
           }
         },
-        req.signal,
+        req.signal
       );
     }
     const cursor = idSchema.optional().parse(p.get("cursor") ?? undefined);
@@ -247,65 +230,55 @@ export async function GET(req: Request) {
       });
     }
     const day = await today();
-    const [
-      rows,
-      equipment,
-      people,
-      groups,
-      openActions,
-      closedActions,
-      overdueActions,
-      overdueCases,
-    ] = await Promise.all([
-      db.problem.findMany({
-        where: scope,
-        orderBy: { id: "asc" },
-        take: 101,
-        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-        select: {
-          id: true,
-          reference: true,
-          method: true,
-          title: true,
-          status: true,
-          dueDate: true,
-          equipmentSnapshot: true,
-          ownerId: true,
-          reviewerId: true,
-          version: true,
-        },
-      }),
-      db.equipment.findMany({
-        where: { id: { in: ids } },
-        orderBy: { name: "asc" },
-      }),
-      visiblePeople(u, ids).then((ps) =>
-        ps.map(({ id, name }) => ({ id, name })),
-      ),
-      db.problem.groupBy({
-        by: ["method", "status"],
-        where: scope,
-        _count: true,
-      }),
-      db.problemAction.count({
-        where: { problem: scope, status: { not: "Completed" } },
-      }),
-      db.problemAction.count({
-        where: { problem: scope, status: "Completed" },
-      }),
-      db.problemAction.count({
-        where: {
-          problem: scope,
-          status: { not: "Completed" },
-          dueDate: { lt: day },
-        },
-      }),
-      db.problem.count({
-        where: {
-          AND: [scope, { status: { not: "Closed" }, dueDate: { lt: day } }],
-        },
-      }),
-    ]);
+    const [rows, equipment, people, groups, openActions, closedActions, overdueActions, overdueCases] =
+      await Promise.all([
+        db.problem.findMany({
+          where: scope,
+          orderBy: { id: "asc" },
+          take: 101,
+          ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+          select: {
+            id: true,
+            reference: true,
+            method: true,
+            title: true,
+            status: true,
+            dueDate: true,
+            equipmentSnapshot: true,
+            ownerId: true,
+            reviewerId: true,
+            version: true,
+          },
+        }),
+        db.equipment.findMany({
+          where: { id: { in: ids } },
+          orderBy: { name: "asc" },
+        }),
+        visiblePeople(u, ids).then((ps) => ps.map(({ id, name }) => ({ id, name }))),
+        db.problem.groupBy({
+          by: ["method", "status"],
+          where: scope,
+          _count: true,
+        }),
+        db.problemAction.count({
+          where: { problem: scope, status: { not: "Completed" } },
+        }),
+        db.problemAction.count({
+          where: { problem: scope, status: "Completed" },
+        }),
+        db.problemAction.count({
+          where: {
+            problem: scope,
+            status: { not: "Completed" },
+            dueDate: { lt: day },
+          },
+        }),
+        db.problem.count({
+          where: {
+            AND: [scope, { status: { not: "Closed" }, dueDate: { lt: day } }],
+          },
+        }),
+      ]);
     const departments = equipment.map((e) => ({ department: e.department }));
     return Response.json({
       items: rows.slice(0, 100),
@@ -335,9 +308,7 @@ export async function POST(req: Request) {
     const u = await requireUser("problems");
     await limit("problems:" + u.id, 120, 60);
     const body = await jsonBody(req, 1024 * 1024);
-    const action = z
-      .enum(["create", "update", "addAction", "updateAction", "editAction"])
-      .parse(body.action);
+    const action = z.enum(["create", "update", "addAction", "updateAction", "editAction"]).parse(body.action);
     const entry = { at: new Date().toISOString(), by: u.id, name: u.name };
     if (action === "create") {
       const input = problemSchema.parse(body);
@@ -350,37 +321,21 @@ export async function POST(req: Request) {
             active: true,
           },
         }),
-        input.previousId
-          ? db.problem.findUnique({ where: { id: input.previousId } })
-          : null,
+        input.previousId ? db.problem.findUnique({ where: { id: input.previousId } }) : null,
       ]);
-      if (
-        !equipment ||
-        people !== new Set([input.ownerId, input.reviewerId]).size
-      )
-        throw new HttpError(
-          400,
-          "Choose valid equipment, facilitator and reviewer",
-        );
+      if (!equipment || people !== new Set([input.ownerId, input.reviewerId]).size)
+        throw new HttpError(400, "Choose valid equipment, facilitator and reviewer");
       if (
         input.previousId &&
-        (!previous ||
-          methods.indexOf(input.method) <=
-            methods.indexOf(previous.method as Method))
+        (!previous || methods.indexOf(input.method) <= methods.indexOf(previous.method as Method))
       )
         throw new HttpError(400, "Link a lower-level record when escalating");
       await assertEquipmentAccess(u, input.equipmentId);
-      await eligiblePeople(input.equipmentId, [
-        input.ownerId,
-        input.reviewerId,
-      ]);
+      await eligiblePeople(input.equipmentId, [input.ownerId, input.reviewerId]);
       if (previous) {
         await assertEquipmentAccess(u, previous.equipmentId);
         if (previous.equipmentId !== input.equipmentId)
-          throw new HttpError(
-            400,
-            "Escalations must retain the same equipment",
-          );
+          throw new HttpError(400, "Escalations must retain the same equipment");
       }
       const id = randomUUID(),
         reference = `${input.method}-${new Date().getUTCFullYear()}-${id.slice(0, 8).toUpperCase()}`;
@@ -388,14 +343,20 @@ export async function POST(req: Request) {
         const saved = await tx.problem.create({
           data: {
             ...input,
-            requirements:
-              input.requirements ?? defaultRequirements(input.method),
+            requirements: input.requirements ?? defaultRequirements(input.method),
             id,
             reference,
             equipmentSnapshot: equipment,
             createdBy: u.id,
             history: [{ ...entry, event: "Created", values: input }],
           },
+        });
+        await queueAssignments(tx, {
+          type: "problem",
+          id: saved.id,
+          equipmentId: input.equipmentId,
+          assignees: [input.ownerId, input.reviewerId],
+          revision: 1,
         });
         return { id: saved.id, reference: saved.reference };
       });
@@ -413,25 +374,16 @@ export async function POST(req: Request) {
       });
       if (!r) throw new HttpError(404, "Record not found");
       await assertEquipmentAccess(u, r.equipmentId, tx);
-      const lead =
-        u.role === "Admin" ||
-        u.id === r.ownerId ||
-        u.id === r.createdBy ||
-        u.id === r.reviewerId;
+      const lead = u.role === "Admin" || u.id === r.ownerId || u.id === r.createdBy || u.id === r.reviewerId;
       const manager = g.includes("manage");
       if (action === "editAction") {
         if (!lead && !manager)
-          throw new HttpError(
-            403,
-            "Only the problem leader or manager can edit action requirements",
-          );
-        if (r.status === "Closed")
-          throw new HttpError(409, "Reopen the record before editing actions");
+          throw new HttpError(403, "Only the problem leader or manager can edit action requirements");
+        if (r.status === "Closed") throw new HttpError(409, "Reopen the record before editing actions");
         const aid = idSchema.parse(body.actionId),
           old = r.actions.find((a) => a.id === aid);
         if (!old) throw new HttpError(404, "Action not found");
-        if (old.version !== version)
-          throw new HttpError(409, "Action changed; refresh before saving");
+        if (old.version !== version) throw new HttpError(409, "Action changed; refresh before saving");
         const input = actionSchema.parse(body);
         if (input.type === "Checkpoint" && r.method === "2D")
           throw new HttpError(400, "Checkpoints apply to 4D and 8D");
@@ -449,6 +401,14 @@ export async function POST(req: Request) {
               values: input,
             }),
           },
+        });
+        await queueAssignments(tx, {
+          type: "action",
+          id: aid,
+          equipmentId: r.equipmentId,
+          assignees: [input.ownerId],
+          previous: [old.ownerId],
+          revision: old.version + 1,
         });
         return tx.problem.update({
           where: { id: r.id },
@@ -468,24 +428,12 @@ export async function POST(req: Request) {
           a = r.actions.find((a) => a.id === aid);
         if (!a) throw new HttpError(404, "Action not found");
         if (!lead && !manager && a.ownerId !== u.id)
-          throw new HttpError(
-            403,
-            "Only the owner or problem team leader can update this action",
-          );
-        if (a.version !== version)
-          throw new HttpError(
-            409,
-            "This action changed. Reload before updating",
-          );
-        if (r.status === "Closed")
-          throw new HttpError(
-            409,
-            "Reopen the record before changing its actions",
-          );
+          throw new HttpError(403, "Only the owner or problem team leader can update this action");
+        if (a.version !== version) throw new HttpError(409, "This action changed. Reload before updating");
+        if (r.status === "Closed") throw new HttpError(409, "Reopen the record before changing its actions");
         const status = z.enum(actionStatuses).parse(body.status),
           comment = z.string().trim().min(1).max(2000).parse(body.comment);
-        const media =
-          body.media === undefined ? a.media : evidenceSchema.parse(body.media);
+        const media = body.media === undefined ? a.media : evidenceSchema.parse(body.media);
         await ownEvidence(u.id, media as any, a.media, tx);
         return tx.problemAction.update({
           where: { id: aid },
@@ -508,15 +456,12 @@ export async function POST(req: Request) {
       if (!lead && !manager)
         throw new HttpError(
           403,
-          "Only the record creator, facilitator, reviewer or manager can edit this record",
+          "Only the record creator, facilitator, reviewer or manager can edit this record"
         );
-      if (r.version !== version)
-        throw new HttpError(409, "This record changed. Reload before saving");
+      if (r.version !== version) throw new HttpError(409, "This record changed. Reload before saving");
       if (action === "addAction") {
-        if (r.status === "Closed")
-          throw new HttpError(409, "Reopen the record before adding actions");
-        if (r.actions.length >= 100)
-          throw new HttpError(400, "Maximum 100 actions per record");
+        if (r.status === "Closed") throw new HttpError(409, "Reopen the record before adding actions");
+        if (r.actions.length >= 100) throw new HttpError(400, "Maximum 100 actions per record");
         const input = actionSchema.parse(body);
         await ownEvidence(u.id, input.media, [], tx);
         await eligiblePeople(r.equipmentId, [input.ownerId], tx);
@@ -528,12 +473,19 @@ export async function POST(req: Request) {
           throw new HttpError(400, "Choose an active action owner");
         if (input.type === "Checkpoint" && r.method === "2D")
           throw new HttpError(400, "Checkpoints apply to 4D and 8D");
-        await tx.problemAction.create({
+        const assignedAction = await tx.problemAction.create({
           data: {
             ...input,
             problemId: id,
             history: [{ ...entry, event: "Created", values: input }],
           },
+        });
+        await queueAssignments(tx, {
+          type: "action",
+          id: assignedAction.id,
+          equipmentId: r.equipmentId,
+          assignees: [input.ownerId],
+          revision: 1,
         });
         return tx.problem.update({
           where: { id },
@@ -558,19 +510,12 @@ export async function POST(req: Request) {
       )
         throw new HttpError(
           400,
-          "Method, equipment and previous record are fixed. Create a linked escalation to retain the original record",
+          "Method, equipment and previous record are fixed. Create a linked escalation to retain the original record"
         );
       if (r.status === "Closed" && status === "Closed")
         throw new HttpError(409, "Reopen this record before editing");
-      if (
-        (status === "Closed" || r.status === "Closed") &&
-        u.role !== "Admin" &&
-        u.id !== r.reviewerId
-      )
-        throw new HttpError(
-          403,
-          "Only the assigned reviewer or Admin can close or reopen this record",
-        );
+      if ((status === "Closed" || r.status === "Closed") && u.role !== "Admin" && u.id !== r.reviewerId)
+        throw new HttpError(403, "Only the assigned reviewer or Admin can close or reopen this record");
       const people = await tx.user.count({
         where: {
           id: { in: [...new Set([input.ownerId, input.reviewerId])] },
@@ -579,31 +524,30 @@ export async function POST(req: Request) {
       });
       if (people !== new Set([input.ownerId, input.reviewerId]).size)
         throw new HttpError(400, "Choose active facilitators and reviewers");
-      await eligiblePeople(
-        r.equipmentId,
-        [input.ownerId, input.reviewerId],
-        tx,
-      );
+      await eligiblePeople(r.equipmentId, [input.ownerId, input.reviewerId], tx);
       if (status === "Closed") {
         const missing = closureErrors(
           r.method as Method,
           input.answers,
           r.actions,
-          input.requirements ??
-            (r.requirements as any) ??
-            defaultRequirements(r.method as Method),
+          input.requirements ?? (r.requirements as any) ?? defaultRequirements(r.method as Method)
         );
-        if (missing.length)
-          throw new HttpError(400, "Before closing: " + missing.join("; "));
+        if (missing.length) throw new HttpError(400, "Before closing: " + missing.join("; "));
       }
+      if (status !== "Closed")
+        await queueAssignments(tx, {
+          type: "problem",
+          id,
+          equipmentId: r.equipmentId,
+          assignees: [input.ownerId, input.reviewerId],
+          previous: [r.ownerId, r.reviewerId],
+          revision: r.version + 1,
+        });
       return tx.problem.update({
         where: { id },
         data: {
           ...input,
-          requirements:
-            input.requirements ??
-            r.requirements ??
-            defaultRequirements(r.method as Method),
+          requirements: input.requirements ?? r.requirements ?? defaultRequirements(r.method as Method),
           status,
           closedAt: status === "Closed" ? new Date() : null,
           version: { increment: 1 },

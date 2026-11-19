@@ -8,9 +8,7 @@ export type LabeledEquipment = {
   line?: string;
 };
 export function equipmentLabel(e: LabeledEquipment) {
-  return [e.name, e.line, e.area, e.department, e.plant, `ID ${e.id}`]
-    .filter(Boolean)
-    .join(" · ");
+  return [e.name, e.line, e.area, e.department, e.plant, `ID ${e.id}`].filter(Boolean).join(" · ");
 }
 export function focusedEquipmentIds(url: string, ids: string[]) {
   const id = z

@@ -1,24 +1,16 @@
 import { Prisma } from "@prisma/client";
-import {
-  createHash,
-  timingSafeEqual,
-  randomUUID,
-  randomBytes,
-} from "node:crypto";
+import { createHash, timingSafeEqual, randomUUID, randomBytes } from "node:crypto";
 import { db } from "./db";
 import { machineEventSchema } from "./integration-rules";
 import { shiftConfigSchema } from "./operations-rules";
 import { HttpError } from "./http-error";
-export const hashToken = (token: string) =>
-  createHash("sha256").update(token).digest("hex");
+export const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 export function createIntegrationToken(id: string) {
   const token = `fw_${id}_${randomBytes(32).toString("hex")}`;
   return { token, tokenHash: hashToken(token) };
 }
 export async function authenticateIntegration(req: Request) {
-  const token = req.headers
-    .get("authorization")
-    ?.match(/^Bearer (fw_[a-f0-9-]{36}_[a-f0-9]{64})$/)?.[1];
+  const token = req.headers.get("authorization")?.match(/^Bearer (fw_[a-f0-9-]{36}_[a-f0-9]{64})$/)?.[1];
   if (!token) throw new HttpError(401, "Integration authentication required");
   const id = token.split("_")[1],
     source = await db.integrationSource.findUnique({ where: { id } });
@@ -31,33 +23,20 @@ export async function authenticateIntegration(req: Request) {
     throw new HttpError(401, "Integration key is invalid or disabled");
   return source;
 }
-export async function ingestMachineEvent(
-  sourceId: string,
-  raw: unknown,
-  expectedHash?: string,
-) {
+export async function ingestMachineEvent(sourceId: string, raw: unknown, expectedHash?: string) {
   const event = machineEventSchema.parse(raw),
     at = new Date(event.occurredAt);
   if (+at < Date.now() - 366 * 86400000)
-    throw new HttpError(
-      400,
-      "Live machine events must be within the last 366 days",
-    );
-  if (+at > Date.now() + 300000)
-    throw new HttpError(400, "Machine event is in the future");
-  const payloadHash = hashToken(
-    JSON.stringify({ ...event, occurredAt: at.toISOString() }),
-  );
+    throw new HttpError(400, "Live machine events must be within the last 366 days");
+  if (+at > Date.now() + 300000) throw new HttpError(400, "Machine event is in the future");
+  const payloadHash = hashToken(JSON.stringify({ ...event, occurredAt: at.toISOString() }));
   return db.$transaction(
     async (tx) => {
       await tx.$queryRaw`SELECT id FROM "IntegrationSource" WHERE id=${sourceId} FOR UPDATE`;
       const source = await tx.integrationSource.findUnique({
         where: { id: sourceId },
       });
-      if (
-        !source?.active ||
-        (expectedHash && source.tokenHash !== expectedHash)
-      )
+      if (!source?.active || (expectedHash && source.tokenHash !== expectedHash))
         throw new HttpError(401, "Integration is disabled or its key changed");
       const previous = await tx.integrationReceipt.findUnique({
         where: { sourceId_eventId: { sourceId, eventId: event.eventId } },
@@ -77,11 +56,7 @@ export async function ingestMachineEvent(
           sourceId_externalId: { sourceId, externalId: event.machineId },
         },
       });
-      if (!binding?.active)
-        throw new HttpError(
-          400,
-          "Map and enable this machine before sending events",
-        );
+      if (!binding?.active) throw new HttpError(400, "Map and enable this machine before sending events");
       // Recheck the receipt after the machine lock for simultaneous retry requests.
       const replay = await tx.integrationReceipt.findUnique({
         where: { sourceId_eventId: { sourceId, eventId: event.eventId } },
@@ -96,18 +71,12 @@ export async function ingestMachineEvent(
         };
       }
       if (binding.lastAt && +at <= +binding.lastAt)
-        throw new HttpError(
-          409,
-          "Machine events must arrive in increasing timestamp order",
-        );
+        throw new HttpError(409, "Machine events must arrive in increasing timestamp order");
       const actor = await tx.user.findUnique({
         where: { id: source.createdBy },
       });
       if (!actor?.active || actor.role !== "Admin")
-        throw new HttpError(
-          409,
-          "Integration owner must be an active Admin account",
-        );
+        throw new HttpError(409, "Integration owner must be an active Admin account");
       const equipment = await tx.equipment.findUniqueOrThrow({
         where: { id: binding.equipmentId },
       });
@@ -119,7 +88,7 @@ export async function ingestMachineEvent(
       if (active && active.externalSourceId !== source.id)
         throw new HttpError(
           409,
-          "A manual or different-source timer is already active; resolve it before importing",
+          "A manual or different-source timer is already active; resolve it before importing"
         );
       if (event.state === "down") {
         if (active) {
@@ -129,17 +98,12 @@ export async function ingestMachineEvent(
           const overlap = await tx.downtime.findFirst({
             where: { equipmentId: equipment.id, endedAt: { gt: at } },
           });
-          if (overlap)
-            throw new HttpError(
-              409,
-              "Event overlaps previously recorded downtime",
-            );
+          if (overlap) throw new HttpError(409, "Event overlaps previously recorded downtime");
           const [reason, setting] = await Promise.all([
             tx.downtimeReason.findUnique({ where: { id: binding.reasonId } }),
             tx.setting.findUniqueOrThrow({ where: { key: "shifts" } }),
           ]);
-          if (!reason?.active)
-            throw new HttpError(400, "Enable the mapped downtime reason");
+          if (!reason?.active) throw new HttpError(400, "Enable the mapped downtime reason");
           const d = await tx.downtime.create({
             data: {
               equipmentId: equipment.id,
@@ -157,17 +121,12 @@ export async function ingestMachineEvent(
           outcome = "Downtime started";
         }
       } else if (active) {
-        if (+at < +active.startedAt)
-          throw new HttpError(409, "Stop time precedes the active downtime");
+        if (+at < +active.startedAt) throw new HttpError(409, "Stop time precedes the active downtime");
         const result = await tx.downtime.updateMany({
           where: { id: active.id, endedAt: null },
           data: { endedAt: at, stoppedBy: source.createdBy },
         });
-        if (!result.count)
-          throw new HttpError(
-            409,
-            "Timer changed while importing; retry the event",
-          );
+        if (!result.count) throw new HttpError(409, "Timer changed while importing; retry the event");
         downtimeId = active.id;
         outcome = "Downtime stopped";
       }
@@ -194,7 +153,7 @@ export async function ingestMachineEvent(
       });
       return { duplicate: false, downtimeId, outcome };
     },
-    { timeout: 15000 },
+    { timeout: 15000 }
   );
 }
 
@@ -205,26 +164,16 @@ export async function annotateAutomaticTimers<
     endedAt: Date | null;
   },
 >(events: T[]) {
-  const ids = [
-    ...new Set(
-      events
-        .filter((e) => e.externalSourceId && !e.endedAt)
-        .map((e) => e.equipmentId),
-    ),
-  ];
+  const ids = [...new Set(events.filter((e) => e.externalSourceId && !e.endedAt).map((e) => e.equipmentId))];
   const bindings = ids.length
     ? await db.$queryRaw<{ equipmentId: string; sourceId: string }[]>(
-        Prisma.sql`SELECT b."equipmentId",b."sourceId" FROM "MachineBinding" b JOIN "IntegrationSource" s ON s.id=b."sourceId" WHERE b.active AND s.active AND b."equipmentId" IN (${Prisma.join(ids)})`,
+        Prisma.sql`SELECT b."equipmentId",b."sourceId" FROM "MachineBinding" b JOIN "IntegrationSource" s ON s.id=b."sourceId" WHERE b.active AND s.active AND b."equipmentId" IN (${Prisma.join(ids)})`
       )
     : [];
-  const managed = new Set(
-    bindings.map((b) => `${b.equipmentId}:${b.sourceId}`),
-  );
+  const managed = new Set(bindings.map((b) => `${b.equipmentId}:${b.sourceId}`));
   return events.map((e) => ({
     ...e,
     integrationManaged:
-      !!e.externalSourceId &&
-      !e.endedAt &&
-      managed.has(`${e.equipmentId}:${e.externalSourceId}`),
+      !!e.externalSourceId && !e.endedAt && managed.has(`${e.equipmentId}:${e.externalSourceId}`),
   }));
 }

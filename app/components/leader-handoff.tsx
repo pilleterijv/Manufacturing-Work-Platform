@@ -96,56 +96,37 @@ export default function LeaderHandoff({
           textFields.push(
             ["targetSpeed", "Target speed", 40],
             ["actualSpeed", "Actual speed", 40],
-            ["remaining", "Bags / bins until minor or major clean", 150],
+            ["remaining", "Bags / bins until minor or major clean", 150]
           );
           choices.push(["nextOrder", "Next order blended / ready"]);
         }
         if (profile === "blending") {
           textFields.push(["status", "Work order status", 150]);
-          choices.push(
-            ["nextOrder", "Next order ready"],
-            ["materialsSplit", "Materials split correctly"],
-          );
+          choices.push(["nextOrder", "Next order ready"], ["materialsSplit", "Materials split correctly"]);
         }
         if (profile === "weigh-room") {
-          if (r.room.startsWith("Weigh Room"))
-            textFields.push(["weighsLeft", "Number of weighs left", 40]);
-          if (r.room === "Bin Blending")
-            textFields.push(["cleanBins", "Number of clean bins", 40]);
+          if (r.room.startsWith("Weigh Room")) textFields.push(["weighsLeft", "Number of weighs left", 40]);
+          if (r.room === "Bin Blending") textFields.push(["cleanBins", "Number of clean bins", 40]);
           if (r.room === "Inspection") {
             textFields.push(
               ["inspectingFor", "What are we inspecting for?", 500],
-              ["status", "Status of work order", 150],
+              ["status", "Status of work order", 150]
             );
             choices.push(
-              [
-                "requiresYielding",
-                "Do totes require charging / yielding in DSI?",
-              ],
-              ["yielded", "Have totes been yielded?"],
+              ["requiresYielding", "Do totes require charging / yielding in DSI?"],
+              ["yielded", "Have totes been yielded?"]
             );
           }
         }
         if (profile === "coating") {
-          if (r.room.startsWith("CC"))
-            textFields.push([
-              "remaining",
-              "Totes until minor / major clean",
-              150,
-            ]);
+          if (r.room.startsWith("CC")) textFields.push(["remaining", "Totes until minor / major clean", 150]);
           if (r.room.startsWith("AC")) {
-            textFields.push(
-              ["round", "Current round", 40],
-              ["totalRounds", "Total rounds", 40],
-            );
-            choices.push([
-              "lastFourRecalculated",
-              "Last four rounds recalculated",
-            ]);
+            textFields.push(["round", "Current round", 40], ["totalRounds", "Total rounds", 40]);
+            choices.push(["lastFourRecalculated", "Last four rounds recalculated"]);
           }
           choices.push(
             ["solutionMixed", "Solution mixed for current work order"],
-            ["nextSolutionReady", "Next order solution staged / picked / made"],
+            ["nextSolutionReady", "Next order solution staged / picked / made"]
           );
         }
         textFields.push(["issues", "Issues and root-cause findings", 2000]);

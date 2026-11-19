@@ -12,7 +12,7 @@ export const securityEvents = [
 ] as const;
 export function securityEvent(
   event: (typeof securityEvents)[number],
-  data: { actorId?: string; subjectHash?: string; scope?: string } = {},
+  data: { actorId?: string; subjectHash?: string; scope?: string } = {}
 ) {
   const safe: {
     event: string;
@@ -21,11 +21,8 @@ export function securityEvent(
     subjectHash?: string;
     scope?: string;
   } = { event, at: new Date().toISOString() };
-  if (data.actorId && /^[a-f0-9-]{36}$/.test(data.actorId))
-    safe.actorId = data.actorId;
-  if (data.subjectHash && /^[a-f0-9]{64}$/.test(data.subjectHash))
-    safe.subjectHash = data.subjectHash;
-  if (data.scope && /^[a-z][a-z0-9-]{0,39}$/.test(data.scope))
-    safe.scope = data.scope;
+  if (data.actorId && /^[a-f0-9-]{36}$/.test(data.actorId)) safe.actorId = data.actorId;
+  if (data.subjectHash && /^[a-f0-9]{64}$/.test(data.subjectHash)) safe.subjectHash = data.subjectHash;
+  if (data.scope && /^[a-z][a-z0-9-]{0,39}$/.test(data.scope)) safe.scope = data.scope;
   console.info(JSON.stringify(safe));
 }

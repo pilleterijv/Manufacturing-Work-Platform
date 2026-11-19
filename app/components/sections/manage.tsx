@@ -7,14 +7,7 @@ import { useState, useEffect, useRef } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
 import type { Data, Step, Cycle, Standard } from "@/lib/workspace-types";
 import { api, getSectionFilters } from "@/lib/client-api";
-import {
-  Field,
-  Submit,
-  fmt,
-  Metric,
-  History,
-  EquipmentSelect,
-} from "../shared";
+import { Field, Submit, fmt, Metric, History, EquipmentSelect } from "../shared";
 type Save = (body: unknown) => Promise<boolean>;
 export default function Manage({
   data,
@@ -48,9 +41,7 @@ export default function Manage({
     [equipment, setEquipment] = useState(""),
     [target, setTarget] = useState(45),
     [tolerance, setTolerance] = useState(10),
-    [steps, setSteps] = useState<Step[]>([
-      { id: crypto.randomUUID(), text: "", photo: false },
-    ]);
+    [steps, setSteps] = useState<Step[]>([{ id: crypto.randomUUID(), text: "", photo: false }]);
   async function history(more = false) {
     const standard = data.standards.find((s) => s.id === editing);
     if (!standard || revisionLoading) return;
@@ -63,11 +54,9 @@ export default function Manage({
             view: "revisions",
             family: standard.family,
             ...(more ? { before: String(revisions.at(-1)?.revision) } : {}),
-          }),
+          })
       );
-      setRevisions((prev) =>
-        more ? [...prev, ...next.revisions] : next.revisions,
-      );
+      setRevisions((prev) => (more ? [...prev, ...next.revisions] : next.revisions));
       setMoreRevisions(next.hasMore);
     } catch (error) {
       setRevisionError((error as Error).message);
@@ -97,8 +86,8 @@ export default function Manage({
         <section className="panel">
           <h2>Standard work editor</h2>
           <p className="muted">
-            Publishing a change creates a new revision. Existing results retain
-            their original steps and timing criteria.
+            Publishing a change creates a new revision. Existing results retain their original steps and
+            timing criteria.
           </p>
           <Field label="Create or revise">
             <select value={editing} onChange={(e) => load(e.target.value)}>
@@ -107,13 +96,9 @@ export default function Manage({
                 <option key={s.id} value={s.id}>
                   {s.title} · revision {s.revision} ·{" "}
                   {(() => {
-                    const e = data.equipment.find(
-                      (e) => e.id === s.equipmentId,
-                    );
+                    const e = data.equipment.find((e) => e.id === s.equipmentId);
                     return e
-                      ? [e.plant, e.department, e.area, e.line, e.name]
-                          .filter(Boolean)
-                          .join(" / ")
+                      ? [e.plant, e.department, e.area, e.line, e.name].filter(Boolean).join(" / ")
                       : s.equipmentId;
                   })()}
                 </option>
@@ -128,11 +113,10 @@ export default function Manage({
               onClick={async () => {
                 if (
                   confirm(
-                    "Remove this standard and its tasks from active use? Completed records and their original revisions will remain available.",
+                    "Remove this standard and its tasks from active use? Completed records and their original revisions will remain available."
                   )
                 ) {
-                  if (await save({ action: "retire-standard", id: editing }))
-                    load("");
+                  if (await save({ action: "retire-standard", id: editing })) load("");
                 }
               }}
             >
@@ -197,8 +181,7 @@ export default function Manage({
                   steps,
                   ...(editing
                     ? {
-                        family: data.standards.find((s) => s.id === editing)
-                          ?.family,
+                        family: data.standards.find((s) => s.id === editing)?.family,
                       }
                     : {}),
                 })
@@ -209,11 +192,7 @@ export default function Manage({
             <div className="form-grid">
               <Field label="Task type">
                 <select
-                  value={
-                    workflow === "leader" || workflow === "changeover"
-                      ? workflow
-                      : kind
-                  }
+                  value={workflow === "leader" || workflow === "changeover" ? workflow : kind}
                   disabled={!!editing}
                   onChange={(e) => {
                     setKind(
@@ -221,30 +200,24 @@ export default function Manage({
                         ? "audit"
                         : e.target.value === "changeover"
                           ? "run"
-                          : e.target.value,
+                          : e.target.value
                     );
                     setWorkflow(
-                      e.target.value === "leader" ||
-                        e.target.value === "changeover"
+                      e.target.value === "leader" || e.target.value === "changeover"
                         ? e.target.value
-                        : "process",
+                        : "process"
                     );
                   }}
                 >
                   <option value="run">Operator task</option>
                   <option value="changeover">Changeover standard</option>
                   <option value="leader">DL/TL Standard Work</option>
-                  <option value="audit">
-                    Process verification (timed check)
-                  </option>
+                  <option value="audit">Process verification (timed check)</option>
                 </select>
               </Field>
               {editing && kind === "audit" && (
                 <Field label="Checklist purpose for new revision">
-                  <select
-                    value={workflow}
-                    onChange={(e) => setWorkflow(e.target.value)}
-                  >
+                  <select value={workflow} onChange={(e) => setWorkflow(e.target.value)}>
                     <option value="process">Standard-work audit</option>
                     <option value="leader">DL/TL leader shift work</option>
                   </select>
@@ -258,9 +231,7 @@ export default function Manage({
                       value={handoffProfile}
                       onChange={(e) => setHandoffProfile(e.target.value)}
                     >
-                      <option value="generic">
-                        Generic room / machine handoff
-                      </option>
+                      <option value="generic">Generic room / machine handoff</option>
                       {tabletingLeaderTemplates.map((t) => (
                         <option key={t.key} value={t.key}>
                           {t.title}
@@ -274,15 +245,11 @@ export default function Manage({
                         aria-label="Load supplied Tableting checklist"
                         value=""
                         onChange={(e) => {
-                          const t = tabletingLeaderTemplates.find(
-                            (t) => t.key === e.target.value,
-                          );
+                          const t = tabletingLeaderTemplates.find((t) => t.key === e.target.value);
                           if (
                             !t ||
                             (steps.some((s) => s.text) &&
-                              !confirm(
-                                "Replace the unsaved checklist tasks with this supplied template?",
-                              ))
+                              !confirm("Replace the unsaved checklist tasks with this supplied template?"))
                           )
                             return;
                           setTitle(t.title);
@@ -291,7 +258,7 @@ export default function Manage({
                             t.steps.map((s) => ({
                               ...s,
                               id: crypto.randomUUID(),
-                            })),
+                            }))
                           );
                         }}
                       >
@@ -318,32 +285,22 @@ export default function Manage({
                           group,
                           timing,
                           photo: false,
-                        })),
+                        }))
                       );
                     }}
                   >
                     Use compressing leader-work starter
                   </button>
                   <p className="small muted">
-                    Review and edit the checklist against your approved local
-                    standard before publishing.
+                    Review and edit the checklist against your approved local standard before publishing.
                   </p>
                 </div>
               )}
               <Field label="Standard title">
-                <input
-                  required
-                  maxLength={150}
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
+                <input required maxLength={150} value={title} onChange={(e) => setTitle(e.target.value)} />
               </Field>
               <Field label="Equipment">
-                <EquipmentSelect
-                  data={data}
-                  value={equipment}
-                  onChange={setEquipment}
-                />
+                <EquipmentSelect data={data} value={equipment} onChange={setEquipment} />
               </Field>
               {workflow !== "leader" && (
                 <>
@@ -376,17 +333,11 @@ export default function Manage({
                 <PersonSelect
                   aria-label="Assigned DL/TLs"
                   people={data.users.filter(
-                    (u) =>
-                      u.active &&
-                      ["Admin", "Manager", "DL/TL"].includes(u.role),
+                    (u) => u.active && ["Admin", "Manager", "DL/TL"].includes(u.role)
                   )}
                   multiple
                   value={assignees}
-                  onChange={(e) =>
-                    setAssignees(
-                      Array.from(e.target.selectedOptions, (o) => o.value),
-                    )
-                  }
+                  onChange={(e) => setAssignees(Array.from(e.target.selectedOptions, (o) => o.value))}
                 />
               </Field>
             )}
@@ -398,11 +349,7 @@ export default function Manage({
                     maxLength={500}
                     value={step.text}
                     onChange={(e) =>
-                      setSteps(
-                        steps.map((s, j) =>
-                          j === i ? { ...s, text: e.target.value } : s,
-                        ),
-                      )
+                      setSteps(steps.map((s, j) => (j === i ? { ...s, text: e.target.value } : s)))
                     }
                   />
                 </Field>
@@ -413,11 +360,7 @@ export default function Manage({
                         maxLength={100}
                         value={step.group || ""}
                         onChange={(e) =>
-                          setSteps(
-                            steps.map((old, j) =>
-                              j === i ? { ...old, group: e.target.value } : old,
-                            ),
-                          )
+                          setSteps(steps.map((old, j) => (j === i ? { ...old, group: e.target.value } : old)))
                         }
                       />
                     </Field>
@@ -427,11 +370,7 @@ export default function Manage({
                         value={step.timing || ""}
                         onChange={(e) =>
                           setSteps(
-                            steps.map((old, j) =>
-                              j === i
-                                ? { ...old, timing: e.target.value }
-                                : old,
-                            ),
+                            steps.map((old, j) => (j === i ? { ...old, timing: e.target.value } : old))
                           )
                         }
                       />
@@ -450,8 +389,8 @@ export default function Manage({
                                   ...s,
                                   fiveSPlanId: e.target.value || undefined,
                                 }
-                              : s,
-                          ),
+                              : s
+                          )
                         )
                       }
                     >
@@ -460,12 +399,7 @@ export default function Manage({
                         .filter((p: any) => p.active)
                         .map((p: any) => (
                           <option key={p.id} value={p.id}>
-                            {p.title} ·{" "}
-                            {
-                              fiveS.areas.find(
-                                (l: any) => l.id === p.locationId,
-                              )?.area
-                            }
+                            {p.title} · {fiveS.areas.find((l: any) => l.id === p.locationId)?.area}
                           </option>
                         ))}
                     </select>
@@ -476,11 +410,7 @@ export default function Manage({
                     type="checkbox"
                     checked={step.photo}
                     onChange={(e) =>
-                      setSteps(
-                        steps.map((s, j) =>
-                          j === i ? { ...s, photo: e.target.checked } : s,
-                        ),
-                      )
+                      setSteps(steps.map((s, j) => (j === i ? { ...s, photo: e.target.checked } : s)))
                     }
                   />
                   Photo required
@@ -500,18 +430,11 @@ export default function Manage({
                 type="button"
                 className="outline"
                 disabled={steps.length >= 100}
-                onClick={() =>
-                  setSteps([
-                    ...steps,
-                    { id: crypto.randomUUID(), text: "", photo: false },
-                  ])
-                }
+                onClick={() => setSteps([...steps, { id: crypto.randomUUID(), text: "", photo: false }])}
               >
                 + Add step
               </button>
-              <Submit busy={busy}>
-                {editing ? "Publish new revision" : "Publish standard"}
-              </Submit>
+              <Submit busy={busy}>{editing ? "Publish new revision" : "Publish standard"}</Submit>
             </div>
           </form>
         </section>
@@ -524,8 +447,7 @@ export default function Manage({
               e.preventDefault();
               const form = e.currentTarget;
               const f = new FormData(form);
-              if (await save({ action: "equipment", ...Object.fromEntries(f) }))
-                form.reset();
+              if (await save({ action: "equipment", ...Object.fromEntries(f) })) form.reset();
             }}
           >
             <div className="form-grid">
@@ -542,14 +464,12 @@ export default function Manage({
                 [e.name, e.plant, e.department, e.area, e.line]
                   .join(" ")
                   .toLowerCase()
-                  .includes(getSectionFilters().search.toLowerCase()),
+                  .includes(getSectionFilters().search.toLowerCase())
               )
               .map((e) => (
                 <p key={e.id}>
                   <strong>{e.name}</strong>
-                  <span>
-                    {[e.plant, e.department, e.area, e.line].join(" / ")}
-                  </span>
+                  <span>{[e.plant, e.department, e.area, e.line].join(" / ")}</span>
                 </p>
               ))}
           </div>

@@ -45,11 +45,7 @@ export default function Submissions({ user }: { user: User }) {
       if (more && data?.cursor) p.set("cursor", data.cursor);
       const next = await api("/api/submissions?" + p);
       if (n === sequence.current) {
-        setData((old: any) =>
-          more
-            ? { ...next, items: [...(old?.items || []), ...next.items] }
-            : next,
-        );
+        setData((old: any) => (more ? { ...next, items: [...(old?.items || []), ...next.items] } : next));
         setError("");
       }
     } catch (e) {
@@ -69,15 +65,12 @@ export default function Submissions({ user }: { user: User }) {
   }, [scope, type, query]);
   useSectionRefresh(
     () => load(),
-    (e) => setError(e.message),
+    (e) => setError(e.message)
   );
   async function view(row: any) {
     setError("");
     try {
-      const d = await api(
-        "/api/submissions?" +
-          new URLSearchParams({ source: row.source, id: row.id }),
-      );
+      const d = await api("/api/submissions?" + new URLSearchParams({ source: row.source, id: row.id }));
       setDetail(d);
     } catch (e) {
       setDetail(null);
@@ -97,20 +90,17 @@ export default function Submissions({ user }: { user: User }) {
     <>
       <section className="panel">
         <h2>Find submitted work</h2>
-        {!user.grants.includes("history") &&
-          !user.grants.includes("analytics") && (
-            <p className="notice">
-              To view everyone’s completed checklists in your area, ask Admin to
-              enable the read-only Area submission history permission for your
-              role. Your existing module access and own records remain
-              available.
-            </p>
-          )}
+        {!user.grants.includes("history") && !user.grants.includes("analytics") && (
+          <p className="notice">
+            To view everyone’s completed checklists in your area, ask Admin to enable the read-only Area
+            submission history permission for your role. Your existing module access and own records remain
+            available.
+          </p>
+        )}
         <p>
-          Your role and area assignments control which submitted work you can
-          view. Area submission history enables viewing colleagues’ completed
-          checklists. This history is read-only; sharing a submission does not
-          grant editing rights.
+          Your role and area assignments control which submitted work you can view. Area submission history
+          enables viewing colleagues’ completed checklists. This history is read-only; sharing a submission
+          does not grant editing rights.
         </p>
         <div className="form-grid">
           <label className="field">
@@ -167,19 +157,13 @@ export default function Submissions({ user }: { user: User }) {
           <button className="outline" disabled={busy}>
             Search history
           </button>
-          <button
-            className="outline"
-            type="button"
-            disabled={busy}
-            onClick={() => void load()}
-          >
+          <button className="outline" type="button" disabled={busy} onClick={() => void load()}>
             Refresh submissions
           </button>
         </form>
         <p className="small muted">
-          Older entries are available with Load older submissions. Records
-          remain available after a checklist revision or retirement. Draft
-          uploads are private until attached to submitted work.
+          Older entries are available with Load older submissions. Records remain available after a checklist
+          revision or retirement. Draft uploads are private until attached to submitted work.
         </p>
       </section>
       {error && (
@@ -189,19 +173,15 @@ export default function Submissions({ user }: { user: User }) {
       )}
       {detail && (
         <div ref={detailAnchor} style={{ scrollMarginTop: "12rem" }}>
-          <SubmissionDetail
-            key={detail.record.id}
-            data={detail}
-            onClose={() => setDetail(null)}
-          />
+          <SubmissionDetail key={detail.record.id} data={detail} onClose={() => setDetail(null)} />
         </div>
       )}
       <section className="panel">
         <h2>Completed submissions</h2>
         {data?.items?.length === 0 && (
           <p>
-            No completed submissions match these filters in your current scope.
-            Reports and resources are listed below.
+            No completed submissions match these filters in your current scope. Reports and resources are
+            listed below.
           </p>
         )}
         {!data && busy && <p role="status">Loading submissions…</p>}
@@ -212,18 +192,12 @@ export default function Submissions({ user }: { user: User }) {
               <span className="badge">{row.status}</span>
             </div>
             <p>
-              {types[row.type] || row.type} · {row.author} ·{" "}
-              {new Date(row.created).toLocaleString()}
+              {types[row.type] || row.type} · {row.author} · {new Date(row.created).toLocaleString()}
             </p>
             <p>
               {row.equipment
                 ? equipmentLabel(row.equipment)
-                : [
-                    row.area?.plant,
-                    row.area?.department,
-                    row.area?.area,
-                    row.area?.line,
-                  ]
+                : [row.area?.plant, row.area?.department, row.area?.area, row.area?.line]
                     .filter(Boolean)
                     .join(" / ")}
             </p>
@@ -233,37 +207,26 @@ export default function Submissions({ user }: { user: User }) {
           </article>
         ))}
         {data?.hasMore && (
-          <button
-            className="outline"
-            disabled={busy}
-            onClick={() => void load(true)}
-          >
+          <button className="outline" disabled={busy} onClick={() => void load(true)}>
             Load older submissions
           </button>
         )}
         <p className="small muted">
           {data?.items?.length || 0} entries loaded
-          {data?.generatedAt
-            ? ` · refreshed ${new Date(data.generatedAt).toLocaleTimeString()}`
-            : ""}
+          {data?.generatedAt ? ` · refreshed ${new Date(data.generatedAt).toLocaleTimeString()}` : ""}
         </p>
       </section>
       <section className="panel">
         <h2>Reports and published resources</h2>
         <p>
-          These sections hold live reports, their actions/status and published
-          resources. The same area and module permissions apply. Update controls
-          remain limited to authorized people.
+          These sections hold live reports, their actions/status and published resources. The same area and
+          module permissions apply. Update controls remain limited to authorized people.
         </p>
         <div className="button-row">
           {reports
             .filter(([name]) => canOpenSection(user, name))
             .map(([name, description]) => (
-              <button
-                key={name}
-                className="outline"
-                onClick={() => openWorkflow({ tab: name })}
-              >
+              <button key={name} className="outline" onClick={() => openWorkflow({ tab: name })}>
                 {sectionLabel(name)}
                 <small>{description}</small>
               </button>

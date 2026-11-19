@@ -8,10 +8,7 @@ export function videoRange(range: string | null, size: number) {
   if (!m || (!m[1] && !m[2])) return null;
   const from = m[1] ? Number(m[1]) : null,
     to = m[2] ? Number(m[2]) : null;
-  if (
-    (from !== null && !Number.isSafeInteger(from)) ||
-    (to !== null && !Number.isSafeInteger(to))
-  )
+  if ((from !== null && !Number.isSafeInteger(from)) || (to !== null && !Number.isSafeInteger(to)))
     return null;
   if (from === null && (!to || to < 0)) return null;
   const start = from ?? Math.max(0, size - to!),

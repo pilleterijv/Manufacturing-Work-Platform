@@ -20,11 +20,7 @@ export async function reminderConfig() {
     email: (s?.value as any)?.email !== false,
   };
 }
-export async function overdueEntity(
-  type: string,
-  id: string,
-  today: string,
-): Promise<OverdueEntity | null> {
+export async function overdueEntity(type: string, id: string, today: string): Promise<OverdueEntity | null> {
   if (type === "idea") {
     const r = await db.idea.findUnique({ where: { id } });
     return r && r.status !== "Completed" && r.dueDate < today
@@ -56,10 +52,7 @@ export async function overdueEntity(
       where: { id },
       include: { problem: true },
     });
-    return a &&
-      a.problem.status !== "Closed" &&
-      a.status !== "Completed" &&
-      a.dueDate < today
+    return a && a.problem.status !== "Closed" && a.status !== "Completed" && a.dueDate < today
       ? {
           type,
           id,
@@ -85,11 +78,7 @@ export async function overdueEntity(
   }
   return null;
 }
-export async function queueOverdueReminders(
-  actor?: ScopedUser,
-  personalOnly?: string,
-  now = new Date(),
-) {
+export async function queueOverdueReminders(actor?: ScopedUser, personalOnly?: string, now = new Date()) {
   const setting = await db.setting.findUniqueOrThrow({
       where: { key: "shifts" },
     }),
@@ -102,15 +91,11 @@ export async function queueOverdueReminders(
     }),
     people = await db.user.findMany({ where: { active: true } });
   const policies = await db.policy.findMany();
-  const capFor = (type: string) =>
-    type === "idea" ? "ideas" : type === "pm" ? "maintenance" : "problems";
+  const capFor = (type: string) => (type === "idea" ? "ideas" : type === "pm" ? "maintenance" : "problems");
   const actorGrants = actor ? await grants(actor) : null;
   const candidates: { type: string; id: string }[] = [];
   // Fetch bounded pages for each source so no overdue rows are silently omitted.
-  async function scan(
-    type: string,
-    fetch: (cursor?: string) => Promise<{ id: string }[]>,
-  ) {
+  async function scan(type: string, fetch: (cursor?: string) => Promise<{ id: string }[]>) {
     let cursor: string | undefined;
     for (;;) {
       const rows = await fetch(cursor);
@@ -126,7 +111,7 @@ export async function queueOverdueReminders(
       take: 100,
       orderBy: { id: "asc" },
       ...(c ? { cursor: { id: c }, skip: 1 } : {}),
-    }),
+    })
   );
   await scan("problem", (c) =>
     db.problem.findMany({
@@ -135,7 +120,7 @@ export async function queueOverdueReminders(
       take: 100,
       orderBy: { id: "asc" },
       ...(c ? { cursor: { id: c }, skip: 1 } : {}),
-    }),
+    })
   );
   await scan("action", (c) =>
     db.problemAction.findMany({
@@ -148,7 +133,7 @@ export async function queueOverdueReminders(
       take: 100,
       orderBy: { id: "asc" },
       ...(c ? { cursor: { id: c }, skip: 1 } : {}),
-    }),
+    })
   );
   await scan("pm", (c) =>
     db.maintenancePlan.findMany({
@@ -157,7 +142,7 @@ export async function queueOverdueReminders(
       take: 100,
       orderBy: { id: "asc" },
       ...(c ? { cursor: { id: c }, skip: 1 } : {}),
-    }),
+    })
   );
   const existing = new Set(
     (
@@ -168,7 +153,7 @@ export async function queueOverdueReminders(
         },
         select: { dedupeKey: true },
       })
-    ).map((r) => r.dedupeKey),
+    ).map((r) => r.dedupeKey)
   );
   let queued = 0;
   for (const c of candidates) {
@@ -183,7 +168,7 @@ export async function queueOverdueReminders(
         p.role !== "Admin" &&
         !roleAuthority(
           p,
-          policies.find((q) => q.role === (p.customRole || p.role)),
+          policies.find((q) => q.role === (p.customRole || p.role))
         ).grants.includes(capFor(e.type))
       )
         continue;
@@ -224,21 +209,13 @@ export async function queueOverdueReminders(
         queued++;
         existing.add(dedupeKey);
       } catch (error) {
-        if (!(
-          error &&
-          typeof error === "object" &&
-          "code" in error &&
-          error.code === "P2002"
-        ))
-          throw error;
+        if (!(error && typeof error === "object" && "code" in error && error.code === "P2002")) throw error;
       }
     }
   }
   return { queued, today };
 }
-export async function deliverReminderEmails(
-  transport: Pick<import("nodemailer").Transporter, "sendMail">,
-) {
+export async function deliverReminderEmails(transport: Pick<import("nodemailer").Transporter, "sendMail">) {
   const config = await reminderConfig(),
     setting = await db.setting.findUniqueOrThrow({ where: { key: "shifts" } }),
     today = localToday((setting.value as ShiftConfig).timezone),
@@ -275,11 +252,7 @@ export async function deliverReminderEmails(
     const permission = p ? await grants(p) : [];
     if (
       !permission.includes(
-        r.entityType === "idea"
-          ? "ideas"
-          : r.entityType === "pm"
-            ? "maintenance"
-            : "problems",
+        r.entityType === "idea" ? "ideas" : r.entityType === "pm" ? "maintenance" : "problems"
       ) ||
       !config.email ||
       !p?.active ||
@@ -295,8 +268,7 @@ export async function deliverReminderEmails(
         data: {
           status: "Cancelled",
           claimedUntil: null,
-          lastError:
-            "Work completed, reassigned, or notification access changed",
+          lastError: "Work completed, reassigned, or notification access changed",
         },
       });
       continue;
@@ -325,10 +297,7 @@ export async function deliverReminderEmails(
         where: { id: r.id },
         data: {
           status: r.attempts + 1 >= 10 ? "Failed" : "Pending",
-          nextAttemptAt: new Date(
-            Date.now() +
-              Math.min(3600000, 60000 * 2 ** Math.min(r.attempts + 1, 6)),
-          ),
+          nextAttemptAt: new Date(Date.now() + Math.min(3600000, 60000 * 2 ** Math.min(r.attempts + 1, 6))),
           claimedUntil: null,
           lastError: p.email
             ? "SMTP delivery failed; check the approved relay"

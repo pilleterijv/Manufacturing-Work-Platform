@@ -13,12 +13,9 @@ export async function sectionWorkbook(
   person: string | undefined,
   search: string,
   matchingEquipment: string[],
-  section: string,
+  section: string
 ) {
-  const kinds: Record<
-    string,
-    { kind: string; workflow?: string; grant: string; label: string }
-  > = {
+  const kinds: Record<string, { kind: string; workflow?: string; grant: string; label: string }> = {
     leaders: {
       kind: "audit",
       workflow: "leader",
@@ -47,10 +44,7 @@ export async function sectionWorkbook(
   };
   const choice = kinds[section];
   if (!choice) throw new HttpError(400, "Choose a valid export section");
-  if (
-    !g.includes(choice.grant) &&
-    !(choice.kind !== "audit" && g.includes("analytics"))
-  )
+  if (!g.includes(choice.grant) && !(choice.kind !== "audit" && g.includes("analytics")))
     throw new HttpError(403, "Section export is not permitted");
   const asOf = new Date();
   const workflowWhere =
@@ -71,18 +65,10 @@ export async function sectionWorkbook(
     async (book) => {
       const details = book.addWorksheet("Export details"),
         results = book.addWorksheet(choice.label),
-        answers =
-          choice.kind === "study" ? null : book.addWorksheet("Task answers"),
-        handoff =
-          choice.workflow === "leader"
-            ? book.addWorksheet("Leader handoff")
-            : null,
-        observations =
-          choice.kind === "study"
-            ? book.addWorksheet("Time observations")
-            : null,
-        statistics =
-          choice.kind === "study" ? book.addWorksheet("Statistics") : null;
+        answers = choice.kind === "study" ? null : book.addWorksheet("Task answers"),
+        handoff = choice.workflow === "leader" ? book.addWorksheet("Leader handoff") : null,
+        observations = choice.kind === "study" ? book.addWorksheet("Time observations") : null,
+        statistics = choice.kind === "study" ? book.addWorksheet("Statistics") : null;
       await details.addRow(["Section", choice.label]);
       await details.addRow(["Exported at UTC", asOf.toISOString()]);
       await details.addRow(["Search", search]);
@@ -107,12 +93,7 @@ export async function sectionWorkbook(
         "Follow up",
         ...(choice.workflow === "leader" ? ["Shift", "Pass-down notes"] : []),
         ...(choice.workflow === "changeover"
-          ? [
-              "Previous product",
-              "Next product",
-              "Changeover type",
-              "Changeover notes",
-            ]
+          ? ["Previous product", "Next product", "Changeover type", "Changeover notes"]
           : []),
       ]);
       await answers?.addRow([
@@ -173,13 +154,7 @@ export async function sectionWorkbook(
         "Next solution ready",
         "Last four rounds recalculated",
       ]);
-      await observations?.addRow([
-        "Study ID",
-        "Study",
-        "Element",
-        "Seconds",
-        "Observed at UTC",
-      ]);
+      await observations?.addRow(["Study ID", "Study", "Element", "Seconds", "Observed at UTC"]);
       await statistics?.addRow([
         "Study ID",
         "Element",
@@ -195,22 +170,16 @@ export async function sectionWorkbook(
       for await (const r of paged((cursor) =>
         db.record.findMany({
           where: {
-            AND: [
-              recordScope(ids),
-              recordFilters(person, search, matchingEquipment),
-              workflowWhere,
-            ],
+            AND: [recordScope(ids), recordFilters(person, search, matchingEquipment), workflowWhere],
             kind: choice.kind,
             created: { lte: asOf },
-            ...(g.includes("analytics") || g.includes("history")
-              ? {}
-              : { userId: u.id }),
+            ...(g.includes("analytics") || g.includes("history") ? {} : { userId: u.id }),
           },
           include: { user: { select: { name: true, username: true } } },
           orderBy: { id: "asc" },
           take: 100,
           ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-        }),
+        })
       )) {
         const d = r.data as any,
           e = d.snapshot?.equipment || d.equipmentSnapshot || {};
@@ -229,9 +198,7 @@ export async function sectionWorkbook(
           e.name || "",
           d.durationSeconds ?? "",
           d.followUp ?? false,
-          ...(choice.workflow === "leader"
-            ? [d.handoff?.shift || "", d.handoff?.notes || ""]
-            : []),
+          ...(choice.workflow === "leader" ? [d.handoff?.shift || "", d.handoff?.notes || ""] : []),
           ...(choice.workflow === "changeover"
             ? [
                 d.changeover?.fromProduct || "",
@@ -249,11 +216,7 @@ export async function sectionWorkbook(
             step?.group || "",
             step?.timing || "",
             step?.text || "",
-            a.answer === true
-              ? "Yes"
-              : a.answer === false
-                ? "No"
-                : "Not answered",
+            a.answer === true ? "Yes" : a.answer === false ? "No" : "Not answered",
             a.comment || "",
             a.photo || "",
             a.video || "",
@@ -261,21 +224,11 @@ export async function sectionWorkbook(
           ]);
         }
         for (const room of d.handoff?.rooms || [])
-          await handoff?.addRow([
-            r.id,
-            d.handoff?.shift || "",
-            ...roomKeys.map((k) => room[k] || ""),
-          ]);
+          await handoff?.addRow([r.id, d.handoff?.shift || "", ...roomKeys.map((k) => room[k] || "")]);
         if (choice.kind === "study") {
           const groups = new Map<string, number[]>();
           for (const c of d.cycles || []) {
-            await observations?.addRow([
-              r.id,
-              d.title || "",
-              c.element,
-              c.seconds,
-              c.at || "",
-            ]);
+            await observations?.addRow([r.id, d.title || "", c.element, c.seconds, c.at || ""]);
             const a = groups.get(c.element) || [];
             a.push(c.seconds);
             groups.set(c.element, a);
@@ -321,7 +274,7 @@ export async function sectionWorkbook(
           (cursor) =>
             db.$queryRaw<
               any[]
-            >`SELECT s.* FROM "Standard" s JOIN (SELECT family,max(revision) revision FROM "Standard" GROUP BY family) latest ON latest.family=s.family AND latest.revision=s.revision WHERE NOT s.archived AND s."equipmentId"=ANY(${ids}::text[]) AND s.kind=${choice.kind} AND s.workflow=${choice.workflow} AND s.id>${cursor || ""} AND (${search}='' OR s.title ILIKE ${"%" + search + "%"} OR s."equipmentId"=ANY(${matchingEquipment}::text[])) AND (${person || ""}='' OR s."assigneeIds"='[]'::jsonb OR s."assigneeIds" @> ${JSON.stringify(person ? [person] : [])}::jsonb) AND (${choice.kind}<>'audit' OR ${u.role}='Admin' OR s."assigneeIds"='[]'::jsonb OR s."assigneeIds" @> ${JSON.stringify([u.id])}::jsonb) ORDER BY s.id LIMIT 100`,
+            >`SELECT s.* FROM "Standard" s JOIN (SELECT family,max(revision) revision FROM "Standard" GROUP BY family) latest ON latest.family=s.family AND latest.revision=s.revision WHERE NOT s.archived AND s."equipmentId"=ANY(${ids}::text[]) AND s.kind=${choice.kind} AND s.workflow=${choice.workflow} AND s.id>${cursor || ""} AND (${search}='' OR s.title ILIKE ${"%" + search + "%"} OR s."equipmentId"=ANY(${matchingEquipment}::text[])) AND (${person || ""}='' OR s."assigneeIds"='[]'::jsonb OR s."assigneeIds" @> ${JSON.stringify(person ? [person] : [])}::jsonb) AND (${choice.kind}<>'audit' OR ${u.role}='Admin' OR s."assigneeIds"='[]'::jsonb OR s."assigneeIds" @> ${JSON.stringify([u.id])}::jsonb) ORDER BY s.id LIMIT 100`
         ))
           for (const step of s.steps as any[])
             await definitions.addRow([
@@ -338,6 +291,6 @@ export async function sectionWorkbook(
             ]);
       }
     },
-    req.signal,
+    req.signal
   );
 }

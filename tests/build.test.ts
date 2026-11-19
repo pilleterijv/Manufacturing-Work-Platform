@@ -4,10 +4,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 // The launcher must never reuse an out-of-date application or recompile for docs alone.
-const {
-  sourceFingerprint,
-  cachedBuild,
-} = require("../scripts/build-state.cjs");
+const { sourceFingerprint, cachedBuild } = require("../scripts/build-state.cjs");
 test("build cache invalidates source changes, ignores docs, and rejects missing runtime files", () => {
   const root = mkdtempSync(path.join(tmpdir(), "floorwork-cache-"));
   try {
@@ -30,10 +27,7 @@ test("build cache invalidates source changes, ignores docs, and rejects missing 
       mkdirSync(path.dirname(full), { recursive: true });
       writeFileSync(full, "fixture");
     }
-    writeFileSync(
-      path.join(root, ".floorwork/build.json"),
-      JSON.stringify({ fingerprint: a }),
-    );
+    writeFileSync(path.join(root, ".floorwork/build.json"), JSON.stringify({ fingerprint: a }));
     assert(cachedBuild(root, a));
     writeFileSync(path.join(root, "docs/readme.md"), "documentation");
     assert.equal(sourceFingerprint(root), a);

@@ -1,8 +1,4 @@
-const {
-  expandTools,
-  assignmentPanels,
-  planningTools,
-} = require("./ui-workspace.cjs");
+const { expandTools, assignmentPanels, planningTools } = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const assert = require("node:assert/strict"),
@@ -24,8 +20,7 @@ const check = async (r, status = 200) => {
   assert.equal(r.status(), status, await r.text());
   return r.json();
 };
-const post = (c, path, data) =>
-  c.request.post(origin + path, { headers: { Origin: origin }, data });
+const post = (c, path, data) => c.request.post(origin + path, { headers: { Origin: origin }, data });
 const get = (c, path) => c.request.get(origin + path);
 async function main() {
   assert(["localhost", "127.0.0.1"].includes(new URL(origin).hostname));
@@ -49,7 +44,7 @@ async function main() {
           password: hash,
           mustChange: false,
         },
-      }),
+      })
     );
   }
   browser = await chromium.launch({
@@ -68,7 +63,7 @@ async function main() {
         username: u.username,
         password,
         remember: false,
-      }),
+      })
     );
     contexts.push(c);
     return c;
@@ -86,7 +81,7 @@ async function main() {
         department,
         area,
         line: "",
-      }),
+      })
     );
     await check(
       await post(admin, "/api/platform", {
@@ -96,12 +91,12 @@ async function main() {
         department,
         area,
         line: "",
-      }),
+      })
     );
     eqs.push(
       await db.equipment.findFirstOrThrow({
         where: { plant: prefix, department, area },
-      }),
+      })
     );
   }
   await check(
@@ -112,7 +107,7 @@ async function main() {
       area: "pack",
       line: "",
     }),
-    409,
+    409
   );
   await check(
     await post(admin, "/api/platform", {
@@ -123,7 +118,7 @@ async function main() {
       area: "Pack",
       line: "",
     }),
-    400,
+    400
   );
   for (const [index, locations] of [
     [1, [{ plant: prefix, department: "A", area: null }]],
@@ -143,7 +138,7 @@ async function main() {
         action: "workspaceAccess",
         id: users[index].id,
         access: { mode: "restricted", locations, equipmentIds: [] },
-      }),
+      })
     );
   const manager = await login(users[1]),
     other = await login(users[2]),
@@ -157,30 +152,20 @@ async function main() {
     eqs
       .slice(0, 2)
       .map((e) => e.id)
-      .sort(),
+      .sort()
   );
-  assert.equal(
-    (await check(await get(none, "/api/platform?view=work"))).equipment.length,
-    0,
-  );
+  assert.equal((await check(await get(none, "/api/platform?view=work"))).equipment.length, 0);
   await check(
     await post(manager, "/api/platform", {
       action: "workspaceAccess",
       id: users[1].id,
       access: { mode: "all", locations: [], equipmentIds: [] },
     }),
-    403,
+    403
   );
-  const scheduleDirectory = await check(
-    await get(manager, "/api/shift-schedules"),
-  );
+  const scheduleDirectory = await check(await get(manager, "/api/shift-schedules"));
   for (const person of scheduleDirectory.people)
-    assert.deepEqual(Object.keys(person).sort(), [
-      "hasEmail",
-      "id",
-      "name",
-      "role",
-    ]);
+    assert.deepEqual(Object.keys(person).sort(), ["hasEmail", "id", "name", "role"]);
   const runFamily = randomUUID(),
     auditFamily = randomUUID();
   const standard = {
@@ -199,7 +184,7 @@ async function main() {
       family: randomUUID(),
       equipmentId: eqs[2].id,
     }),
-    403,
+    403
   );
   await check(
     await post(manager, "/api/platform", {
@@ -208,7 +193,7 @@ async function main() {
       title: prefix + " leader work",
       kind: "audit",
       assigneeIds: [users[3].id],
-    }),
+    })
   );
   const run = await db.standard.findFirstOrThrow({
       where: { family: runFamily },
@@ -216,23 +201,15 @@ async function main() {
     audit = await db.standard.findFirstOrThrow({
       where: { family: auditFamily },
     });
+  assert((await check(await get(tl, "/api/platform?view=audits"))).standards.some((s) => s.id === audit.id));
   assert(
-    (await check(await get(tl, "/api/platform?view=audits"))).standards.some(
-      (s) => s.id === audit.id,
-    ),
-  );
-  assert(
-    !(
-      await check(await get(otherTl, "/api/platform?view=audits"))
-    ).standards.some((s) => s.id === audit.id),
+    !(await check(await get(otherTl, "/api/platform?view=audits"))).standards.some((s) => s.id === audit.id)
   );
   const completion = {
     action: "audit",
     standardId: audit.id,
     started: new Date().toISOString(),
-    responses: [
-      { stepId: "check", answer: true, photo: null, comment: "Verified" },
-    ],
+    responses: [{ stepId: "check", answer: true, photo: null, comment: "Verified" }],
   };
   await check(await post(otherTl, "/api/platform", completion), 403);
   await check(await post(tl, "/api/platform", completion));
@@ -242,14 +219,14 @@ async function main() {
       action: "run",
       standardId: run.id,
     }),
-    403,
+    403
   );
   await check(
     await post(op, "/api/platform", {
       ...completion,
       action: "run",
       standardId: run.id,
-    }),
+    })
   );
   await check(
     await post(other, "/api/platform", {
@@ -258,7 +235,7 @@ async function main() {
       equipmentId: eqs[0].id,
       cycles: [{ element: "x", seconds: 1, at: new Date().toISOString() }],
     }),
-    403,
+    403
   );
   // Reporter, owner, reviewer and individual action owners must share the equipment assignment.
   const problem = {
@@ -285,15 +262,13 @@ async function main() {
       ...problem,
       reviewerId: users[2].id,
     }),
-    400,
+    400
   );
   const created = await check(await post(manager, "/api/problems", problem));
   await check(await get(other, "/api/problems?id=" + created.id), 403);
   assert.equal(
-    (await check(await get(other, "/api/problems"))).items.some(
-      (p) => p.id === created.id,
-    ),
-    false,
+    (await check(await get(other, "/api/problems"))).items.some((p) => p.id === created.id),
+    false
   );
   let r = await db.problem.findUniqueOrThrow({ where: { id: created.id } });
   for (const type of ["Containment", "Corrective", "Preventive"]) {
@@ -307,7 +282,7 @@ async function main() {
         ownerId: users[3].id,
         dueDate: "2026-12-01",
         required: true,
-      }),
+      })
     );
     r = await db.problem.findUniqueOrThrow({ where: { id: r.id } });
   }
@@ -323,7 +298,7 @@ async function main() {
         version: a.version,
         status: "Completed",
         comment: "Verified on equipment",
-      }),
+      })
     );
   await check(
     await post(manager, "/api/problems", {
@@ -335,7 +310,7 @@ async function main() {
       ownerId: users[3].id,
       dueDate: "2026-12-01",
       required: true,
-    }),
+    })
   );
   const optional = await db.problemAction.findFirstOrThrow({
     where: { problemId: r.id, type: "Correction" },
@@ -349,7 +324,7 @@ async function main() {
       version: r.version,
       status: "Closed",
     }),
-    400,
+    400
   );
   await check(
     await post(manager, "/api/problems", {
@@ -362,7 +337,7 @@ async function main() {
       ownerId: users[5].id,
       dueDate: "2026-12-02",
       required: false,
-    }),
+    })
   );
   r = await db.problem.findUniqueOrThrow({ where: { id: r.id } });
   await check(
@@ -372,7 +347,7 @@ async function main() {
       id: r.id,
       version: r.version,
       status: "Closed",
-    }),
+    })
   );
   const fourInput = {
     ...problem,
@@ -398,7 +373,7 @@ async function main() {
       ownerId: users[3].id,
       dueDate: "2026-12-01",
       required: true,
-    }),
+    })
   );
   const fourAction = await db.problemAction.findFirstOrThrow({
     where: { problemId: four.id },
@@ -414,7 +389,7 @@ async function main() {
       ownerId: users[1].id,
       dueDate: "2026-12-02",
       required: false,
-    }),
+    })
   );
   fourRecord = await db.problem.findUniqueOrThrow({ where: { id: four.id } });
   await check(
@@ -424,7 +399,7 @@ async function main() {
       id: four.id,
       version: fourRecord.version,
       status: "Closed",
-    }),
+    })
   );
   // Scope also applies to guides, private evidence, video range requests and exports.
   const image = await require("sharp")({
@@ -435,7 +410,7 @@ async function main() {
   const photo = await check(
     await post(manager, "/api/photos", {
       image: "data:image/png;base64," + image.toString("base64"),
-    }),
+    })
   );
   photos.push(photo.id);
   const videoPath = "/tmp/" + prefix + ".mp4";
@@ -461,16 +436,14 @@ async function main() {
   const video = await check(
     await post(manager, "/api/guide-media", {
       video: "data:video/mp4;base64," + videoBytes.toString("base64"),
-    }),
+    })
   );
   videos.push(video.id);
   await check(
     await post(manager, "/api/guide-media", {
-      video:
-        "data:video/mp4;base64," +
-        Buffer.from("<html>bad</html>").toString("base64"),
+      video: "data:video/mp4;base64," + Buffer.from("<html>bad</html>").toString("base64"),
     }),
-    400,
+    400
   );
   await check(
     await post(manager, "/api/platform", {
@@ -482,21 +455,17 @@ async function main() {
         { id: photo.id, kind: "photo", caption: "Issue" },
         { id: video.id, kind: "video", caption: "Fix" },
       ],
-    }),
+    })
   );
   const guide = await db.content.findFirstOrThrow({
     where: { title: prefix + " visual guide" },
   });
   assert.equal((await get(op, "/api/photos/" + photo.id)).status(), 200);
   assert.equal((await get(other, "/api/photos/" + photo.id)).status(), 403);
-  assert.equal(
-    (await get(other, "/api/guide-media/" + video.id)).status(),
-    403,
-  );
-  const partial = await op.request.get(
-    origin + "/api/guide-media/" + video.id,
-    { headers: { Range: "bytes=0-15" } },
-  );
+  assert.equal((await get(other, "/api/guide-media/" + video.id)).status(), 403);
+  const partial = await op.request.get(origin + "/api/guide-media/" + video.id, {
+    headers: { Range: "bytes=0-15" },
+  });
   assert.equal(partial.status(), 206);
   assert.equal((await partial.body()).length, 16);
   await check(
@@ -508,7 +477,7 @@ async function main() {
       body: "x",
       media: [],
     }),
-    403,
+    403
   );
   const report = await check(await get(other, "/api/leadership?department=A"));
   assert.equal(report.summary.equipment, 0);
@@ -528,14 +497,8 @@ async function main() {
   await ownWorkbook.xlsx.load(await ownExport.body());
   const workSheet = ownWorkbook.getWorksheet("Standard work"),
     header = workSheet.getRow(1).values;
-  assert.equal(
-    workSheet.getRow(2).getCell(header.indexOf("Department")).value,
-    "A",
-  );
-  assert.equal(
-    workSheet.getRow(2).getCell(header.indexOf("Equipment ID")).value,
-    eqs[0].id,
-  );
+  assert.equal(workSheet.getRow(2).getCell(header.indexOf("Department")).value, "A");
+  assert.equal(workSheet.getRow(2).getCell(header.indexOf("Equipment ID")).value, eqs[0].id);
   const problemExport = await get(other, "/api/problems?format=xlsx");
   assert.equal(problemExport.status(), 200);
   const problemBook = new (require("exceljs").Workbook)();
@@ -550,7 +513,7 @@ async function main() {
       equipmentId: eqs[0].id,
       reasonId: reason.id,
     }),
-    403,
+    403
   );
   await check(
     await post(manager, "/api/operations", {
@@ -566,7 +529,7 @@ async function main() {
       validatorId: users[1].id,
       participantIds: [],
     }),
-    403,
+    403
   );
   // Actual browser forms: controlled location selectors, multi-area assignments, DL/TL task, editable photo canvas.
   const errors = [],
@@ -575,9 +538,7 @@ async function main() {
   await page.goto(origin);
   await expandTools(page);
   await page.getByRole("button", { name: "♙ Accounts", exact: true }).click();
-  await page
-    .getByRole("heading", { name: "Departments, areas and lines" })
-    .waitFor();
+  await page.getByRole("heading", { name: "Departments, areas and lines" }).waitFor();
   await page.getByLabel("Account", { exact: true }).selectOption(users[3].id);
   await page
     .getByRole("heading", {
@@ -590,9 +551,7 @@ async function main() {
     fullPage: true,
   });
   await page.getByRole("button", { name: "⊞ Manage", exact: true }).click();
-  await page
-    .getByRole("heading", { name: "Add equipment", exact: true })
-    .waitFor();
+  await page.getByRole("heading", { name: "Add equipment", exact: true }).waitFor();
   assert(await page.locator("select[name=department]").count());
   await page.screenshot({
     path: "docs/screenshots/location-tasks/location-dropdowns.png",
@@ -601,9 +560,7 @@ async function main() {
   const tp = await tl.newPage();
   await tp.goto(origin);
   await expandTools(tp);
-  await tp
-    .getByRole("button", { name: "◉ Standard work audits", exact: true })
-    .click();
+  await tp.getByRole("button", { name: "◉ Standard work audits", exact: true }).click();
   await tp.getByLabel("Standard work", { exact: true }).selectOption(audit.id);
   await tp.screenshot({
     path: "docs/screenshots/location-tasks/dl-tl-tasks.png",
@@ -613,9 +570,7 @@ async function main() {
   mp.on("pageerror", (e) => errors.push(e.message));
   await mp.goto(origin);
   await expandTools(mp);
-  await mp
-    .getByRole("button", { name: "◇ Troubleshooting", exact: true })
-    .click();
+  await mp.getByRole("button", { name: "◇ Troubleshooting", exact: true }).click();
   await mp
     .getByRole("button", { name: "Edit guide and media" })
     .filter({ hasText: "Edit guide" })
@@ -633,16 +588,9 @@ async function main() {
     path: "docs/screenshots/location-tasks/photo-editor.png",
     fullPage: true,
   });
-  await mp
-    .getByRole("button", { name: "Save edited photo", exact: true })
-    .click();
-  await mp
-    .getByRole("button", { name: "Save guide changes", exact: true })
-    .click();
-  await mp
-    .getByRole("status")
-    .filter({ hasText: "Saved to the database." })
-    .waitFor();
+  await mp.getByRole("button", { name: "Save edited photo", exact: true }).click();
+  await mp.getByRole("button", { name: "Save guide changes", exact: true }).click();
+  await mp.getByRole("status").filter({ hasText: "Saved to the database." }).waitFor();
   const edited = await db.content.findUniqueOrThrow({
     where: { id: guide.id },
   });
@@ -653,9 +601,7 @@ async function main() {
     fullPage: true,
   });
   assert.deepEqual(errors, []);
-  await mp
-    .getByRole("button", { name: "◈ Problem solving", exact: true })
-    .click();
+  await mp.getByRole("button", { name: "◈ Problem solving", exact: true }).click();
   await mp
     .getByRole("combobox", { name: "Search problem solving", exact: true })
     .fill(prefix + " recurring issue");
@@ -676,26 +622,16 @@ async function main() {
       action: "workspaceAccess",
       id: users[1].id,
       access: { mode: "restricted", locations: [], equipmentIds: [] },
-    }),
+    })
   );
   assert.equal((await get(manager, "/api/platform")).status(), 401);
   const revoked = await login(users[1]);
-  assert.equal(
-    (await check(await get(revoked, "/api/platform?view=manage"))).equipment
-      .length,
-    0,
-  );
+  assert.equal((await check(await get(revoked, "/api/platform?view=manage"))).equipment.length, 0);
   await check(await get(revoked, "/api/problems?id=" + created.id), 403);
-  assert.equal(
-    (await get(revoked, "/api/photos/" + photos.at(-1))).status(),
-    403,
-  );
-  assert.equal(
-    (await get(revoked, "/api/guide-media/" + video.id)).status(),
-    403,
-  );
+  assert.equal((await get(revoked, "/api/photos/" + photos.at(-1))).status(), 403);
+  assert.equal((await get(revoked, "/api/guide-media/" + video.id)).status(), 403);
   console.log(
-    "PASS: catalog dropdowns; department/area isolation and defaults; manager/DL assignments; assigned DL/TL tasks; configurable 2D action requirements and edits; protected device media, photo markup and video ranges; scoped reports, exports and revocation.",
+    "PASS: catalog dropdowns; department/area isolation and defaults; manager/DL assignments; assigned DL/TL tasks; configurable 2D action requirements and edits; protected device media, photo markup and video ranges; scoped reports, exports and revocation."
   );
 }
 async function cleanup() {
@@ -722,12 +658,12 @@ async function cleanup() {
   await db.location.deleteMany({ where: { plant: prefix } });
   await db.photo.deleteMany({ where: { userId: { in: ids } } });
   await db.guideMedia.deleteMany({ where: { userId: { in: ids } } });
+  await db.notification.deleteMany({ where: { userId: { in: ids }, kind: "assignment" } });
+  await db.assignmentDelivery.deleteMany({ where: { userId: { in: ids } } });
   await db.user.deleteMany({ where: { id: { in: ids } } });
   if (reason) await db.downtimeReason.delete({ where: { id: reason.id } });
-  for (const id of photos)
-    await fs.unlink("uploads/" + id + ".webp").catch(() => {});
-  for (const id of videos)
-    await fs.unlink("uploads/" + id + ".video").catch(() => {});
+  for (const id of photos) await fs.unlink("uploads/" + id + ".webp").catch(() => {});
+  for (const id of videos) await fs.unlink("uploads/" + id + ".video").catch(() => {});
   await db.$disconnect();
 }
 main()

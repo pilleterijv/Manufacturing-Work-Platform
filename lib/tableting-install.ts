@@ -17,8 +17,7 @@ export async function installTableting(plant: string, userId: string) {
         existing.find(
           (l) =>
             l.department.toLowerCase() === name.toLowerCase() ||
-            (name === "Maintenance/Facilities" &&
-              l.department.toLowerCase() === "maintenance"),
+            (name === "Maintenance/Facilities" && l.department.toLowerCase() === "maintenance")
         )?.department || name;
       const rows = referenceDepartments.flatMap((department) =>
         ["", ...referenceAreas[department]].map((area) => ({
@@ -29,10 +28,10 @@ export async function installTableting(plant: string, userId: string) {
               (l) =>
                 l.department === canonicalDepartment(department) &&
                 l.area.toLowerCase() === area.toLowerCase() &&
-                !l.line,
+                !l.line
             )?.area || area,
           line: "",
-        })),
+        }))
       );
       await tx.location.createMany({ data: rows, skipDuplicates: true });
       if (
@@ -46,10 +45,7 @@ export async function installTableting(plant: string, userId: string) {
           },
         })
       )
-        throw new HttpError(
-          409,
-          "The Tableting department is inactive. Review Locations before installing.",
-        );
+        throw new HttpError(409, "The Tableting department is inactive. Review Locations before installing.");
       const installed: string[] = [],
         retained: string[] = [];
       for (const template of templates) {
@@ -73,7 +69,7 @@ export async function installTableting(plant: string, userId: string) {
         if (!location.active)
           throw new HttpError(
             409,
-            "A required Tableting area is inactive. Review Locations before installing.",
+            "A required Tableting area is inactive. Review Locations before installing."
           );
         // Area work point, explicitly labelled to distinguish it from physical machinery.
         const name = "DL/TL area checklist — " + template.area;
@@ -137,6 +133,6 @@ export async function installTableting(plant: string, userId: string) {
       }
       return { installed, retained, plant: site };
     },
-    { timeout: 20000 },
+    { timeout: 20000 }
   );
 }

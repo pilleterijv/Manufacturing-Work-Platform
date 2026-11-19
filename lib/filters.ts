@@ -21,7 +21,7 @@ export function recordFilters(
   person: string | undefined,
   search: string,
   matchingEquipmentIds: string[] = [],
-  extraPaths: string[][] = [],
+  extraPaths: string[][] = []
 ): Prisma.RecordWhereInput {
   const fields = ["name", "plant", "department", "area", "line"];
   return {
@@ -80,7 +80,7 @@ export function recordFilters(
                   string_contains: search,
                   mode: "insensitive" as const,
                 },
-              })),
+              }))
             ),
           ],
         }

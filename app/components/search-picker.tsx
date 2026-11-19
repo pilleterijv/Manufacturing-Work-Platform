@@ -36,7 +36,7 @@ export default function SearchPicker({
     .filter((c) =>
       `${c.label} ${c.value} ${c.kind || ""} ${c.searchText || ""}`
         .toLowerCase()
-        .includes(value.toLowerCase()),
+        .includes(value.toLowerCase())
     )
     .slice(0, 40);
   function select(choice: SearchChoice) {
@@ -59,11 +59,7 @@ export default function SearchPicker({
           aria-expanded={open}
           aria-controls={id}
           aria-autocomplete="list"
-          aria-activedescendant={
-            open && active >= 0 && results[active]
-              ? `${id}-${active}`
-              : undefined
-          }
+          aria-activedescendant={open && active >= 0 && results[active] ? `${id}-${active}` : undefined}
           maxLength={150}
           value={value}
           placeholder={placeholder}
@@ -82,13 +78,7 @@ export default function SearchPicker({
               e.preventDefault();
               setOpen(true);
               setActive((a) =>
-                Math.max(
-                  0,
-                  Math.min(
-                    results.length - 1,
-                    a + (e.key === "ArrowDown" ? 1 : -1),
-                  ),
-                ),
+                Math.max(0, Math.min(results.length - 1, a + (e.key === "ArrowDown" ? 1 : -1)))
               );
             }
             if (e.key === "Enter" && open && active >= 0 && results[active]) {
@@ -110,12 +100,7 @@ export default function SearchPicker({
         ⌄
       </button>
       {open && (
-        <div
-          className="search-suggestions"
-          role="listbox"
-          id={id}
-          aria-label={`${label} suggestions`}
-        >
+        <div className="search-suggestions" role="listbox" id={id} aria-label={`${label} suggestions`}>
           {results.map((c, i) => (
             <div
               role="option"
@@ -135,11 +120,7 @@ export default function SearchPicker({
               )}
             </div>
           ))}
-          {!results.length && (
-            <p role="status">
-              No matching suggestions. You can still type a search.
-            </p>
-          )}
+          {!results.length && <p role="status">No matching suggestions. You can still type a search.</p>}
         </div>
       )}
     </div>

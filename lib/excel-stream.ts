@@ -22,13 +22,9 @@ const MAX_BYTES = 256 * 1024 * 1024;
 export async function streamWorkbook(
   filename: string,
   produce: (book: ExportBook) => Promise<void>,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ) {
-  if (active >= 1)
-    throw new HttpError(
-      429,
-      "An export is already running. Try again shortly.",
-    );
+  if (active >= 1) throw new HttpError(429, "An export is already running. Try again shortly.");
   active++;
   let folder: string | undefined;
   let released = false;
@@ -62,10 +58,7 @@ export async function streamWorkbook(
       if (signal?.aborted) throw new HttpError(499, "Export cancelled");
     };
     // Open spool handles lazily: worksheet creation remains synchronous.
-    const pending = new Map<
-      number,
-      Promise<Awaited<ReturnType<typeof open>>>
-    >();
+    const pending = new Map<number, Promise<Awaited<ReturnType<typeof open>>>>();
     const names: string[] = [];
     const book: ExportBook = {
       check,
@@ -83,16 +76,12 @@ export async function streamWorkbook(
           async addRow(values) {
             check();
             const line =
-              JSON.stringify(
-                values.map((v) =>
-                  v instanceof Date ? { $date: v.toISOString() } : v,
-                ),
-              ) + "\n";
+              JSON.stringify(values.map((v) => (v instanceof Date ? { $date: v.toISOString() } : v))) + "\n";
             total += Buffer.byteLength(line);
             if (total > MAX_BYTES)
               throw new HttpError(
                 413,
-                "Export is too large. Use a narrower report or ask your administrator for an archive.",
+                "Export is too large. Use a narrower report or ask your administrator for an archive."
               );
             await (await pending.get(index)!).writeFile(line);
           },
@@ -137,9 +126,7 @@ export async function streamWorkbook(
           check();
           if (diskError) throw diskError;
           const values = JSON.parse(line).map((v: unknown) =>
-            v && typeof v === "object" && "$date" in v
-              ? new Date(String(v.$date))
-              : v,
+            v && typeof v === "object" && "$date" in v ? new Date(String(v.$date)) : v
           );
           if (count === 0) sheet.columns = values.map(() => ({ width: 24 }));
           const row = sheet.addRow(values);
@@ -152,8 +139,7 @@ export async function streamWorkbook(
             };
           }
           row.commit();
-          if (++count % 100 === 0)
-            await new Promise<void>((resolve) => setImmediate(resolve));
+          if (++count % 100 === 0) await new Promise<void>((resolve) => setImmediate(resolve));
         }
         // Wait for this ZIP entry to finish before opening the next worksheet.
         // ExcelJS commits rows but otherwise permits later sheets to buffer.
@@ -173,8 +159,7 @@ export async function streamWorkbook(
             done();
             reject(error);
           };
-          const cancelled = () =>
-            failed(new HttpError(499, "Export cancelled"));
+          const cancelled = () => failed(new HttpError(499, "Export cancelled"));
           archive!.on("entry", entry);
           archive!.on("error", failed);
           signal?.addEventListener("abort", cancelled, { once: true });
@@ -192,17 +177,13 @@ export async function streamWorkbook(
     download.once("close", () => {
       void cleanup();
     });
-    return new Response(
-      Readable.toWeb(download) as ReadableStream<Uint8Array>,
-      {
-        headers: {
-          "Content-Type":
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          "Content-Disposition": `attachment; filename="${filename}"`,
-          "Cache-Control": "private, no-store",
-        },
+    return new Response(Readable.toWeb(download) as ReadableStream<Uint8Array>, {
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Cache-Control": "private, no-store",
       },
-    );
+    });
   } catch (error) {
     archive?.abort();
     output?.destroy();

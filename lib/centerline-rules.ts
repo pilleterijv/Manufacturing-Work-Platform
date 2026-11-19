@@ -16,11 +16,7 @@ export const centerlineParameterSchema = z
   .superRefine((p, ctx) => {
     if (
       p.kind === "numeric" &&
-      (p.target === null ||
-        p.lower === null ||
-        p.upper === null ||
-        p.lower > p.target ||
-        p.target > p.upper)
+      (p.target === null || p.lower === null || p.upper === null || p.lower > p.target || p.target > p.upper)
     )
       ctx.addIssue({
         code: "custom",
@@ -43,8 +39,7 @@ export const centerlineSchema = z
   .superRefine((p, ctx) => {
     if (
       new Set(p.parameters.map((x) => x.id)).size !== p.parameters.length ||
-      new Set(p.parameters.map((x) => x.name.toLowerCase())).size !==
-        p.parameters.length
+      new Set(p.parameters.map((x) => x.name.toLowerCase())).size !== p.parameters.length
     )
       ctx.addIssue({
         code: "custom",

@@ -15,7 +15,7 @@ export default function InstallApp() {
   useEffect(() => {
     if (!window.isSecureContext) {
       setConnectionHelp(
-        "Installation and camera access need a trusted HTTPS address. Ask IT for the company app address; localhost is only for this computer.",
+        "Installation and camera access need a trusted HTTPS address. Ask IT for the company app address; localhost is only for this computer."
       );
       return;
     }
@@ -24,8 +24,8 @@ export default function InstallApp() {
         .register("/sw.js", { updateViaCache: "none" })
         .catch(() =>
           setConnectionHelp(
-            "Offline reconnect support could not be registered. Check the trusted HTTPS address and browser policy with IT; the online app can still be used.",
-          ),
+            "Offline reconnect support could not be registered. Check the trusted HTTPS address and browser policy with IT; the online app can still be used."
+          )
         );
     const standalone =
       matchMedia("(display-mode: standalone)").matches ||
@@ -55,7 +55,7 @@ export default function InstallApp() {
     const update = () =>
       document.documentElement.style.setProperty(
         "--install-banner-height",
-        `${banner.current?.getBoundingClientRect().height ?? 0}px`,
+        `${banner.current?.getBoundingClientRect().height ?? 0}px`
       );
     update();
     const observer = new ResizeObserver(update);
@@ -68,19 +68,12 @@ export default function InstallApp() {
   return (
     <>
       {!show && (
-        <button
-          className="install-help-toggle outline"
-          onClick={() => help.current?.showModal()}
-        >
+        <button className="install-help-toggle outline" onClick={() => help.current?.showModal()}>
           Install app / Help
         </button>
       )}
       {show && (
-        <aside
-          ref={banner}
-          className="install-banner"
-          aria-label="Install Floorwork"
-        >
+        <aside ref={banner} className="install-banner" aria-label="Install Floorwork">
           <span>
             {ios
               ? "Install on iPad or iPhone: open in Safari, tap Share, then Add to Home Screen."
@@ -97,9 +90,7 @@ export default function InstallApp() {
                   const choice = await available.userChoice;
                   if (choice.outcome === "accepted") setShow(false);
                 } catch {
-                  setInstallError(
-                    "The browser could not open installation. Use the instructions below.",
-                  );
+                  setInstallError("The browser could not open installation. Use the instructions below.");
                   help.current?.showModal();
                 }
               }}
@@ -110,52 +101,40 @@ export default function InstallApp() {
           <button className="outline" onClick={() => help.current?.showModal()}>
             Installation help
           </button>
-          <button
-            className="outline"
-            aria-label="Dismiss installation help"
-            onClick={() => setShow(false)}
-          >
+          <button className="outline" aria-label="Dismiss installation help" onClick={() => setShow(false)}>
             Dismiss
           </button>
         </aside>
       )}
-      <dialog
-        ref={help}
-        className="install-help-dialog"
-        aria-labelledby="install-help-title"
-      >
+      <dialog ref={help} className="install-help-dialog" aria-labelledby="install-help-title">
         <h2 id="install-help-title">Install on your device</h2>
         {installError && <p role="status">{installError}</p>}
         {connectionHelp && <p role="status">{connectionHelp}</p>}
         <p>Open the app’s HTTPS web address on the device you want to use.</p>
         <h3>iPad or iPhone</h3>
         <p>
-          Open in Safari. Tap Share (the square with an arrow), then Add to Home
-          Screen. Scroll down in the Share menu if needed. Keep Open as Web App
-          enabled if offered, then tap Add.
+          Open in Safari. Tap Share (the square with an arrow), then Add to Home Screen. Scroll down in the
+          Share menu if needed. Keep Open as Web App enabled if offered, then tap Add.
         </p>
         <h3>Android tablet or phone</h3>
         <p>
-          Open in Chrome. Tap the three-dot menu, then Install app or Add to
-          Home screen, and follow the prompts.
+          Open in Chrome. Tap the three-dot menu, then Install app or Add to Home screen, and follow the
+          prompts.
         </p>
         <h3>Windows or Mac</h3>
         <p>
-          In Chrome, open the three-dot menu and look under Cast, save, and
-          share → Install page as app. In Edge, use the menu → Apps → Install
-          this site as an app. Menu names can vary.
+          In Chrome, open the three-dot menu and look under Cast, save, and share → Install page as app. In
+          Edge, use the menu → Apps → Install this site as an app. Menu names can vary.
         </p>
         <h3>If the install option is missing</h3>
         <p>
-          Use a normal browser tab, check whether the app is already installed,
-          and refresh the page. Installation may be restricted by your company’s
-          browser policy. The browser controls whether an Install button is
-          offered; this help remains available.
+          Use a normal browser tab, check whether the app is already installed, and refresh the page.
+          Installation may be restricted by your company’s browser policy. The browser controls whether an
+          Install button is offered; this help remains available.
         </p>
         <p>
-          The server must stay running to use the app. A Codespace must be
-          running too, and a private preview may require your GitHub sign-in. A
-          localhost address from a computer will not work on your tablet.
+          The server must stay running to use the app. A Codespace must be running too, and a private preview
+          may require your GitHub sign-in. A localhost address from a computer will not work on your tablet.
         </p>
         <form method="dialog">
           <button className="primary">Close installation help</button>

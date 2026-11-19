@@ -33,8 +33,7 @@ export default function FloorContext({
   useEffect(() => {
     const pick = (e: Event) => {
       const el = e.target as HTMLSelectElement;
-      if (el.tagName === "SELECT" && equipment.some((m) => m.id === el.value))
-        setMachine(el.value);
+      if (el.tagName === "SELECT" && equipment.some((m) => m.id === el.value)) setMachine(el.value);
     };
     document.addEventListener("change", pick);
     return () => document.removeEventListener("change", pick);
@@ -44,8 +43,7 @@ export default function FloorContext({
     let id = raw.trim();
     try {
       const u = new URL(id);
-      if (u.origin !== location.origin)
-        throw Error("Use a machine label from this app.");
+      if (u.origin !== location.origin) throw Error("Use a machine label from this app.");
       id = u.searchParams.get("machine") || "";
     } catch (e) {
       if (/^https?:/i.test(id)) {
@@ -71,7 +69,7 @@ export default function FloorContext({
         const Detector = (window as any).BarcodeDetector;
         if (!Detector)
           throw Error(
-            "Camera scanning is unavailable in this browser. Open the machine QR link with your tablet camera, or paste its machine ID below.",
+            "Camera scanning is unavailable in this browser. Open the machine QR link with your tablet camera, or paste its machine ID below."
           );
         stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: "environment" },
@@ -119,11 +117,7 @@ export default function FloorContext({
       <div className="form-grid">
         <label className="field">
           <span>Machine reminder — does not switch an open task</span>
-          <select
-            aria-label="Machine context"
-            value={machine}
-            onChange={(v) => setMachine(v.target.value)}
-          >
+          <select aria-label="Machine context" value={machine} onChange={(v) => setMachine(v.target.value)}>
             <option value="">Confirm the machine for your work</option>
             {equipment.map((e) => (
               <option key={e.id} value={e.id}>
@@ -134,11 +128,7 @@ export default function FloorContext({
         </label>
         <label className="field">
           <span>Shift reminder ({timezone})</span>
-          <select
-            aria-label="Working shift"
-            value={shift}
-            onChange={(v) => setShift(v.target.value)}
-          >
+          <select aria-label="Working shift" value={shift} onChange={(v) => setShift(v.target.value)}>
             <option value="">Choose current shift</option>
             {shifts.map((s) => (
               <option key={s}>{s}</option>
@@ -150,22 +140,15 @@ export default function FloorContext({
         <p>
           <strong>{e.name}</strong> · {e.plant} / {e.department} / {e.area}
           {e.line ? " / " + e.line : ""}
-          {shift ? " · " + shift : ""}. Reminder only; check the recording
-          target on your form.{" "}
+          {shift ? " · " + shift : ""}. Reminder only; check the recording target on your form.{" "}
           <button
             type="button"
             className="outline"
-            onClick={() =>
-              openWorkflow({ tab: "Machines", filters: { equipment: e.id } })
-            }
+            onClick={() => openWorkflow({ tab: "Machines", filters: { equipment: e.id } })}
           >
             Open machine workspace
           </button>{" "}
-          <button
-            type="button"
-            className="outline"
-            onClick={() => onOpen(e.id)}
-          >
+          <button type="button" className="outline" onClick={() => onOpen(e.id)}>
             Find this machine’s instructions
           </button>
         </p>
@@ -173,16 +156,11 @@ export default function FloorContext({
       <details>
         <summary>Scan or enter machine label</summary>
         <p>
-          Use a label containing this app’s URL with{" "}
-          <code>?machine=equipment-id</code>, or the machine ID. Camera support
-          depends on the browser.
+          Use a label containing this app’s URL with <code>?machine=equipment-id</code>, or the machine ID.
+          Camera support depends on the browser.
         </p>
         <div className="button-row">
-          <button
-            type="button"
-            className="outline"
-            onClick={() => setScanning(!scanning)}
-          >
+          <button type="button" className="outline" onClick={() => setScanning(!scanning)}>
             {scanning ? "Stop scanning" : "Scan machine label"}
           </button>
           <input
@@ -191,17 +169,11 @@ export default function FloorContext({
             maxLength={2048}
             onChange={(e) => setCode(e.target.value)}
           />
-          <button
-            type="button"
-            className="outline"
-            onClick={() => resolve(code)}
-          >
+          <button type="button" className="outline" onClick={() => resolve(code)}>
             Find machine
           </button>
         </div>
-        {scanning && (
-          <video ref={video} playsInline muted aria-label="Machine scanner" />
-        )}
+        {scanning && <video ref={video} playsInline muted aria-label="Machine scanner" />}
         {e && (
           <p>
             Machine label URL:{" "}

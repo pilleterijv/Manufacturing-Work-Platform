@@ -14,17 +14,13 @@ const username = "runtime-" + randomUUID().slice(0, 8),
 async function main() {
   assert(!fs.existsSync(path.join(root, ".env")));
   assert(!fs.existsSync(path.join(root, "uploads")));
-  assert(
-    fs.existsSync(
-      path.join(root, "node_modules/.prisma/client/query_compiler_bg.wasm"),
-    ),
-  );
+  assert(fs.existsSync(path.join(root, "node_modules/.prisma/client/query_compiler_bg.wasm")));
   await new Promise((resolve, reject) => {
-    const child = spawn(
-      process.execPath,
-      [path.join(root, "tools/create-admin.cjs")],
-      { cwd: process.cwd(), env: process.env, stdio: ["pipe", "pipe", "pipe"] },
-    );
+    const child = spawn(process.execPath, [path.join(root, "tools/create-admin.cjs")], {
+      cwd: process.cwd(),
+      env: process.env,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
     const answers = [
       ["Admin username", username],
       ["Display name", "Runtime verification"],
@@ -51,23 +47,14 @@ async function main() {
     child.on("exit", (code) => {
       clearTimeout(timer);
       if (code !== 0)
-        return reject(
-          Error(
-            "Bundled account tool failed: " +
-              output.replaceAll(password, "[redacted]"),
-          ),
-        );
+        return reject(Error("Bundled account tool failed: " + output.replaceAll(password, "[redacted]")));
       assert(!output.includes(password), "Password was echoed");
       resolve();
     });
   });
   // A separately launched worker must load .env before constructing its DB pool.
   // Disable all external transports; this smoke check only touches the local test DB.
-  assert(
-    ["localhost", "127.0.0.1"].includes(
-      new URL(process.env.DATABASE_URL).hostname,
-    ),
-  );
+  assert(["localhost", "127.0.0.1"].includes(new URL(process.env.DATABASE_URL).hostname));
   if (fs.existsSync(path.join(process.cwd(), ".env"))) {
     const workerEnv = {
       ...process.env,
@@ -78,15 +65,11 @@ async function main() {
     delete workerEnv.DATABASE_URL;
     delete workerEnv.DATABASE_SETUP_URL;
     await new Promise((resolve, reject) => {
-      const child = spawn(
-        process.execPath,
-        [path.join(root, "tools/background-worker.cjs"), "--once"],
-        {
-          cwd: process.cwd(),
-          env: workerEnv,
-          stdio: ["ignore", "pipe", "pipe"],
-        },
-      );
+      const child = spawn(process.execPath, [path.join(root, "tools/background-worker.cjs"), "--once"], {
+        cwd: process.cwd(),
+        env: workerEnv,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
       let output = "";
       const timer = setTimeout(() => {
         child.kill();
@@ -97,9 +80,7 @@ async function main() {
       child.on("error", reject);
       child.on("exit", (code) => {
         clearTimeout(timer);
-        code === 0
-          ? resolve()
-          : reject(Error("Bundled env-file worker failed: " + output));
+        code === 0 ? resolve() : reject(Error("Bundled env-file worker failed: " + output));
       });
     });
   }
@@ -107,7 +88,7 @@ async function main() {
   assert(u && u.mustChange && u.role === "Admin");
   assert(await verifyPassword(password, u.password));
   console.log(
-    "PASS: isolated runtime database/account tools, required WASM asset, hidden password prompts, env-file worker startup, and exclusion of configuration/photos.",
+    "PASS: isolated runtime database/account tools, required WASM asset, hidden password prompts, env-file worker startup, and exclusion of configuration/photos."
   );
 }
 main()

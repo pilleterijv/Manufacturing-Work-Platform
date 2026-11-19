@@ -1,16 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  tabletingLeaderTemplates,
-  handoffRooms,
-} from "../lib/tableting-leader";
+import { tabletingLeaderTemplates, handoffRooms } from "../lib/tableting-leader";
 import { standardSchema } from "../lib/rules";
 import { leaderHandoffSchema } from "../lib/leader-handoff-rules";
 import { referenceDepartments, referenceAreas } from "../lib/reference-catalog";
 test("four supplied Tableting documents retain task counts, thresholds and distinctive checks", () => {
   assert.deepEqual(
     tabletingLeaderTemplates.map((t) => t.steps.length),
-    [35, 30, 29, 38],
+    [35, 30, 29, 38]
   );
   for (const t of tabletingLeaderTemplates) {
     standardSchema.parse({
@@ -27,9 +24,7 @@ test("four supplied Tableting documents retain task counts, thresholds and disti
     assert(t.steps.every((s) => s.group && s.timing && !s.photo));
     assert(referenceAreas.Tableting.includes(t.area));
   }
-  const all = tabletingLeaderTemplates.map((t) =>
-    t.steps.map((s) => s.text).join("\n"),
-  );
+  const all = tabletingLeaderTemplates.map((t) => t.steps.map((s) => s.text).join("\n"));
   assert(all[0].includes("IPR 3.5–6; Korsch <50"));
   assert(all[1].includes("FIFO"));
   assert(all[2].includes("3 clean bins"));
@@ -41,18 +36,11 @@ test("handoffs use source room labels and preserve specific validated fields", (
   assert.equal(handoffRooms("compressing").length, 10);
   assert.deepEqual(
     handoffRooms("coating").map((r) => r.room),
-    ["CC1", "CC2", "AC3", "AC4"],
+    ["CC1", "CC2", "AC3", "AC4"]
   );
   assert.deepEqual(
     handoffRooms("weigh-room").map((r) => r.room),
-    [
-      "Weigh Room A",
-      "Weigh Room B",
-      "Weigh Room C",
-      "Weigh Room D",
-      "Bin Blending",
-      "Inspection",
-    ],
+    ["Weigh Room A", "Weigh Room B", "Weigh Room C", "Weigh Room D", "Bin Blending", "Inspection"]
   );
   const value = {
     shift: "Shift 1",
@@ -72,7 +60,7 @@ test("handoffs use source room labels and preserve specific validated fields", (
     !leaderHandoffSchema.safeParse({
       ...value,
       rooms: [{ ...value.rooms[0], solutionMixed: "Maybe" }],
-    }).success,
+    }).success
   );
   assert.equal(referenceDepartments.length, 17);
   assert.equal(new Set(referenceDepartments).size, 17);

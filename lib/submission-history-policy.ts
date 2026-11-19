@@ -12,11 +12,7 @@ export const historyKinds = (g: string[]) =>
         ...(g.includes("maintenance") ? ["pm", "cil"] : []),
         ...(g.includes("centerlines") ? ["centerline"] : []),
       ];
-export function readableSubmissionWhere(
-  ids: string[],
-  g: string[],
-  userId: string,
-): Prisma.RecordWhereInput {
+export function readableSubmissionWhere(ids: string[], g: string[], userId: string): Prisma.RecordWhereInput {
   // Existing role grants stay intact. The optional history capability adds
   // area-wide read access only; without it, retain the existing own/team rules.
   return {

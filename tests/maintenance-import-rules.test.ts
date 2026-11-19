@@ -1,28 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  nextMaintenanceDate,
-  maintenanceSchema,
-} from "../lib/maintenance-rules";
-import {
-  feedIdentifier,
-  externalRowSchema,
-  validateWorkbookZip,
-} from "../lib/external-rules";
+import { nextMaintenanceDate, maintenanceSchema } from "../lib/maintenance-rules";
+import { feedIdentifier, externalRowSchema, validateWorkbookZip } from "../lib/external-rules";
 import { recordFilters } from "../lib/filters";
 test("PM next dates advance on calendar days and skip missed periods without drift", () => {
-  assert.equal(
-    nextMaintenanceDate("2026-10-01", "2026-11-09", 30),
-    "2026-11-30",
-  );
-  assert.equal(
-    nextMaintenanceDate("2026-11-09", "2026-11-09", 1),
-    "2026-11-10",
-  );
-  assert.equal(
-    nextMaintenanceDate("2028-02-28", "2028-02-28", 1),
-    "2028-02-29",
-  );
+  assert.equal(nextMaintenanceDate("2026-10-01", "2026-11-09", 30), "2026-11-30");
+  assert.equal(nextMaintenanceDate("2026-11-09", "2026-11-09", 1), "2026-11-10");
+  assert.equal(nextMaintenanceDate("2028-02-28", "2028-02-28", 1), "2028-02-29");
 });
 test("external views reject SQL syntax and row payloads cannot carry account or permission writes", () => {
   assert.equal(feedIdentifier("dbo.FloorworkResults"), "dbo.FloorworkResults");
@@ -35,13 +19,11 @@ test("external views reject SQL syntax and row payloads cannot carry account or 
       title: "Result",
       occurredAt: new Date().toISOString(),
       role: "Admin",
-    }).success,
+    }).success
   );
 });
 test("workbook guard rejects non-XLSX and oversized archives before decompression", () => {
-  assert.throws(() =>
-    validateWorkbookZip(Buffer.from("<html>not a workbook</html>")),
-  );
+  assert.throws(() => validateWorkbookZip(Buffer.from("<html>not a workbook</html>")));
   assert.throws(() => validateWorkbookZip(Buffer.alloc(8 * 1024 * 1024 + 1)));
 });
 test("person/text filters intersect existing scopes and use case insensitive title matching", () => {
@@ -75,13 +57,7 @@ test("workbook inflation is bounded even when ZIP metadata lies about expanded s
   end.writeUInt16LE(1, 10);
   end.writeUInt32LE(central.length + name.length, 12);
   end.writeUInt32LE(local.length + name.length + packed.length, 16);
-  assert.throws(
-    () =>
-      validateWorkbookZip(
-        Buffer.concat([local, name, packed, central, name, end]),
-      ),
-    /32 MB/,
-  );
+  assert.throws(() => validateWorkbookZip(Buffer.concat([local, name, packed, central, name, end])), /32 MB/);
 });
 
 import { validateDatabaseTargets } from "../lib/database-target";
@@ -89,20 +65,17 @@ test("migration credentials cannot accidentally target another database or serve
   assert.doesNotThrow(() =>
     validateDatabaseTargets(
       "postgresql://app:runtime@localhost/work",
-      "postgres://migration:private@localhost:5432/work",
-    ),
+      "postgres://migration:private@localhost:5432/work"
+    )
   );
   assert.throws(() => validateDatabaseTargets(undefined));
   assert.throws(() =>
     validateDatabaseTargets(
       "postgres://app@localhost/work",
-      "postgres://migration@localhost/another_database",
-    ),
+      "postgres://migration@localhost/another_database"
+    )
   );
   assert.throws(() =>
-    validateDatabaseTargets(
-      "postgres://app@localhost/work",
-      "postgres://migration@another-host/work",
-    ),
+    validateDatabaseTargets("postgres://app@localhost/work", "postgres://migration@another-host/work")
   );
 });

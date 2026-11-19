@@ -28,7 +28,7 @@ async function main() {
           mustChange: false,
           workspaceAccess: { mode: "all", locations: [], equipmentIds: [] },
         },
-      }),
+      })
     );
   for (const department of ["Tablet A " + suffix, "Tablet B " + suffix])
     equipment.push(
@@ -40,7 +40,7 @@ async function main() {
           area: "Packing",
           line: "Line A",
         },
-      }),
+      })
     );
   const family = randomUUID();
   await db.standard.createMany({
@@ -56,9 +56,7 @@ async function main() {
     })),
   });
   standards.push(
-    ...(
-      await db.standard.findMany({ where: { family }, select: { id: true } })
-    ).map((r) => r.id),
+    ...(await db.standard.findMany({ where: { family }, select: { id: true } })).map((r) => r.id)
   );
   const at = new Date("2026-11-02T12:00:00Z");
   await db.record.createMany({
@@ -72,11 +70,9 @@ async function main() {
           equipmentId: equipment[eq].id,
           equipmentSnapshot: equipment[eq],
           title: "Study",
-          cycles: [
-            { element: "A", seconds: (eq + 1) * 10 + i, at: at.toISOString() },
-          ],
+          cycles: [{ element: "A", seconds: (eq + 1) * 10 + i, at: at.toISOString() }],
         },
-      })),
+      }))
     ),
   });
   const ideaData = Array.from({ length: 205 }, (_, i) => ({
@@ -138,8 +134,7 @@ async function main() {
   };
   // Bounded pages with timestamp ties and a deleted boundary row remain stable.
   let first = await get(
-    "/api/operations?view=ideas&department=" +
-      encodeURIComponent(equipment[0].department),
+    "/api/operations?view=ideas&department=" + encodeURIComponent(equipment[0].department)
   );
   assert.equal(first.ideas.length, 100);
   assert.equal(first.downtime.length, 0);
@@ -153,7 +148,7 @@ async function main() {
         view: "ideas",
         department: equipment[0].department,
         cursor: first.ideasPage.cursor,
-      }),
+      })
   );
   assert.equal(next.ideas.length, 100);
   for (const i of next.ideas) {
@@ -166,7 +161,7 @@ async function main() {
         view: "ideas",
         department: equipment[0].department,
         cursor: next.ideasPage.cursor,
-      }),
+      })
   );
   assert.equal(next.ideas.length, 5);
   assert(!next.ideasPage.hasMore);
@@ -176,13 +171,9 @@ async function main() {
   }
   assert.equal(seen.size, 205);
   assert.equal(
-    (
-      await get(
-        "/api/operations?view=ideas&department=" +
-          encodeURIComponent(equipment[1].department),
-      )
-    ).ideas.length,
-    0,
+    (await get("/api/operations?view=ideas&department=" + encodeURIComponent(equipment[1].department))).ideas
+      .length,
+    0
   );
   assert.equal((await get("/api/operations?view=downtime")).ideas.length, 0);
   const work = await get("/api/platform?view=work");
@@ -193,10 +184,7 @@ async function main() {
   assert.equal(rev.revisions.length, 100);
   assert(rev.hasMore);
   const older = await get(
-    "/api/platform?view=revisions&family=" +
-      family +
-      "&before=" +
-      rev.revisions.at(-1).revision,
+    "/api/platform?view=revisions&family=" + family + "&before=" + rev.revisions.at(-1).revision
   );
   assert.equal(older.revisions.length, 5);
   const report = await get(
@@ -205,7 +193,7 @@ async function main() {
         department: equipment[0].department,
         from: "2026-11-02",
         to: "2026-11-02",
-      }),
+      })
   );
   assert.equal(report.summary.studies, 3);
   assert.equal(report.summary.observations, 3);
@@ -214,10 +202,7 @@ async function main() {
   assert.equal(report.summary.downtimeSeconds, 6300);
   const expected = stats([10, 11, 12]);
   for (const key of Object.keys(expected))
-    assert(
-      Math.abs(report.summary.cycleStats[key] - expected[key]) < 1e-9,
-      key,
-    );
+    assert(Math.abs(report.summary.cycleStats[key] - expected[key]) < 1e-9, key);
   // Host and fetch-metadata protection, private caching and no leaked platform header.
   r = await context.request.get(origin + "/api/account", {
     headers: { Host: "attacker.example" },
@@ -238,34 +223,22 @@ async function main() {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(origin);
-  await page
-    .getByText("Performance and department reports", { exact: true })
-    .click();
-  await page
-    .getByRole("heading", { name: "Whole-floor performance", exact: true })
-    .waitFor();
+  await page.getByText("Performance and department reports", { exact: true }).click();
+  await page.getByRole("heading", { name: "Whole-floor performance", exact: true }).waitFor();
   await page.evaluate(() => navigator.serviceWorker.ready);
   assert(
     await page.evaluate(() => {
       const banner = document.querySelector(".install-banner"),
         sidebar = document.querySelector(".sidebar");
-      if (!banner || !sidebar || getComputedStyle(sidebar).position !== "fixed")
-        return true;
-      return (
-        sidebar.getBoundingClientRect().top >=
-        banner.getBoundingClientRect().bottom - 1
-      );
+      if (!banner || !sidebar || getComputedStyle(sidebar).position !== "fixed") return true;
+      return sidebar.getBoundingClientRect().top >= banner.getBoundingClientRect().bottom - 1;
     }),
-    "Install instructions overlap tablet navigation",
+    "Install instructions overlap tablet navigation"
   );
   await page.reload();
   await page.waitForFunction(() => !!navigator.serviceWorker.controller);
-  await page
-    .getByText("Performance and department reports", { exact: true })
-    .click();
-  await page
-    .getByLabel("Leadership department", { exact: true })
-    .selectOption(equipment[0].department);
+  await page.getByText("Performance and department reports", { exact: true }).click();
+  await page.getByLabel("Leadership department", { exact: true }).selectOption(equipment[0].department);
   await page
     .locator("form.leadership-filters")
     .getByRole("button", { name: "Apply filters", exact: true })
@@ -277,10 +250,8 @@ async function main() {
     })
     .waitFor();
   assert(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-    "Tablet dashboard overflows viewport",
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    "Tablet dashboard overflows viewport"
   );
   await page.screenshot({
     path: "docs/screenshots/tablet-department-dashboard.png",
@@ -290,8 +261,7 @@ async function main() {
     const names = await caches.keys();
     const urls = [];
     for (const name of names) {
-      for (const r of await (await caches.open(name)).keys())
-        urls.push(new URL(r.url).pathname);
+      for (const r of await (await caches.open(name)).keys()) urls.push(new URL(r.url).pathname);
     }
     return urls;
   });
@@ -323,30 +293,18 @@ async function main() {
   r = await operator.request.get(origin + "/api/dashboard");
   assert.equal(r.status(), 200);
   assert((await r.json()).department);
+  assert.equal((await operator.request.get(origin + "/api/leadership")).status(), 403);
   assert.equal(
-    (await operator.request.get(origin + "/api/leadership")).status(),
-    403,
-  );
-  assert.equal(
-    (
-      await operator.request.get(
-        origin + "/api/platform?view=revisions&family=" + family,
-      )
-    ).status(),
-    403,
+    (await operator.request.get(origin + "/api/platform?view=revisions&family=" + family)).status(),
+    403
   );
   const op = await operator.newPage();
   await op.goto(origin);
-  await op
-    .getByText("Performance and department reports", { exact: true })
-    .click();
+  await op.getByText("Performance and department reports", { exact: true }).click();
   await op.getByRole("heading", { name: /section dashboard$/ }).waitFor();
-  assert.equal(
-    await op.getByRole("button", { name: /Leadership dashboard$/ }).count(),
-    0,
-  );
+  assert.equal(await op.getByRole("button", { name: /Leadership dashboard$/ }).count(), 0);
   console.log(
-    "PASS: tablet PWA manifest/service worker, offline privacy, department SQL statistics, latest standards and revision paging, 205 tied-timestamp ideas across deleted cursor, 105 downtime rows, host/cross-site guards, tablet layout and role separation.",
+    "PASS: tablet PWA manifest/service worker, offline privacy, department SQL statistics, latest standards and revision paging, 205 tied-timestamp ideas across deleted cursor, 105 downtime rows, host/cross-site guards, tablet layout and role separation."
   );
 }
 main()
@@ -371,6 +329,8 @@ main()
     await db.record.deleteMany({ where: { userId: { in: ids } } });
     await db.standard.deleteMany({ where: { id: { in: standards } } });
     await db.equipment.deleteMany({ where: { id: { in: eq } } });
+    await db.notification.deleteMany({ where: { userId: { in: ids }, kind: "assignment" } });
+    await db.assignmentDelivery.deleteMany({ where: { userId: { in: ids } } });
     await db.user.deleteMany({ where: { id: { in: ids } } });
     await db.$disconnect();
   });

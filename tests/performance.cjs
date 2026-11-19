@@ -36,8 +36,7 @@ async function sample(url, path, cookie) {
 }
 async function main() {
   assert(["localhost", "127.0.0.1"].includes(new URL(origin).hostname));
-  if (baseline)
-    assert(["localhost", "127.0.0.1"].includes(new URL(baseline).hostname));
+  if (baseline) assert(["localhost", "127.0.0.1"].includes(new URL(baseline).hostname));
   const password = `Benchmark ${randomUUID()}!`;
   user = await db.user.create({
     data: {
@@ -143,15 +142,8 @@ async function main() {
   const page = await sample(origin, "/api/platform", cookie);
   assert.equal(page.data.records.length, 100);
   assert(page.data.page.hasMore);
-  const next = await sample(
-    origin,
-    "/api/platform?view=records&cursor=" + page.data.page.cursor,
-    cookie,
-  );
-  assert.equal(
-    new Set([...page.data.records, ...next.data.records].map((r) => r.id)).size,
-    160,
-  );
+  const next = await sample(origin, "/api/platform?view=records&cursor=" + page.data.page.cursor, cookie);
+  assert.equal(new Set([...page.data.records, ...next.data.records].map((r) => r.id)).size, 160);
   assert.equal(next.data.records.length, 60);
   assert(!next.data.page.hasMore);
   const overview = await sample(origin, "/api/platform?view=overview", cookie);
@@ -159,11 +151,7 @@ async function main() {
   assert.equal(overview.data.overview.runs, 160);
   const poll = await sample(origin, "/api/operations?view=summary", cookie),
     live = await sample(origin, "/api/operations?view=live", cookie);
-  assert(
-    !("ideas" in poll.data) &&
-      !("people" in poll.data) &&
-      !("downtime" in poll.data),
-  );
+  assert(!("ideas" in poll.data) && !("people" in poll.data) && !("downtime" in poll.data));
   assert.equal(live.data.active.length, 0);
   const full = await sample(origin, "/api/operations", cookie);
   const exportResponse = await fetch(origin + "/api/export", {
@@ -195,44 +183,23 @@ async function main() {
     const page = await context.newPage();
     await page.clock.install();
     await page.goto(origin);
-    await page
-      .getByRole("heading", { name: "Welcome, Performance.", exact: true })
-      .waitFor();
-    await page
-      .getByRole("button", { name: "☑ Standard work", exact: true })
-      .click();
-    await page
-      .getByRole("button", { name: "Load more history", exact: true })
-      .click();
-    await page.waitForFunction(
-      () => document.querySelectorAll("tbody tr").length === 160,
-    );
-    assert.equal(
-      await page
-        .getByRole("button", { name: "Load more history", exact: true })
-        .count(),
-      0,
-    );
-    const summaryResponse = page.waitForResponse((r) =>
-      r.url().includes("/api/operations?view=summary"),
-    );
+    await page.getByRole("heading", { name: "Welcome, Performance.", exact: true }).waitFor();
+    await page.getByRole("button", { name: "☑ Standard work", exact: true }).click();
+    await page.getByRole("button", { name: "Load more history", exact: true }).click();
+    await page.waitForFunction(() => document.querySelectorAll("tbody tr").length === 160);
+    assert.equal(await page.getByRole("button", { name: "Load more history", exact: true }).count(), 0);
+    const summaryResponse = page.waitForResponse((r) => r.url().includes("/api/operations?view=summary"));
     await page.clock.fastForward(21000);
     assert.equal((await summaryResponse).status(), 200);
   } finally {
     await browser.close();
   }
   const html = await (await fetch(origin)).text();
-  const scripts = [
-    ...new Set(
-      [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map((m) => m[1]),
-    ),
-  ];
+  const scripts = [...new Set([...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map((m) => m[1]))];
   let raw = 0,
     gzip = 0;
   for (const src of scripts) {
-    const bytes = Buffer.from(
-      await (await fetch(new URL(src, origin))).arrayBuffer(),
-    );
+    const bytes = Buffer.from(await (await fetch(new URL(src, origin))).arrayBuffer());
     raw += bytes.length;
     gzip += zlib.gzipSync(bytes).length;
   }
@@ -250,18 +217,14 @@ async function main() {
   };
   if (baseline) {
     const oldCookie = await login(baseline, password);
-    result.baselineFullPollBytes = (
-      await sample(baseline, "/api/operations", oldCookie)
-    ).bytes;
-    result.baselinePlatformBytes = (
-      await sample(baseline, "/api/platform", oldCookie)
-    ).bytes;
+    result.baselineFullPollBytes = (await sample(baseline, "/api/operations", oldCookie)).bytes;
+    result.baselinePlatformBytes = (await sample(baseline, "/api/platform", oldCookie)).bytes;
   }
   fs.mkdirSync(".measurements", { recursive: true });
   fs.writeFileSync(".measurements/after.json", JSON.stringify(result, null, 2));
   console.log(result);
   console.log(
-    "PASS: bounded histories, exact overview totals, small polling payloads, and complete streamed exports across database page boundaries.",
+    "PASS: bounded histories, exact overview totals, small polling payloads, and complete streamed exports across database page boundaries."
   );
 }
 main()

@@ -1,0 +1,8 @@
+node_modules/
+.next/
+.floorwork/
+uploads/
+prisma/*.sql
+package-lock.json
+lib/data/
+docs/screenshots/

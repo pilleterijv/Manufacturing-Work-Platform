@@ -73,24 +73,18 @@ export async function POST(req: Request) {
       await db.$transaction(
         async (tx) => {
           const fresh = await tx.user.findUnique({ where: { id: u.id } });
-          if (
-            !fresh?.active ||
-            fresh.version !== u.version ||
-            fresh.password !== u.password
-          )
+          if (!fresh?.active || fresh.version !== u.version || fresh.password !== u.password)
             throw new HttpError(401, "Please sign in again");
           await tx.session.create({
             data: {
               token: digest(token),
               userId: u.id,
               version: u.version,
-              expires: new Date(
-                Date.now() + (input.remember ? 30 * 86400 : 8 * 3600) * 1000,
-              ),
+              expires: new Date(Date.now() + (input.remember ? 30 * 86400 : 8 * 3600) * 1000),
             },
           });
         },
-        { isolationLevel: "Serializable" },
+        { isolationLevel: "Serializable" }
       );
       (await cookies()).set(cookieName(), token, {
         httpOnly: true,
@@ -105,8 +99,7 @@ export async function POST(req: Request) {
     const u = await requireUser(undefined, true);
     const jar = await cookies();
     if (b.action === "logout" || b.action === "logoutAll") {
-      if (b.action === "logoutAll")
-        await db.session.deleteMany({ where: { userId: u.id } });
+      if (b.action === "logoutAll") await db.session.deleteMany({ where: { userId: u.id } });
       else
         await db.session.deleteMany({
           where: { token: digest(jar.get(cookieName())?.value ?? "") },
@@ -124,22 +117,18 @@ export async function POST(req: Request) {
       return Response.json({ ok: true });
     }
     if (b.action === "password") {
-      const input = z
-        .object({ current: z.string().max(128), password: z.string().max(128) })
-        .parse(b);
+      const input = z.object({ current: z.string().max(128), password: z.string().max(128) }).parse(b);
       await limit(`password-change:${u.id}`, 5, 900);
       if (!(await verifyPassword(input.current, u.password)))
         throw new HttpError(400, "Current password is incorrect");
-      if (input.current === input.password)
-        throw new HttpError(400, "Choose a different new password");
+      if (input.current === input.password) throw new HttpError(400, "Choose a different new password");
       const password = await hashPassword(input.password);
       await db.$transaction(async (tx) => {
         const changed = await tx.user.updateMany({
           where: { id: u.id, password: u.password, version: u.version },
           data: { password, mustChange: false, version: { increment: 1 } },
         });
-        if (!changed.count)
-          throw new HttpError(409, "Account changed. Sign in again");
+        if (!changed.count) throw new HttpError(409, "Account changed. Sign in again");
         await tx.session.deleteMany({ where: { userId: u.id } });
       });
       securityEvent("password_changed", { actorId: u.id });

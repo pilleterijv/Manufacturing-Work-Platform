@@ -1,11 +1,7 @@
+import { queueAssignments } from "@/lib/assignment-notifications";
 import { requireDelegated } from "@/lib/security";
 import { readFilters } from "@/lib/filters";
-import {
-  equipmentIds,
-  assertEquipmentAccess,
-  eligiblePeople,
-  visiblePeople,
-} from "@/lib/location-access";
+import { equipmentIds, assertEquipmentAccess, eligiblePeople, visiblePeople } from "@/lib/location-access";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireUser, jsonBody, failure, HttpError } from "@/lib/security";
@@ -17,47 +13,42 @@ export async function GET(req: Request) {
     const u = await requireDelegated("schedules.manage", "manage");
     const ids = await equipmentIds(u);
     const { person, search } = readFilters(req.url);
-    const [schedules, people, standards, setting, health, pending, failed] =
-      await Promise.all([
-        db.workSchedule.findMany({
-          where: {
-            equipmentId: { in: ids },
-            AND: [
-              ...(person
-                ? [
-                    {
-                      OR: [
-                        { assigneeIds: { array_contains: [person] } },
-                        { managerIds: { array_contains: [person] } },
-                      ],
-                    },
-                  ]
-                : []),
-              ...(search
-                ? [
-                    {
-                      title: { contains: search, mode: "insensitive" as const },
-                    },
-                  ]
-                : []),
-            ],
-          },
-          orderBy: { id: "asc" },
-          take: 1000,
-        }),
-        visiblePeople(u, ids),
-        db.$queryRaw<
-          any[]
-        >`SELECT DISTINCT ON (s.family) s.*,e.name AS "equipmentName",e.department FROM "Standard" s JOIN "Equipment" e ON e.id=s."equipmentId" WHERE NOT s.archived AND e.id=ANY(${ids}::text[]) ORDER BY s.family,s.revision DESC`,
-        db.setting.findUniqueOrThrow({ where: { key: "shifts" } }),
-        db.setting.findUnique({ where: { key: "shift-monitor-health" } }),
-        u.role === "Admin"
-          ? db.emailDelivery.count({ where: { status: "Pending" } })
-          : Promise.resolve(null),
-        u.role === "Admin"
-          ? db.emailDelivery.count({ where: { status: "Failed" } })
-          : Promise.resolve(null),
-      ]);
+    const [schedules, people, standards, setting, health, pending, failed] = await Promise.all([
+      db.workSchedule.findMany({
+        where: {
+          equipmentId: { in: ids },
+          AND: [
+            ...(person
+              ? [
+                  {
+                    OR: [
+                      { assigneeIds: { array_contains: [person] } },
+                      { managerIds: { array_contains: [person] } },
+                    ],
+                  },
+                ]
+              : []),
+            ...(search
+              ? [
+                  {
+                    title: { contains: search, mode: "insensitive" as const },
+                  },
+                ]
+              : []),
+          ],
+        },
+        orderBy: { id: "asc" },
+        take: 1000,
+      }),
+      visiblePeople(u, ids),
+      db.$queryRaw<
+        any[]
+      >`SELECT DISTINCT ON (s.family) s.*,e.name AS "equipmentName",e.department FROM "Standard" s JOIN "Equipment" e ON e.id=s."equipmentId" WHERE NOT s.archived AND e.id=ANY(${ids}::text[]) ORDER BY s.family,s.revision DESC`,
+      db.setting.findUniqueOrThrow({ where: { key: "shifts" } }),
+      db.setting.findUnique({ where: { key: "shift-monitor-health" } }),
+      u.role === "Admin" ? db.emailDelivery.count({ where: { status: "Pending" } }) : Promise.resolve(null),
+      u.role === "Admin" ? db.emailDelivery.count({ where: { status: "Failed" } }) : Promise.resolve(null),
+    ]);
     return Response.json({
       schedules,
       canConfigureCrews: u.role === "Admin" && !u.customRole,
@@ -82,22 +73,14 @@ export async function POST(req: Request) {
       b = await jsonBody(req);
     if (b.action === "configureCrews") {
       if (u.role !== "Admin" || u.customRole)
-        throw new HttpError(
-          403,
-          "Only Admin can configure plant shift times and crew rotations",
-        );
+        throw new HttpError(403, "Only Admin can configure plant shift times and crew rotations");
       const config = shiftConfigSchema.parse(b.config);
       if (
         !config.crews?.length ||
         config.shifts.length !== 2 ||
-        Math.abs(
-          config.shifts[0].startMinute - config.shifts[1].startMinute,
-        ) !== 720
+        Math.abs(config.shifts[0].startMinute - config.shifts[1].startMinute) !== 720
       )
-        throw new HttpError(
-          400,
-          "Rotating crews require two start times 12 hours apart",
-        );
+        throw new HttpError(400, "Rotating crews require two start times 12 hours apart");
       await db.setting.update({
         where: { key: "shifts" },
         data: { value: config },
@@ -112,32 +95,19 @@ export async function POST(req: Request) {
         where: { family: v.family },
         orderBy: { revision: "desc" },
       });
-      if (!latest || latest.archived)
-        throw new HttpError(400, "Choose a current standard");
+      if (!latest || latest.archived) throw new HttpError(400, "Choose a current standard");
       await assertEquipmentAccess(u, latest.equipmentId);
-      await eligiblePeople(latest.equipmentId, [
-        ...v.assigneeIds,
-        ...v.managerIds,
-      ]);
+      await eligiblePeople(latest.equipmentId, [...v.assigneeIds, ...v.managerIds]);
       if (
         latest.kind === "audit" &&
         (latest.assigneeIds as string[]).length &&
-        v.assigneeIds.some(
-          (id) => !(latest.assigneeIds as string[]).includes(id),
-        )
+        v.assigneeIds.some((id) => !(latest.assigneeIds as string[]).includes(id))
       )
         throw new HttpError(400, "Choose people assigned to this DL/TL task");
-      if (
-        v.shiftNames.some((name) => !config.shifts.some((s) => s.name === name))
-      )
+      if (v.shiftNames.some((name) => !config.shifts.some((s) => s.name === name)))
         throw new HttpError(400, "Choose valid shifts");
-      if (
-        v.crewNames.some((name) => !config.crews?.some((c) => c.name === name))
-      )
-        throw new HttpError(
-          400,
-          "Configure and choose a valid crew rotation first",
-        );
+      if (v.crewNames.some((name) => !config.crews?.some((c) => c.name === name)))
+        throw new HttpError(400, "Configure and choose a valid crew rotation first");
       const ids = [...new Set(v.managerIds)],
         managers = await db.user.findMany({
           where: {
@@ -147,15 +117,9 @@ export async function POST(req: Request) {
           },
         });
       if (managers.length !== ids.length)
-        throw new HttpError(
-          400,
-          "Choose active manager or supervisor recipients",
-        );
+        throw new HttpError(400, "Choose active manager or supervisor recipients");
       if (v.notifyEmail && managers.some((m) => !m.email))
-        throw new HttpError(
-          400,
-          "Add an email address to each recipient account before enabling email",
-        );
+        throw new HttpError(400, "Add an email address to each recipient account before enabling email");
       const assignees = [...new Set(v.assigneeIds)];
       if (
         (await db.user.count({
@@ -164,19 +128,28 @@ export async function POST(req: Request) {
       )
         throw new HttpError(400, "Choose active assignees");
       const now = new Date();
-      await db.workSchedule.create({
-        data: {
-          ...v,
-          kind: latest.kind,
-          assigneeIds: assignees,
-          managerIds: ids,
+      await db.$transaction(async (tx) => {
+        const assignedSchedule = await tx.workSchedule.create({
+          data: {
+            ...v,
+            kind: latest.kind,
+            assigneeIds: assignees,
+            managerIds: ids,
+            equipmentId: latest.equipmentId,
+            title: latest.title,
+            config,
+            createdBy: u.id,
+            effectiveFrom: now,
+            checkedThrough: now,
+          },
+        });
+        await queueAssignments(tx, {
+          type: "schedule",
+          id: assignedSchedule.id,
           equipmentId: latest.equipmentId,
-          title: latest.title,
-          config,
-          createdBy: u.id,
-          effectiveFrom: now,
-          checkedThrough: now,
-        },
+          assignees,
+          revision: 1,
+        });
       });
     } else if (b.action === "update") {
       const v = z
@@ -198,8 +171,7 @@ export async function POST(req: Request) {
           const managers = await tx.user.findMany({
             where: { id: { in: old.managerIds as string[] }, active: true },
           });
-          if (managers.some((m) => !m.email))
-            throw new HttpError(400, "Recipients need email addresses");
+          if (managers.some((m) => !m.email)) throw new HttpError(400, "Recipients need email addresses");
         }
         await tx.workSchedule.update({
           where: { id: v.id },
@@ -208,9 +180,7 @@ export async function POST(req: Request) {
             notifyInApp: v.notifyInApp,
             notifyEmail: v.notifyEmail,
             version: { increment: 1 },
-            ...(!old.active && v.active
-              ? { effectiveFrom: new Date(), checkedThrough: new Date() }
-              : {}),
+            ...(!old.active && v.active ? { effectiveFrom: new Date(), checkedThrough: new Date() } : {}),
           },
         });
         if (!v.notifyEmail || !v.active)

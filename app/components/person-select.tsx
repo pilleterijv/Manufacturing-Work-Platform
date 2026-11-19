@@ -14,7 +14,7 @@ export default function PersonSelect({
       ? Array.isArray(props.defaultValue)
         ? [...props.defaultValue]
         : []
-      : String(props.defaultValue ?? ""),
+      : String(props.defaultValue ?? "")
   );
   const value = props.value ?? picked;
   const selected = Array.isArray(value) ? value : [String(value)];
@@ -32,11 +32,7 @@ export default function PersonSelect({
         defaultValue={undefined}
         value={value}
         onChange={(e) => {
-          setPicked(
-            props.multiple
-              ? Array.from(e.target.selectedOptions, (o) => o.value)
-              : e.target.value,
-          );
+          setPicked(props.multiple ? Array.from(e.target.selectedOptions, (o) => o.value) : e.target.value);
           props.onChange?.(e);
         }}
       >
@@ -45,9 +41,7 @@ export default function PersonSelect({
           .filter(
             (p) =>
               selected.includes(p.id) ||
-              `${p.name} ${p.username ?? ""}`
-                .toLowerCase()
-                .includes(query.toLowerCase()),
+              `${p.name} ${p.username ?? ""}`.toLowerCase().includes(query.toLowerCase())
           )
           .map((p) => (
             <option key={p.id} value={p.id} disabled={p.active === false}>

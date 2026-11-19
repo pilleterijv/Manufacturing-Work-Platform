@@ -2,7 +2,7 @@ export async function periodicJob(
   run: () => Promise<unknown>,
   intervalMs: number,
   stopped: () => boolean,
-  onError: () => void,
+  onError: () => void
 ) {
   while (!stopped()) {
     try {
@@ -12,8 +12,6 @@ export async function periodicJob(
     }
     const until = Date.now() + intervalMs;
     while (!stopped() && Date.now() < until)
-      await new Promise((resolve) =>
-        setTimeout(resolve, Math.min(1000, until - Date.now())),
-      );
+      await new Promise((resolve) => setTimeout(resolve, Math.min(1000, until - Date.now())));
   }
 }

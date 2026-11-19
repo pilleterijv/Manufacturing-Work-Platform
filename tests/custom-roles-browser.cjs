@@ -26,15 +26,9 @@ async function main() {
           area: "Packing",
           line: "",
         },
-      }),
+      })
     );
-  for (const [n, role] of [
-    "Admin",
-    "Manager",
-    "Operator",
-    "Operator",
-    "DL/TL",
-  ].entries())
+  for (const [n, role] of ["Admin", "Manager", "Operator", "Operator", "DL/TL"].entries())
     users.push(
       await db.user.create({
         data: {
@@ -49,7 +43,7 @@ async function main() {
             equipmentIds: [equipment[n === 3 ? 1 : 0].id],
           },
         },
-      }),
+      })
     );
   browser = await chromium.launch({
     executablePath: process.env.CHROMIUM_PATH || "/usr/bin/chromium",
@@ -59,7 +53,7 @@ async function main() {
   async function request(c, path, body, status = 200) {
     const r = await c.request[body ? "post" : "get"](
       origin + path,
-      body ? { headers: { Origin: origin }, data: body } : {},
+      body ? { headers: { Origin: origin }, data: body } : {}
     );
     assert.equal(r.status(), status, await r.text());
     return r.json();
@@ -90,21 +84,11 @@ async function main() {
     adminPrivileges: ["maintenance.manage"],
   };
   await request(manager, "/api/roles", null, 403);
-  await request(
-    manager,
-    "/api/roles",
-    { action: "create", ...definition },
-    403,
-  );
+  await request(manager, "/api/roles", { action: "create", ...definition }, 403);
   await request(admin, "/api/roles", { action: "create", ...definition });
   roles.push(role);
   await request(admin, "/api/roles", { action: "create", ...definition }, 409);
-  await request(
-    admin,
-    "/api/roles",
-    { action: "create", ...definition, name: "ADMIN" },
-    400,
-  );
+  await request(admin, "/api/roles", { action: "create", ...definition, name: "ADMIN" }, 400);
   await request(
     admin,
     "/api/roles",
@@ -114,7 +98,7 @@ async function main() {
       name: "Global " + suffix,
       grants: ["permissions"],
     },
-    400,
+    400
   );
   await request(
     admin,
@@ -125,19 +109,14 @@ async function main() {
       name: "Global " + suffix,
       baseRole: "Admin",
     },
-    400,
+    400
   );
-  await request(
-    admin,
-    "/api/roles",
-    { action: "update", ...definition, role, version: 99 },
-    409,
-  );
+  await request(admin, "/api/roles", { action: "update", ...definition, role, version: 99 }, 409);
   await request(
     admin,
     "/api/roles",
     { action: "update", ...definition, role, version: 1, baseRole: "Manager" },
-    400,
+    400
   );
   async function assign(i, roleName, status = 200) {
     return request(
@@ -152,7 +131,7 @@ async function main() {
         role: roleName,
         active: true,
       },
-      status,
+      status
     );
   }
   await assign(2, role);
@@ -183,12 +162,7 @@ async function main() {
     steps: [{ id: "guard", text: "Inspect guard", photo: false }],
   };
   await request(tech, "/api/maintenance", plan);
-  await request(
-    tech,
-    "/api/maintenance",
-    { ...plan, equipmentId: equipment[1].id },
-    403,
-  );
+  await request(tech, "/api/maintenance", { ...plan, equipmentId: equipment[1].id }, 403);
   await request(admin, "/api/roles", {
     action: "create",
     name: managerRole,
@@ -208,7 +182,7 @@ async function main() {
     reviewer,
     "/api/account-management",
     { action: "active", id: users[3].id, active: false, version: 1 },
-    403,
+    403
   );
   // Existing sessions immediately lose role privileges; individual additions remain explicit.
   await db.user.update({
@@ -227,12 +201,7 @@ async function main() {
   assert.deepEqual([...changed.grants].sort(), ["studies", "work"]);
   assert.deepEqual(changed.adminPrivileges, []);
   await request(tech, "/api/maintenance", plan, 403);
-  await request(
-    admin,
-    "/api/roles",
-    { action: "retire", role, version: 2 },
-    409,
-  );
+  await request(admin, "/api/roles", { action: "retire", role, version: 2 }, 409);
   const listing = await request(manager, "/api/account-management");
   assert(!listing.assignableRoles.some((r) => r.name === managerRole));
   assert(!listing.accounts.some((a) => a.id === users[3].id));
@@ -241,7 +210,7 @@ async function main() {
     manager,
     "/api/account-management",
     { action: "active", id: beta.id, version: beta.version, active: false },
-    403,
+    403
   );
   // UI: create a role using named controls, then select the existing custom role.
   await request(admin, "/api/dashboard-settings", {
@@ -251,12 +220,8 @@ async function main() {
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(origin);
-  await page
-    .getByRole("heading", { name: "Roles and permissions", exact: true })
-    .waitFor();
-  await page
-    .getByRole("button", { name: "Create custom role", exact: true })
-    .click();
+  await page.getByRole("heading", { name: "Roles and permissions", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Create custom role", exact: true }).click();
   const uiRole = "Floor observer " + suffix;
   roles.push(uiRole);
   await page.getByLabel("Role name", { exact: true }).fill(uiRole);
@@ -281,12 +246,12 @@ async function main() {
         a.action === "Updated" &&
         a.snapshot.before &&
         a.snapshot.after &&
-        a.actorName === users[0].name,
-    ),
+        a.actorName === users[0].name
+    )
   );
   assert(!JSON.stringify(history).includes(hash));
   console.log(
-    "Custom roles: API boundaries, scoped assignments, immediate revocation, protected Admin, version checks, retirement and UI passed",
+    "Custom roles: API boundaries, scoped assignments, immediate revocation, protected Admin, version checks, retirement and UI passed"
   );
 }
 main()
@@ -311,12 +276,13 @@ main()
     });
     await db.accountAudit.deleteMany({
       where: {
-        OR: [
-          { actorId: { in: users.map((u) => u.id) } },
-          { targetId: { in: users.map((u) => u.id) } },
-        ],
+        OR: [{ actorId: { in: users.map((u) => u.id) } }, { targetId: { in: users.map((u) => u.id) } }],
       },
     });
+    await db.notification.deleteMany({
+      where: { userId: { in: users.map((u) => u.id) }, kind: "assignment" },
+    });
+    await db.assignmentDelivery.deleteMany({ where: { userId: { in: users.map((u) => u.id) } } });
     await db.user.deleteMany({ where: { id: { in: users.map((u) => u.id) } } });
     await db.policy.deleteMany({ where: { role: { in: roles } } });
     await db.equipment.deleteMany({

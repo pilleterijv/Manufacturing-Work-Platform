@@ -19,26 +19,20 @@ test("upstream/request bodies enforce actual size and deadline, cancelling reade
       cancelled = true;
     },
   });
-  await assert.rejects(
-    () => readBodyBytes(new Response(stream), 10),
-    /too large/,
-  );
+  await assert.rejects(() => readBodyBytes(new Response(stream), 10), /too large/);
   assert(cancelled);
   const slow = new Response(
     new ReadableStream({
       cancel() {
         cancelled = true;
       },
-    }),
+    })
   );
   await assert.rejects(() => readBodyBytes(slow, 100, 15), /timed out/);
   assert.deepEqual(await readBoundedResponseJson(new Response('{"ok":true}')), {
     ok: true,
   });
-  await assert.rejects(
-    () => readBoundedResponseJson(new Response("x".repeat(100)), 20),
-    /too large/,
-  );
+  await assert.rejects(() => readBoundedResponseJson(new Response("x".repeat(100)), 20), /too large/);
 });
 test("video ranges reject malformed, excessive or unsafe values and handle suffix/open-ended ranges", () => {
   assert.deepEqual(videoRange("bytes=10-20", 100), {
@@ -73,10 +67,7 @@ test("video ranges reject malformed, excessive or unsafe values and handle suffi
     assert.equal(videoRange(s, 100), null);
 });
 test("a range stream reads only selected bytes and closes on cancellation", async () => {
-  assert(
-    !process.env.AZURE_STORAGE_CONNECTION_STRING,
-    "Only local fixtures may run this test",
-  );
+  assert(!process.env.AZURE_STORAGE_CONNECTION_STRING, "Only local fixtures may run this test");
   const root = process.env.UPLOADS_DIR || path.join(process.cwd(), "uploads"),
     id = randomUUID(),
     file = path.join(root, id + ".video");
@@ -113,10 +104,7 @@ test("bounded connection cache reuses in-flight pools and evicts failures/unused
     creates++;
     return { name: "first" };
   };
-  const [a, b] = await Promise.all([
-    cache.get("key", make),
-    cache.get("key", make),
-  ]);
+  const [a, b] = await Promise.all([cache.get("key", make), cache.get("key", make)]);
   assert.equal(creates, 1);
   assert.equal(a, b);
   await cache.get("other", async () => ({ name: "second" }));
@@ -128,7 +116,7 @@ test("bounded connection cache reuses in-flight pools and evicts failures/unused
       cache.get("bad", async () => {
         throw Error("failure");
       }),
-    /failure/,
+    /failure/
   );
   await cache.get("bad", async () => ({ name: "recovered" }));
   await cache.close();
@@ -151,11 +139,6 @@ test("security events discard secret-bearing fields and malformed password hashe
   assert(!logs[0].includes("secret"));
   assert(!logs[0].includes("example"));
   assert.equal(JSON.parse(logs[0]).event, "login_failed");
-  for (const hash of [
-    "salt:" + "x".repeat(128),
-    "z".repeat(32) + ":" + "0".repeat(128),
-    "short",
-    "",
-  ])
+  for (const hash of ["salt:" + "x".repeat(128), "z".repeat(32) + ":" + "0".repeat(128), "short", ""])
     assert.equal(await verifyPassword("valid length password", hash), false);
 });

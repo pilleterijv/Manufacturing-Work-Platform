@@ -6,10 +6,7 @@ export async function GET(req: Request) {
   try {
     const u = await requireUser(),
       g = await grants(u),
-      id = z
-        .string()
-        .uuid()
-        .parse(new URL(req.url).searchParams.get("equipment"));
+      id = z.string().uuid().parse(new URL(req.url).searchParams.get("equipment"));
     await assertEquipmentAccess(u, id);
     const [defects, problems] = await Promise.all([
       g.includes("defects")

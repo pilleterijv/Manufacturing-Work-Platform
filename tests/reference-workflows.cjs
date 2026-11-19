@@ -7,10 +7,7 @@ const assert = require("node:assert/strict"),
   fs = require("node:fs/promises");
 const { db } = require("../lib/db.ts"),
   { hashPassword } = require("../lib/security.ts"),
-  {
-    referenceDepartments,
-    referenceAreas,
-  } = require("../lib/reference-catalog.ts");
+  { referenceDepartments, referenceAreas } = require("../lib/reference-catalog.ts");
 const origin = process.env.APP_URL || "http://localhost:3000",
   prefix = "Reference-" + randomUUID().slice(0, 8),
   users = [],
@@ -28,8 +25,7 @@ const check = async (r, status = 200) => {
   assert.equal(r.status(), status, await r.text());
   return r.json();
 };
-const post = (c, path, data) =>
-  c.request.post(origin + path, { headers: { Origin: origin }, data });
+const post = (c, path, data) => c.request.post(origin + path, { headers: { Origin: origin }, data });
 (async () => {
   try {
     assert(["localhost", "127.0.0.1"].includes(new URL(origin).hostname));
@@ -55,7 +51,7 @@ const post = (c, path, data) =>
               equipmentIds: [],
             },
           },
-        }),
+        })
       );
     browser = await chromium.launch({
       executablePath: process.env.CHROMIUM_PATH || "/usr/bin/chromium",
@@ -75,7 +71,7 @@ const post = (c, path, data) =>
           username: u.username,
           password,
           remember: false,
-        }),
+        })
       );
       contexts.push(c);
     }
@@ -93,49 +89,37 @@ const post = (c, path, data) =>
         action: "seed-catalog",
         plant: prefix,
       }),
-      403,
+      403
     );
     await check(
       await post(admin, "/api/platform", {
         action: "seed-catalog",
         plant: prefix,
-      }),
+      })
     );
-    const expected = referenceDepartments.reduce(
-      (n, d) => n + 1 + referenceAreas[d].length,
-      0,
-    );
-    assert.equal(
-      await db.location.count({ where: { plant: prefix } }),
-      expected,
-    );
+    const expected = referenceDepartments.reduce((n, d) => n + 1 + referenceAreas[d].length, 0);
+    assert.equal(await db.location.count({ where: { plant: prefix } }), expected);
     await check(
       await post(admin, "/api/platform", {
         action: "seed-catalog",
         plant: prefix,
-      }),
+      })
     );
-    assert.equal(
-      await db.location.count({ where: { plant: prefix } }),
-      expected,
-    );
+    assert.equal(await db.location.count({ where: { plant: prefix } }), expected);
     assert.equal(
       (
         await db.location.findFirst({
           where: { plant: prefix, area: "Mezzanine" },
         })
       ).active,
-      false,
+      false
     );
     assert(
       await db.location.findFirst({
         where: { plant: prefix, department: "Tableting", area: "Coating" },
-      }),
+      })
     );
-    assert.equal(
-      await db.location.count({ where: { plant: prefix, area: "AC Coating" } }),
-      0,
-    );
+    assert.equal(await db.location.count({ where: { plant: prefix, area: "AC Coating" } }), 0);
     for (const [department, area] of [
       ["Tableting", "Compressing"],
       ["Packaging", "Line 1"],
@@ -149,7 +133,7 @@ const post = (c, path, data) =>
             area,
             line: "",
           },
-        }),
+        })
       );
     const standard = async (kind, workflow, title, extra = {}) => {
       const family = randomUUID();
@@ -184,24 +168,11 @@ const post = (c, path, data) =>
         })),
       };
     };
-    const leader = await standard(
-        "audit",
-        "leader",
-        prefix + " leader shift checklist",
-      ),
-      processAudit = await standard(
-        "audit",
-        "process",
-        prefix + " process audit",
-      ),
+    const leader = await standard("audit", "leader", prefix + " leader shift checklist"),
+      processAudit = await standard("audit", "process", prefix + " process audit"),
       run = await standard("run", "process", prefix + " operator standard");
-    await check(
-      await operator.request.get(origin + "/api/platform?view=leaders"),
-      403,
-    );
-    let listing = await check(
-      await manager.request.get(origin + "/api/platform?view=leaders"),
-    );
+    await check(await operator.request.get(origin + "/api/platform?view=leaders"), 403);
+    let listing = await check(await manager.request.get(origin + "/api/platform?view=leaders"));
     assert(listing.standards.some((s) => s.id === leader.id));
     assert(!listing.standards.some((s) => s.id === processAudit.id));
     const legacy = await db.record.create({
@@ -221,23 +192,21 @@ const post = (c, path, data) =>
       },
     });
     records.push(legacy.id);
-    const legacyList = await check(
-      await manager.request.get(origin + "/api/platform?view=audits"),
-    );
+    const legacyList = await check(await manager.request.get(origin + "/api/platform?view=audits"));
     assert(legacyList.records.some((r) => r.id === legacy.id));
     await check(
       await post(other, "/api/platform", {
         action: "retire-standard",
         id: run.id,
       }),
-      403,
+      403
     );
     await check(
       await post(operator, "/api/platform", {
         action: "retire-standard",
         id: run.id,
       }),
-      403,
+      403
     );
     const begin = new Date().toISOString(),
       response = {
@@ -253,7 +222,7 @@ const post = (c, path, data) =>
         standardId: run.id,
         started: begin,
         responses: [response],
-      }),
+      })
     );
     const saved = await db.record.findFirst({ where: { standardId: run.id } });
     records.push(saved.id);
@@ -273,20 +242,16 @@ const post = (c, path, data) =>
           },
           createdBy: users[0].id,
         },
-      }),
+      })
     );
     await check(
       await post(admin, "/api/platform", {
         action: "retire-standard",
         id: run.id,
-      }),
+      })
     );
     assert(await db.record.findUnique({ where: { id: saved.id } }));
-    assert.equal(
-      (await db.workSchedule.findUnique({ where: { id: schedules[0].id } }))
-        .active,
-      false,
-    );
+    assert.equal((await db.workSchedule.findUnique({ where: { id: schedules[0].id } })).active, false);
     await check(await post(admin, "/api/platform", run.input), 409);
     await check(
       await post(operator, "/api/platform", {
@@ -295,7 +260,7 @@ const post = (c, path, data) =>
         started: begin,
         responses: [response],
       }),
-      409,
+      409
     );
     const race = await standard("run", "process", prefix + " race standard");
     const concurrent = await Promise.all([
@@ -308,7 +273,7 @@ const post = (c, path, data) =>
       await db.standard.count({
         where: { family: race.family, archived: false },
       }),
-      0,
+      0
     );
     await check(
       await post(admin, "/api/platform", {
@@ -317,23 +282,15 @@ const post = (c, path, data) =>
         equipmentId: eqs[0].id,
         body: "Fixture recovery guide",
         media: [],
-      }),
+      })
     );
     const guide = await db.content.findFirst({
       where: { title: prefix + " obsolete guide" },
     });
     contents.push(guide.id);
-    await check(
-      await post(other, "/api/platform", { action: "archive", id: guide.id }),
-      403,
-    );
-    await check(
-      await post(manager, "/api/platform", { action: "archive", id: guide.id }),
-    );
-    assert.equal(
-      (await db.content.findUnique({ where: { id: guide.id } })).active,
-      false,
-    );
+    await check(await post(other, "/api/platform", { action: "archive", id: guide.id }), 403);
+    await check(await post(manager, "/api/platform", { action: "archive", id: guide.id }));
+    assert.equal((await db.content.findUnique({ where: { id: guide.id } })).active, false);
     const pm = await db.maintenancePlan.create({
       data: {
         equipmentId: eqs[0].id,
@@ -367,19 +324,16 @@ const post = (c, path, data) =>
         id: pm.id,
         version: 1,
       }),
-      403,
+      403
     );
     await check(
       await post(manager, "/api/maintenance", {
         action: "retire",
         id: pm.id,
         version: 1,
-      }),
+      })
     );
-    assert.equal(
-      (await db.maintenancePlan.findUnique({ where: { id: pm.id } })).active,
-      false,
-    );
+    assert.equal((await db.maintenancePlan.findUnique({ where: { id: pm.id } })).active, false);
     assert(await db.record.findUnique({ where: { id: pmRecord.id } }));
     const area = await db.location.findFirst({
       where: { plant: prefix, department: "Tableting", area: "Compressing" },
@@ -403,41 +357,36 @@ const post = (c, path, data) =>
       },
     });
     plans.push(plan.id);
-    const linked = await standard(
-      "audit",
-      "leader",
-      prefix + " linked leader",
-      {
-        steps: [
-          {
-            id: randomUUID(),
-            text: "Verify 5S",
-            photo: false,
-            fiveSPlanId: plan.id,
-          },
-        ],
-      },
-    );
+    const linked = await standard("audit", "leader", prefix + " linked leader", {
+      steps: [
+        {
+          id: randomUUID(),
+          text: "Verify 5S",
+          photo: false,
+          fiveSPlanId: plan.id,
+        },
+      ],
+    });
     await check(
       await post(manager, "/api/five-s", {
         action: "retire",
         id: plan.id,
         version: 1,
       }),
-      409,
+      409
     );
     await check(
       await post(admin, "/api/platform", {
         action: "retire-standard",
         id: linked.id,
-      }),
+      })
     );
     await check(
       await post(manager, "/api/five-s", {
         action: "retire",
         id: plan.id,
         version: 1,
-      }),
+      })
     );
     const problem = {
       action: "create",
@@ -467,9 +416,7 @@ const post = (c, path, data) =>
     };
     const created = await check(await post(admin, "/api/problems", problem));
     cases.push(created.id);
-    let detail = await check(
-      await admin.request.get(origin + "/api/problems?id=" + created.id),
-    );
+    let detail = await check(await admin.request.get(origin + "/api/problems?id=" + created.id));
     assert.equal(detail.answers.why1b, "Path B");
     await check(
       await post(admin, "/api/problems", {
@@ -478,11 +425,9 @@ const post = (c, path, data) =>
         id: created.id,
         version: detail.version,
         status: "Closed",
-      }),
+      })
     );
-    detail = await check(
-      await admin.request.get(origin + "/api/problems?id=" + created.id),
-    );
+    detail = await check(await admin.request.get(origin + "/api/problems?id=" + created.id));
     assert(detail.closedAt);
     assert.equal(detail.answers.rootCause2, "Verified cause B");
     const page = await manager.newPage();
@@ -491,12 +436,7 @@ const post = (c, path, data) =>
     await page.goto(origin);
     await expandTools(page);
     await page.getByRole("heading", { name: "Welcome, Manager." }).waitFor();
-    assert.equal(
-      await page
-        .getByRole("combobox", { name: "Search this section", exact: true })
-        .count(),
-      0,
-    );
+    assert.equal(await page.getByRole("combobox", { name: "Search this section", exact: true }).count(), 0);
     const nav = async (name) => {
       await expandTools(page);
       await page.locator(".nav-item").filter({ hasText: name }).first().click();
@@ -512,24 +452,14 @@ const post = (c, path, data) =>
         const summary = page.getByText("Recent work and history", {
           exact: true,
         });
-        if (
-          (await summary.isVisible()) &&
-          (await summary.locator("..").getAttribute("open")) === null
-        )
+        if ((await summary.isVisible()) && (await summary.locator("..").getAttribute("open")) === null)
           await summary.click();
       }
     };
     await nav("My account");
-    assert.equal(
-      await page
-        .getByRole("combobox", { name: "Search this section", exact: true })
-        .count(),
-      0,
-    );
+    assert.equal(await page.getByRole("combobox", { name: "Search this section", exact: true }).count(), 0);
     await nav("Overview");
-    await page
-      .getByRole("button", { name: "View Ideas assignments", exact: true })
-      .click();
+    await page.getByRole("button", { name: "View Ideas assignments", exact: true }).click();
     await page
       .getByRole("heading", {
         name: "Improvement ideas",
@@ -538,39 +468,19 @@ const post = (c, path, data) =>
       })
       .waitFor();
     await nav("Overview");
-    await page
-      .getByRole("button", { name: "View DL/TL Standard Work", exact: true })
-      .first()
-      .click();
-    await page
-      .getByRole("heading", { name: "Complete assigned DL/TL Standard Work" })
-      .waitFor();
-    await page
-      .getByLabel("Standard work", { exact: true })
-      .selectOption(leader.id);
+    await page.getByRole("button", { name: "View DL/TL Standard Work", exact: true }).first().click();
+    await page.getByRole("heading", { name: "Complete assigned DL/TL Standard Work" }).waitFor();
+    await page.getByLabel("Standard work", { exact: true }).selectOption(leader.id);
     await page.getByRole("button", { name: "✓ Yes", exact: true }).click();
-    assert.equal(
-      await page
-        .getByText("Optional cycle timestamps", { exact: false })
-        .count(),
-      0,
-    );
+    assert.equal(await page.getByText("Optional cycle timestamps", { exact: false }).count(), 0);
     const setting = await db.setting.findUnique({ where: { key: "shifts" } });
-    await page
-      .getByLabel("Leader-work shift", { exact: true })
-      .selectOption(setting.value.shifts[0].name);
+    await page.getByLabel("Leader-work shift", { exact: true }).selectOption(setting.value.shifts[0].name);
     await page
       .getByLabel("Leader pass-down notes", { exact: true })
       .fill("Fixture pass-down: next shift review");
-    await page
-      .getByRole("button", { name: "Add room / machine handoff", exact: true })
-      .click();
-    await page
-      .getByLabel("Item number · row 1", { exact: true })
-      .fill("ITEM-FIXTURE");
-    await page
-      .getByLabel("Lot number · row 1", { exact: true })
-      .fill("LOT-FIXTURE");
+    await page.getByRole("button", { name: "Add room / machine handoff", exact: true }).click();
+    await page.getByLabel("Item number · row 1", { exact: true }).fill("ITEM-FIXTURE");
+    await page.getByLabel("Lot number · row 1", { exact: true }).fill("LOT-FIXTURE");
     await fs.mkdir("docs/screenshots/reference-forms", { recursive: true });
     await page.evaluate(() => scrollTo(0, 0));
     await page.screenshot({
@@ -584,10 +494,7 @@ const post = (c, path, data) =>
       })
       .click();
     try {
-      await page
-        .getByRole("status")
-        .filter({ hasText: "Saved to the database" })
-        .waitFor({ timeout: 10000 });
+      await page.getByRole("status").filter({ hasText: "Saved to the database" }).waitFor({ timeout: 10000 });
     } catch (error) {
       console.error(await page.locator("main").innerText());
       console.error(
@@ -596,8 +503,8 @@ const post = (c, path, data) =>
             tag: n.tagName,
             name: n.getAttribute("aria-label"),
             message: n.validationMessage,
-          })),
-        ),
+          }))
+        )
       );
       throw error;
     }
@@ -608,36 +515,26 @@ const post = (c, path, data) =>
     records.push(completed.id);
     assert.equal(completed.data.snapshot.workflow, "leader");
     assert.equal(completed.data.handoff.rooms[0].lot, "LOT-FIXTURE");
-    listing = await check(
-      await manager.request.get(origin + "/api/platform?view=leaders"),
-    );
+    listing = await check(await manager.request.get(origin + "/api/platform?view=leaders"));
     assert(listing.records.some((r) => r.id === completed.id));
     assert(!listing.records.some((r) => r.id === legacy.id));
     await nav("Problem solving");
-    await page
-      .getByRole("button", { name: "New 4D record", exact: true })
-      .click();
-    await page
-      .getByLabel("Use a second 5-Why root cause path", { exact: true })
-      .check();
-    await page
-      .getByPlaceholder("Root cause path 2 · Why 1", { exact: true })
-      .fill("Independent path B");
+    await page.getByRole("button", { name: "New 4D record", exact: true }).click();
+    await page.getByLabel("Use a second 5-Why root cause path", { exact: true }).check();
+    await page.getByPlaceholder("Root cause path 2 · Why 1", { exact: true }).fill("Independent path B");
     await page
       .getByPlaceholder("Root cause path 2 · Root cause summary", {
         exact: true,
       })
       .fill("Second verified cause");
-    await page
-      .getByPlaceholder("Root cause path 2 · Why 1", { exact: true })
-      .scrollIntoViewIfNeeded();
+    await page.getByPlaceholder("Root cause path 2 · Why 1", { exact: true }).scrollIntoViewIfNeeded();
     await page.screenshot({
       path: "docs/screenshots/reference-forms/two-root-causes.png",
     });
     assert.deepEqual(errors, []);
     for (const c of contexts) await c.close();
     console.log(
-      "PASS: exact/idempotent catalog, role/scope guards, separate leader/process audits, immutable retirement and schedules, concurrent family retirement, guide/PM/5S retirement, dual 4D roots, dashboard shortcuts, hidden irrelevant searches and persisted leader handoff.",
+      "PASS: exact/idempotent catalog, role/scope guards, separate leader/process audits, immutable retirement and schedules, concurrent family retirement, guide/PM/5S retirement, dual 4D roots, dashboard shortcuts, hidden irrelevant searches and persisted leader handoff."
     );
   } finally {
     await browser?.close();
@@ -645,10 +542,7 @@ const post = (c, path, data) =>
     await db.problem.deleteMany({ where: { id: { in: cases } } });
     await db.record.deleteMany({
       where: {
-        OR: [
-          { id: { in: records } },
-          { standard: { family: { in: families } } },
-        ],
+        OR: [{ id: { in: records } }, { standard: { family: { in: families } } }],
       },
     });
     await db.workSchedule.deleteMany({
@@ -669,6 +563,10 @@ const post = (c, path, data) =>
     await db.session.deleteMany({
       where: { userId: { in: users.map((u) => u.id) } },
     });
+    await db.notification.deleteMany({
+      where: { userId: { in: users.map((u) => u.id) }, kind: "assignment" },
+    });
+    await db.assignmentDelivery.deleteMany({ where: { userId: { in: users.map((u) => u.id) } } });
     await db.user.deleteMany({ where: { id: { in: users.map((u) => u.id) } } });
     await db.$disconnect();
   }

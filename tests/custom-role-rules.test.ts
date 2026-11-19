@@ -12,10 +12,7 @@ const policy = {
   active: true,
 };
 test("custom role uses only its own functions and explicit management rights", () => {
-  const a = roleAuthority(
-    { role: "Operator", customRole: policy.role },
-    policy,
-  );
+  const a = roleAuthority({ role: "Operator", customRole: policy.role }, policy);
   assert(a.grants.includes("maintenance"));
   assert(!a.grants.includes("work"));
   assert(!a.grants.includes("manage"));
@@ -28,8 +25,8 @@ test("custom role uses only its own functions and explicit management rights", (
         ...a,
         adminPrivileges: a.privileges,
       },
-      "Accounts",
-    ),
+      "Accounts"
+    )
   );
 });
 test("custom Manager workflow does not silently inherit account administration", () => {
@@ -49,21 +46,17 @@ test("custom Manager workflow does not silently inherit account administration",
         grants: a.grants,
         adminPrivileges: a.privileges,
       },
-      "Accounts",
-    ),
+      "Accounts"
+    )
   );
   const builtIn = roleAuthority(
     { role: "Manager" },
-    { role: "Manager", baseRole: "Manager", grants: defaults.Manager },
+    { role: "Manager", baseRole: "Manager", grants: defaults.Manager }
   );
   assert(managerAccountPrivileges.every((x) => builtIn.privileges.includes(x)));
 });
 test("inactive, missing and mismatched custom roles fail closed", () => {
-  for (const p of [
-    undefined,
-    { ...policy, active: false },
-    { ...policy, baseRole: "Manager" },
-  ]) {
+  for (const p of [undefined, { ...policy, active: false }, { ...policy, baseRole: "Manager" }]) {
     const a = roleAuthority(
       {
         role: "Operator",
@@ -71,7 +64,7 @@ test("inactive, missing and mismatched custom roles fail closed", () => {
         extraGrants: ["work"],
         adminPrivileges: ["equipment.manage"],
       },
-      p,
+      p
     );
     assert.deepEqual(a, { grants: [], privileges: [] });
   }
@@ -100,7 +93,7 @@ test("individual extra permissions are additive only for a valid active role", (
       extraGrants: ["ideas"],
       adminPrivileges: ["resources.manage"],
     },
-    policy,
+    policy
   );
   assert(a.grants.includes("ideas"));
   assert(a.privileges.includes("resources.manage"));
