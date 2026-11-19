@@ -288,10 +288,10 @@ async function main() {
   await page.getByRole("combobox", { name: "Account", exact: true }).selectOption(people[0].id);
   assert.equal(await page.getByLabel("First name", { exact: true }).inputValue(), "Mary Ann");
   assert.equal(await page.getByLabel("Last name", { exact: true }).inputValue(), "van der Meer");
-  await page.screenshot({
-    path: "docs/screenshots/directory-assignment-charts/account.png",
-    fullPage: false,
-  });
+  await page
+    .getByRole("heading", { name: "Update account", exact: true })
+    .locator("..")
+    .screenshot({ path: "docs/screenshots/directory-assignment-charts/account.png" });
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   assert.deepEqual(errors, []);
   console.log(

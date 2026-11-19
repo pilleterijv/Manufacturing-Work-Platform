@@ -342,6 +342,7 @@ export async function GET(req: Request) {
           : (view === "manage" ? await visiblePeople(u, ids) : []).map((person) => ({
               id: person.id,
               name: person.name,
+              username: person.username,
               role: person.role,
               active: person.active,
             })),
