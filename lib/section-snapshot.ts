@@ -48,22 +48,27 @@ export function sectionSnapshot(section: string, d: any): SectionSnapshot {
           : r.active
             ? "Active settings"
             : "Retired"
-        : section === "Downtime"
-          ? r.endedAt
-            ? "Ended"
-            : "Active"
-          : r.status ||
-            (r.kind === "video"
-              ? "Training"
-              : r.kind === "guide"
-                ? "Guide"
-                : r.endedAt
-                  ? "Stopped"
-                  : r.startedAt
-                    ? "Running"
-                    : r.data?.followUp
-                      ? "Follow up"
-                      : "Recorded"),
+        : ["Preventive maintenance", "TPM / CIL", "5S audits"].includes(section) &&
+            typeof r.active === "boolean"
+          ? r.active
+            ? "Active plan"
+            : "Retired plan"
+          : section === "Downtime"
+            ? r.endedAt
+              ? "Ended"
+              : "Active"
+            : r.status ||
+              (r.kind === "video"
+                ? "Training"
+                : r.kind === "guide"
+                  ? "Guide"
+                  : r.endedAt
+                    ? "Stopped"
+                    : r.startedAt
+                      ? "Running"
+                      : r.data?.followUp
+                        ? "Follow up"
+                        : "Recorded"),
     equipment:
       r.snapshot?.area?.area ||
       (d.areas || []).find((a: any) => a.id === r.locationId)?.area ||
