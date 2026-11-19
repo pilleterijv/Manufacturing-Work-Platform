@@ -15,6 +15,7 @@ export const dashboardWidgetLabels = {
 };
 export const homeSections = [
   "Work queue",
+  "Submission history",
   "Machines",
   "Overview",
   "Standard work",

@@ -90,9 +90,14 @@ export function builtinRole(name: string) {
   return (roles as readonly string[]).includes(name);
 }
 export const capabilityLabels: Record<
-  string,
+  (typeof capabilities)[number],
   { label: string; detail: string }
 > = {
+  history: {
+    label: "Area submission history — read only",
+    detail:
+      "View completed submissions and attached evidence in assigned areas. Does not allow completing, editing, deleting or exporting work by itself.",
+  },
   work: {
     label: "Perform standard work",
     detail: "Complete machine tasks and view permitted work history",

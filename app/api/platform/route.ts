@@ -150,7 +150,9 @@ export async function GET(req: Request) {
     const historyKind = view === "records" ? requestedKind : view;
     const scope = {
       AND: [recordScope(ids), recordFilters(person, search, matchingEquipment)],
-      ...(g.includes("analytics") ? {} : { userId: u.id }),
+      ...(g.includes("analytics") || g.includes("history")
+        ? {}
+        : { userId: u.id }),
       ...(historyKind === "changeovers"
         ? { data: { path: ["snapshot", "workflow"], equals: "changeover" } }
         : historyKind === "work"
@@ -341,7 +343,9 @@ export async function GET(req: Request) {
                 ],
                 kind: "audit",
                 data: { path: ["snapshot", "workflow"], equals: "leader" },
-                ...(g.includes("analytics") ? {} : { userId: u.id }),
+                ...(g.includes("analytics") || g.includes("history")
+                  ? {}
+                  : { userId: u.id }),
               },
             })
           : 0,
