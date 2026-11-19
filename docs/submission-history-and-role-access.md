@@ -37,3 +37,5 @@ There is one place to find completed work, with names that distinguish Operator 
 Regression checks use a randomly named disposable PostgreSQL database, synthetic accounts and synthetic photos. They cover same-area sharing, direct foreign-ID denial, private draft denial, separate write permissions, scope revocation, stable pagination and tablet rendering. Production build, TypeScript and unit checks are also required before publishing.
 
 This is a targeted permissions and workflow review. It is not a guarantee that every possible production configuration or external integration is error-free. Configure role permissions and assignments in a pilot, then have one representative from each role try their actual shift tasks before plant-wide rollout.
+
+Verified on November 19, 2026: production build and TypeScript passed; all 83 unit tests passed; isolated custom-role, core browser, floor-usability and security-readiness suites passed. The history regression also exercises 5S, PM, CIL and centerline detail access, 111 authorized records across multiple pages, same-timestamp ordering and revocation. No company database was changed by these tests.
