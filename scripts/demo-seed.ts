@@ -1,7 +1,6 @@
 import "dotenv/config";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import sharp from "sharp";
 import { db } from "../lib/db";
 import { hashPassword } from "../lib/passwords";
 import { defaults } from "../lib/rules";
@@ -19,6 +18,18 @@ async function seed() {
   if (process.env.FLOORWORK_DEMO_MODE !== "true") throw Error("Refusing to seed outside explicit demo mode.");
   const marker = await db.setting.findUnique({ where: { key: "demo-dataset" } });
   if ((marker?.value as any)?.synthetic) {
+    if (process.env.FLOORWORK_DEMO_PASSWORD) {
+      const password = await hashPassword(process.env.FLOORWORK_DEMO_PASSWORD);
+      const accounts = (marker!.value as any).accounts as string[];
+      const users = await db.user.findMany({ where: { username: { in: accounts } }, select: { id: true } });
+      await db.$transaction([
+        db.user.updateMany({
+          where: { id: { in: users.map((u) => u.id) } },
+          data: { password, mustChange: false, version: { increment: 1 } },
+        }),
+        db.session.deleteMany({ where: { userId: { in: users.map((u) => u.id) } } }),
+      ]);
+    }
     console.log("Demo examples already exist; preserving your practice edits. Use demo:reset to start over.");
     return;
   }
@@ -33,13 +44,7 @@ async function seed() {
     day = (offset: number) => Temporal.PlainDate.from(today).add({ days: offset }).toString();
   const imageId = randomUUID(),
     videoId = randomUUID();
-  const bytes = await sharp(
-    Buffer.from(
-      '<svg width="640" height="360" xmlns="http://www.w3.org/2000/svg"><rect width="640" height="360" fill="#fff3e5"/><rect x="130" y="80" width="380" height="150" fill="#e85208" rx="20"/><text x="320" y="280" font-size="24" text-anchor="middle" fill="#223c50">DEMO equipment illustration</text><text x="320" y="320" font-size="18" text-anchor="middle" fill="#223c50">Fictional example — not a work instruction</text></svg>'
-    )
-  )
-    .webp()
-    .toBuffer();
+  const bytes = await readFile("scripts/demo-assets/equipment.webp");
   const clip = await readFile("scripts/demo-assets/training.mp4");
   await storePhoto(imageId, bytes);
   await storeVideo(videoId, clip, "video/mp4");
@@ -76,8 +81,14 @@ async function seed() {
               mustChange: false,
               email: `demo-${key}@example.invalid`,
               workspaceAccess: access,
-              dashboardDepartment: key === "manager" ? { plant, department: "Tableting" } : undefined,
-              dashboardPreferences: { home: "Overview", showQueue: true, defaultScope: "personal" },
+              dashboardDepartment: ["manager", "admin"].includes(key)
+                ? { plant, department: "Tableting" }
+                : undefined,
+              dashboardPreferences: {
+                home: "Overview",
+                showQueue: true,
+                defaultScope: ["manager", "admin"].includes(key) ? "department" : "personal",
+              },
               overdueEmail: false,
             },
           })
@@ -92,7 +103,7 @@ async function seed() {
           role: "Demo Maintenance",
           baseRole: "Operator",
           homeProfile: "maintenance",
-          grants: ["maintenance", "defects", "centerlines", "work", "dashboard", "history"],
+          grants: ["maintenance", "defects", "centerlines", "work", "problems", "dashboard", "history"],
           description: "Fictional demo maintenance workflow",
         },
       });
@@ -406,7 +417,7 @@ async function seed() {
             createdBy: operator.id,
             submitterId: operator.id,
             pilotId: operator.id,
-            validatorId: manager.id,
+            validatorId: index === 2 ? admin.id : manager.id,
             media,
             participants: { create: [{ userId: leader.id }] },
           },
@@ -431,7 +442,7 @@ async function seed() {
             occurredOn: today,
             reportedBy: operator.name,
             ownerId: leader.id,
-            reviewerId: manager.id,
+            reviewerId: method === "2D" ? admin.id : manager.id,
             team: "DEMO team — fictional people only",
             dueDate: day(method === "2D" ? -1 : 7),
             answers: {
@@ -556,9 +567,17 @@ async function seed() {
           active: false,
         },
       });
+      const excelSource = await tx.integrationSource.create({
+        data: {
+          name: "DEMO local Excel examples — no live connection",
+          tokenHash: randomUUID(),
+          active: true,
+          createdBy: admin.id,
+        },
+      });
       const feed = await tx.externalFeed.create({
         data: {
-          sourceId: source.id,
+          sourceId: excelSource.id,
           name: "DEMO Excel production results",
           section: "Production results",
           active: true,

@@ -1,9 +1,11 @@
 import type { MetadataRoute } from "next";
+export const dynamic = "force-dynamic";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Floorwork Manufacturing",
-    short_name: "Floorwork",
+    name:
+      process.env.FLOORWORK_DEMO_MODE === "true" ? "Floorwork DEMO — sample data" : "Floorwork Manufacturing",
+    short_name: process.env.FLOORWORK_DEMO_MODE === "true" ? "Floorwork DEMO" : "Floorwork",
     description: "Standard work, improvement ideas and department performance",
     start_url: "/",
     scope: "/",
