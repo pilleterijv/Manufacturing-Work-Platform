@@ -73,6 +73,15 @@ export async function GET(req: Request) {
         {
           source,
           record,
+          authorName:
+            source === "fiveS"
+              ? (
+                  await db.user.findUnique({
+                    where: { id: record.userId },
+                    select: { name: true },
+                  })
+                )?.name
+              : undefined,
           areas:
             source === "fiveS"
               ? areas.filter((a) => a.id === (record as any).locationId)
@@ -177,6 +186,28 @@ export async function GET(req: Request) {
                   }),
             }
           : { kind: type };
+    const matchingAreas = search
+      ? areas
+          .filter((a) =>
+            [a.plant, a.department, a.area, a.line]
+              .join(" ")
+              .toLowerCase()
+              .includes(search.toLowerCase()),
+          )
+          .map((a) => a.id)
+      : [];
+    const matchingAuthors =
+      search && (g.includes("fiveS") || g.includes("history"))
+        ? await db.user.findMany({
+            where: {
+              OR: [
+                { name: { contains: search, mode: "insensitive" } },
+                { username: { contains: search, mode: "insensitive" } },
+              ],
+            },
+            select: { id: true },
+          })
+        : [];
     const [records, audits] = await Promise.all([
       type === "fiveS"
         ? []
@@ -224,11 +255,17 @@ export async function GET(req: Request) {
                 ...(search
                   ? [
                       {
-                        snapshot: {
-                          path: ["title"],
-                          string_contains: search,
-                          mode: "insensitive" as const,
-                        },
+                        OR: [
+                          {
+                            snapshot: {
+                              path: ["title"],
+                              string_contains: search,
+                              mode: "insensitive" as const,
+                            },
+                          },
+                          { locationId: { in: matchingAreas } },
+                          { userId: { in: matchingAuthors.map((a) => a.id) } },
+                        ],
                       },
                     ]
                   : []),

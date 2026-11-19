@@ -340,6 +340,112 @@ async function main() {
     ).status(),
     405,
   );
+  const locations = [];
+  for (const e of eq)
+    locations.push(
+      await db.location.create({
+        data: {
+          plant: e.plant,
+          department: e.department,
+          area: e.area,
+          line: "",
+        },
+      }),
+    );
+  const audits = [];
+  for (const [si, userIndex] of [
+    [0, 1],
+    [1, 3],
+  ]) {
+    const plan = await db.fiveSPlan.create({
+      data: {
+        locationId: locations[si].id,
+        title: "5S scope check",
+        questions: [],
+        assigneeIds: [],
+        createdBy: users[userIndex].id,
+        history: [],
+      },
+    });
+    audits.push(
+      await db.fiveSAudit.create({
+        data: {
+          planId: plan.id,
+          locationId: locations[si].id,
+          userId: users[userIndex].id,
+          snapshot: {
+            title: "5S scope check",
+            questions: [{ id: "q", text: "Clear aisle" }],
+          },
+          responses: [{ questionId: "q", score: 2 }],
+          media: [],
+          score: 2,
+          maximum: 2,
+        },
+      }),
+    );
+  }
+  assert.equal(
+    (
+      await readerContext.request.get(
+        origin + "/api/submissions?source=fiveS&id=" + audits[0].id,
+      )
+    ).status(),
+    200,
+  );
+  assert.equal(
+    (
+      await readerContext.request.get(
+        origin + "/api/submissions?source=fiveS&id=" + audits[1].id,
+      )
+    ).status(),
+    404,
+  );
+  await db.location.update({
+    where: { id: locations[0].id },
+    data: { active: false },
+  });
+  assert.equal(
+    (
+      await readerContext.request.get(
+        origin + "/api/submissions?source=fiveS&id=" + audits[0].id,
+      )
+    ).status(),
+    200,
+  );
+  for (const kind of ["pm", "cil", "centerline"]) {
+    const saved = await db.record.create({
+      data: {
+        kind,
+        userId: users[1].id,
+        data: {
+          equipmentId: eq[0].id,
+          planSnapshot: { title: kind + " saved plan", steps: [] },
+          responses: [],
+          media: [{ id: peerPhoto, kind: "photo" }],
+        },
+      },
+    });
+    const response = await readerContext.request.get(
+      origin + "/api/submissions?type=" + kind,
+    );
+    assert.equal(response.status(), 200);
+    assert((await response.json()).items.some((item) => item.id === saved.id));
+    assert.equal(
+      (
+        await readerContext.request.get(
+          origin + "/api/submissions?source=record&id=" + saved.id,
+        )
+      ).status(),
+      200,
+    );
+  }
+  const fiveSearch = await readerContext.request.get(
+    origin +
+      "/api/submissions?" +
+      new URLSearchParams({ type: "fiveS", search: users[1].name }),
+  );
+  assert.equal((await fiveSearch.json()).items.length, 1);
   // More than the old 100-entry cap, including identical timestamps.
   await db.record.createMany({
     data: Array.from({ length: 105 }, () => ({
@@ -369,24 +475,25 @@ async function main() {
     }
     cursor = page.hasMore ? page.cursor : "";
   } while (cursor);
-  assert.equal(seen.size, 107);
+  assert.equal(seen.size, 111);
   const page = await readerContext.newPage();
   await page.setViewportSize({ width: 1024, height: 768 });
   await page.goto(origin);
-  await page
-    .getByRole("button", { name: "Submission history", exact: true })
-    .click();
+  await page.getByRole("button", { name: /Submission history/ }).click();
   await page.getByRole("heading", { name: "Find submitted work" }).waitFor();
   await page
     .getByRole("button", { name: "View submitted details" })
     .first()
     .click();
-  await page.getByText("Read-only saved submission", { exact: true }).first().waitFor();
+  await page
+    .getByText("Read-only saved submission", { exact: true })
+    .first()
+    .waitFor();
   const fs = require("node:fs");
   fs.mkdirSync("docs/screenshots/submission-history", { recursive: true });
   await page.screenshot({
     path: "docs/screenshots/submission-history/tablet.png",
-    fullPage: true,
+    fullPage: false,
   });
   assert(
     await page.evaluate(
