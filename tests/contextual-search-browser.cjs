@@ -1,8 +1,4 @@
-const {
-  expandTools,
-  assignmentPanels,
-  planningTools,
-} = require("./ui-workspace.cjs");
+const { expandTools, assignmentPanels, planningTools } = require("./ui-workspace.cjs");
 require("tsx/cjs");
 const { sectionLabel } = require("../lib/navigation.ts");
 require("dotenv").config({ quiet: true });
@@ -21,16 +17,7 @@ const origin = process.env.APP_URL || "http://localhost:3000",
   contents = [],
   maintenance = [],
   locations = [];
-let browser,
-  centerline,
-  defect,
-  fiveS,
-  audit,
-  source,
-  feed,
-  external,
-  problem,
-  idea;
+let browser, centerline, defect, fiveS, audit, source, feed, external, problem, idea;
 async function get(c, path) {
   const r = await c.request.get(origin + path);
   assert.equal(r.status(), 200, await r.text());
@@ -49,19 +36,17 @@ async function main() {
           area: n ? "Line 9" : "Compressing",
           line: "",
         },
-      }),
+      })
     );
     equipment.push(
       await db.equipment.create({
         data: {
           ...Object.fromEntries(
-            Object.entries(locations[n]).filter(([k]) =>
-              ["plant", "department", "area", "line"].includes(k),
-            ),
+            Object.entries(locations[n]).filter(([k]) => ["plant", "department", "area", "line"].includes(k))
           ),
           name: prefix + (n ? " foreign" : " press"),
         },
-      }),
+      })
     );
   }
   for (const [role, n] of [
@@ -89,7 +74,7 @@ async function main() {
             equipmentIds: [],
           },
         },
-      }),
+      })
     );
   for (let n = 0; n < 2; n++)
     records.push(
@@ -101,24 +86,14 @@ async function main() {
             title: prefix + (n ? " secret study" : " measured study"),
             equipmentId: equipment[n].id,
             equipmentSnapshot: equipment[n],
-            cycles: [
-              { element: "Fill", seconds: 10, at: new Date().toISOString() },
-            ],
+            cycles: [{ element: "Fill", seconds: 10, at: new Date().toISOString() }],
           },
         },
-      }),
+      })
     );
   for (const [kind, title, body] of [
-    [
-      "video",
-      prefix + " training",
-      "https://www.youtube-nocookie.com/embed/abc",
-    ],
-    [
-      "guide",
-      prefix + " roller guide",
-      "Inspect rollerwear and restore alignment",
-    ],
+    ["video", prefix + " training", "https://www.youtube-nocookie.com/embed/abc"],
+    ["guide", prefix + " roller guide", "Inspect rollerwear and restore alignment"],
   ])
     contents.push(
       await db.content.create({
@@ -129,7 +104,7 @@ async function main() {
           equipmentId: equipment[0].id,
           createdBy: users[0].id,
         },
-      }),
+      })
     );
   for (const kind of ["pm", "cil"])
     maintenance.push(
@@ -145,7 +120,7 @@ async function main() {
           createdBy: users[0].id,
           history: [],
         },
-      }),
+      })
     );
   centerline = await db.centerline.create({
     data: {
@@ -189,7 +164,7 @@ async function main() {
           followUp: false,
         },
       },
-    }),
+    })
   );
   defect = await db.defect.create({
     data: {
@@ -302,86 +277,40 @@ async function main() {
     },
   });
   assert.equal(r.status(), 200);
-  const options = (section, q = "") =>
-    get(c, "/api/section-options?" + new URLSearchParams({ section, q }));
+  const options = (section, q = "") => get(c, "/api/section-options?" + new URLSearchParams({ section, q }));
+  assert(JSON.stringify(await options("Time studies", prefix)).includes(records[0].data.title));
+  assert(!JSON.stringify(await options("Time studies", prefix)).includes("secret study"));
+  assert(!JSON.stringify(await options("Training", prefix)).includes(records[0].data.title));
+  assert(!JSON.stringify(await options("5S audits", prefix)).includes(equipment[0].name));
+  assert(JSON.stringify(await options("Preventive maintenance", prefix)).includes(maintenance[0].title));
+  assert(!JSON.stringify(await options("Preventive maintenance", prefix)).includes(maintenance[1].title));
+  assert(JSON.stringify(await options("TPM / CIL", prefix)).includes(maintenance[1].title));
   assert(
-    JSON.stringify(await options("Time studies", prefix)).includes(
-      records[0].data.title,
-    ),
-  );
-  assert(
-    !JSON.stringify(await options("Time studies", prefix)).includes(
-      "secret study",
-    ),
-  );
-  assert(
-    !JSON.stringify(await options("Training", prefix)).includes(
-      records[0].data.title,
-    ),
-  );
-  assert(
-    !JSON.stringify(await options("5S audits", prefix)).includes(
-      equipment[0].name,
-    ),
-  );
-  assert(
-    JSON.stringify(await options("Preventive maintenance", prefix)).includes(
-      maintenance[0].title,
-    ),
-  );
-  assert(
-    !JSON.stringify(await options("Preventive maintenance", prefix)).includes(
-      maintenance[1].title,
-    ),
-  );
-  assert(
-    JSON.stringify(await options("TPM / CIL", prefix)).includes(
-      maintenance[1].title,
-    ),
-  );
-  assert(
-    (await options("Problem solving", problem.reference)).options.some(
-      (x) => x.value === problem.reference,
-    ),
+    (await options("Problem solving", problem.reference)).options.some((x) => x.value === problem.reference)
   );
   assert(
     (await options("Production results", external.externalId)).options.some(
-      (x) => x.value === external.externalId,
-    ),
+      (x) => x.value === external.externalId
+    )
   );
   assert.equal(
-    (
-      await get(
-        c,
-        "/api/external-data?section=Production%20results&search=" +
-          external.externalId,
-      )
-    ).items[0].id,
-    external.id,
+    (await get(c, "/api/external-data?section=Production%20results&search=" + external.externalId)).items[0]
+      .id,
+    external.id
   );
-  assert.equal(
-    (await get(c, "/api/defects?search=" + defect.maintainxId)).defects[0].id,
-    defect.id,
+  assert.equal((await get(c, "/api/defects?search=" + defect.maintainxId)).defects[0].id, defect.id);
+  assert(
+    (await get(c, "/api/centerlines?search=" + encodeURIComponent("Retired-SKU-105-" + prefix))).records.some(
+      (x) => x.id === records[2].id
+    )
   );
   assert(
     (
       await get(
         c,
-        "/api/centerlines?search=" +
-          encodeURIComponent("Retired-SKU-105-" + prefix),
+        "/api/five-s?person=" + users[0].id + "&search=" + encodeURIComponent(prefix + " historical 5S")
       )
-    ).records.some((x) => x.id === records[2].id),
-  );
-  assert(
-    (
-      await get(
-        c,
-        "/api/five-s?person=" +
-          users[0].id +
-          "&search=" +
-          encodeURIComponent(prefix + " historical 5S"),
-      )
-    ).records.some((x) => x.id === audit.id),
+    ).records.some((x) => x.id === audit.id)
   );
   const page = await c.newPage(),
     errors = [],
@@ -397,27 +326,16 @@ async function main() {
     await page
       .locator(".sidebar nav > div")
       .getByRole("button", {
-        name: new RegExp(
-          sectionLabel(name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$",
-        ),
+        name: new RegExp(sectionLabel(name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$"),
       })
       .first()
       .click();
-    await page
-      .getByRole("heading", { name: sectionLabel(name), level: 1, exact: true })
-      .waitFor();
+    await page.getByRole("heading", { name: sectionLabel(name), level: 1, exact: true }).waitFor();
   }
   for (const name of Object.keys(sectionSearch)) {
     await nav(name);
-    await page
-      .getByRole("combobox", { name: sectionSearch[name].label, exact: true })
-      .waitFor();
-    assert.equal(
-      await page
-        .getByRole("combobox", { name: "Search this section", exact: true })
-        .count(),
-      0,
-    );
+    await page.getByRole("combobox", { name: sectionSearch[name].label, exact: true }).waitFor();
+    assert.equal(await page.getByRole("combobox", { name: "Search this section", exact: true }).count(), 0);
     assert.equal(
       await page
         .getByRole("combobox", {
@@ -425,7 +343,7 @@ async function main() {
           exact: true,
         })
         .count(),
-      1,
+      1
     );
   }
   await nav("Time studies");
@@ -434,29 +352,16 @@ async function main() {
     exact: true,
   });
   await field.fill(prefix + " measured study");
-  await page
-    .getByRole("button", { name: "Apply filters", exact: true })
-    .click();
-  await page
-    .getByText(records[0].data.title, { exact: true })
-    .first()
-    .waitFor();
+  await page.getByRole("button", { name: "Apply filters", exact: true }).click();
+  await page.getByText(records[0].data.title, { exact: true }).first().waitFor();
   await nav("Centerlines");
   assert.equal(
-    await page
-      .getByRole("combobox", { name: "Search centerlines", exact: true })
-      .inputValue(),
-    "",
+    await page.getByRole("combobox", { name: "Search centerlines", exact: true }).inputValue(),
+    ""
   );
-  await page
-    .getByRole("heading", { name: "Machine centerlines", exact: true })
-    .waitFor();
+  await page.getByRole("heading", { name: "Machine centerlines", exact: true }).waitFor();
   try {
-    await page
-      .getByRole("row")
-      .filter({ hasText: centerline.title })
-      .first()
-      .waitFor({ timeout: 10000 });
+    await page.getByRole("row").filter({ hasText: centerline.title }).first().waitFor({ timeout: 10000 });
   } catch (e) {
     console.error("Browser errors:", errors);
     throw e;
@@ -468,63 +373,35 @@ async function main() {
     exact: true,
   });
   await guideSearch.fill("rollerwear");
-  await page
-    .locator('[role="listbox"] [role="option"]')
-    .filter({ hasText: contents[1].title })
-    .waitFor();
-  await page
-    .locator('[role="listbox"] [role="option"]')
-    .filter({ hasText: contents[1].title })
-    .click();
-  await page
-    .getByRole("button", { name: "Apply filters", exact: true })
-    .click();
-  await page
-    .getByRole("heading", { name: contents[1].title, exact: true })
-    .waitFor();
-  assert.equal(
-    await page.getByLabel("Search library", { exact: true }).count(),
-    0,
-  );
+  await page.locator('[role="listbox"] [role="option"]').filter({ hasText: contents[1].title }).waitFor();
+  await page.locator('[role="listbox"] [role="option"]').filter({ hasText: contents[1].title }).click();
+  await page.getByRole("button", { name: "Apply filters", exact: true }).click();
+  await page.getByRole("heading", { name: contents[1].title, exact: true }).waitFor();
+  assert.equal(await page.getByLabel("Search library", { exact: true }).count(), 0);
   await nav("Problem solving");
-  assert.equal(
-    await page.getByLabel("Find a record", { exact: true }).count(),
-    0,
-  );
+  assert.equal(await page.getByLabel("Find a record", { exact: true }).count(), 0);
   await page.getByLabel("Method filter").selectOption("4D");
   const search = page.getByRole("combobox", {
     name: "Search problem solving",
     exact: true,
   });
   await search.fill(problem.reference);
-  await page
-    .locator('[role="listbox"] [role="option"]')
-    .filter({ hasText: problem.reference })
-    .click();
-  await page
-    .getByRole("button", { name: "Apply filters", exact: true })
-    .click();
+  await page.locator('[role="listbox"] [role="option"]').filter({ hasText: problem.reference }).click();
+  await page.getByRole("button", { name: "Apply filters", exact: true }).click();
   await page.getByRole("row").filter({ hasText: problem.reference }).waitFor();
   assert.equal(await page.getByLabel("Method filter").inputValue(), "4D");
   await nav("Improvement ideas");
   await page
     .getByRole("combobox", { name: "Search improvement ideas", exact: true })
     .fill("guardrailrevision");
-  await page
-    .locator('[role="listbox"] [role="option"]')
-    .filter({ hasText: idea.title })
-    .waitFor();
+  await page.locator('[role="listbox"] [role="option"]').filter({ hasText: idea.title }).waitFor();
   await nav("Centerlines");
   const person = page.getByRole("combobox", {
     name: "Centerline auditor",
     exact: true,
   });
   await person.fill("Manager Context");
-  assert(
-    await page
-      .getByRole("button", { name: "Apply filters", exact: true })
-      .isDisabled(),
-  );
+  assert(await page.getByRole("button", { name: "Apply filters", exact: true }).isDisabled());
   await page
     .getByRole("listbox", {
       name: "Centerline auditor suggestions",
@@ -533,21 +410,15 @@ async function main() {
     .getByRole("option")
     .filter({ hasText: users[0].username })
     .click();
-  await page
-    .getByRole("button", { name: "Apply filters", exact: true })
-    .click();
-  await page
-    .getByRole("heading", { name: "Machine centerlines", exact: true })
-    .waitFor();
-  await page
-    .getByRole("combobox", { name: "Centerline auditor", exact: true })
-    .waitFor();
+  await page.getByRole("button", { name: "Apply filters", exact: true }).click();
+  await page.getByRole("heading", { name: "Machine centerlines", exact: true }).waitFor();
+  await page.getByRole("combobox", { name: "Centerline auditor", exact: true }).waitFor();
   await page.waitForFunction(
     (username) =>
       [...document.querySelectorAll('input[role="combobox"]')].some((input) =>
-        input.value.includes(username),
+        input.value.includes(username)
       ),
-    users[0].username,
+    users[0].username
   );
   await fs.mkdir("docs/screenshots/contextual-search", { recursive: true });
   await page.screenshot({
@@ -555,29 +426,21 @@ async function main() {
   });
   await page.setViewportSize({ width: 820, height: 1180 });
   await nav("Downtime");
-  await page
-    .getByRole("heading", { name: "Track a stoppage", exact: true })
-    .waitFor();
-  await page
-    .getByRole("combobox", { name: "Search downtime", exact: true })
-    .fill(equipment[0].name);
+  await page.getByRole("heading", { name: "Track a stoppage", exact: true }).waitFor();
+  await page.getByRole("combobox", { name: "Search downtime", exact: true }).fill(equipment[0].name);
   await page
     .locator('[role="listbox"] [role="option"]')
     .filter({ hasText: equipment[0].name })
     .first()
     .waitFor();
-  assert(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  );
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await page.screenshot({
     path: "docs/screenshots/contextual-search/tablet-downtime-search.png",
   });
   assert.deepEqual(errors, []);
   assert.deepEqual(failures, []);
   console.log(
-    "PASS: all contextual search labels and roles, native-only scoped suggestions, PM/CIL separation, problem references, production/work-order IDs, historical 5S/setup search, body-text suggestions, single controls, person selection, cross-tab isolation and tablet layout without page/API errors.",
+    "PASS: all contextual search labels and roles, native-only scoped suggestions, PM/CIL separation, problem references, production/work-order IDs, historical 5S/setup search, body-text suggestions, single controls, person selection, cross-tab isolation and tablet layout without page/API errors."
   );
 }
 main()
@@ -598,8 +461,7 @@ main()
     if (fiveS) await db.fiveSPlan.delete({ where: { id: fiveS.id } });
     if (defect) await db.defect.delete({ where: { id: defect.id } });
     await db.record.deleteMany({ where: { userId: { in: ids } } });
-    if (centerline)
-      await db.centerline.delete({ where: { id: centerline.id } });
+    if (centerline) await db.centerline.delete({ where: { id: centerline.id } });
     await db.content.deleteMany({
       where: { id: { in: contents.map((x) => x.id) } },
     });
@@ -607,6 +469,8 @@ main()
       where: { id: { in: maintenance.map((x) => x.id) } },
     });
     await db.session.deleteMany({ where: { userId: { in: ids } } });
+    await db.notification.deleteMany({ where: { userId: { in: ids }, kind: "assignment" } });
+    await db.assignmentDelivery.deleteMany({ where: { userId: { in: ids } } });
     await db.user.deleteMany({ where: { id: { in: ids } } });
     await db.equipment.deleteMany({
       where: { id: { in: equipment.map((x) => x.id) } },

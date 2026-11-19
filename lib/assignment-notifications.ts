@@ -11,10 +11,7 @@ type Assignment = {
   previous?: string[];
   revision: string | number;
 };
-export async function queueAssignments(
-  tx: Prisma.TransactionClient,
-  a: Assignment,
-) {
+export async function queueAssignments(tx: Prisma.TransactionClient, a: Assignment) {
   for (const userId of new Set(a.assignees.filter(Boolean))) {
     if (a.previous?.includes(userId)) continue;
     const id = createHash("sha256")
@@ -52,8 +49,7 @@ export async function queueAssignments(
           userId,
           kind: "assignment",
           sourceId: id,
-          message:
-            "New work assigned to you. Open My assignments or the work queue to review it.",
+          message: "New work assigned to you. Open My assignments or the work queue to review it.",
         },
       });
   }
@@ -169,9 +165,7 @@ export async function currentAssignment(type: string, id: string) {
   }
   return null;
 }
-export async function deliverAssignmentEmails(
-  transport: Pick<import("nodemailer").Transporter, "sendMail">,
-) {
+export async function deliverAssignmentEmails(transport: Pick<import("nodemailer").Transporter, "sendMail">) {
   const rows = await db.assignmentDelivery.findMany({
     where: {
       status: "Pending",
@@ -247,11 +241,8 @@ export async function deliverAssignmentEmails(
         data: {
           status: attempts >= 10 ? "Failed" : "Pending",
           claimedUntil: null,
-          nextAttemptAt: new Date(
-            Date.now() + Math.min(3600000, 60000 * 2 ** Math.min(attempts, 6)),
-          ),
-          lastError:
-            "Assignment email not confirmed. Check the account email and mail service.",
+          nextAttemptAt: new Date(Date.now() + Math.min(3600000, 60000 * 2 ** Math.min(attempts, 6))),
+          lastError: "Assignment email not confirmed. Check the account email and mail service.",
         },
       });
     }

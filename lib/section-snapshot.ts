@@ -68,26 +68,16 @@ export function sectionSnapshot(section: string, d: any): SectionSnapshot {
       r.snapshot?.area?.area ||
       (d.areas || []).find((a: any) => a.id === r.locationId)?.area ||
       r.equipmentSnapshot?.name ||
-      (d.equipment || []).find(
-        (e: any) => e.id === (r.equipmentId || r.data?.equipmentId),
-      )?.name ||
+      (d.equipment || []).find((e: any) => e.id === (r.equipmentId || r.data?.equipmentId))?.name ||
       "—",
     person:
       r.user?.name ||
       r.starter?.name ||
       r.pilot?.name ||
-      (d.people || []).find(
-        (p: any) =>
-          p.id === (r.userId || r.ownerId || r.reportedBy || r.assigneeId),
-      )?.name ||
+      (d.people || []).find((p: any) => p.id === (r.userId || r.ownerId || r.reportedBy || r.assigneeId))
+        ?.name ||
       "—",
-    date:
-      r.createdAt ||
-      r.created ||
-      r.occurredAt ||
-      r.startedAt ||
-      r.nextDue ||
-      "",
+    date: r.createdAt || r.created || r.occurredAt || r.startedAt || r.nextDue || "",
   }));
   let metrics = [
     {
@@ -130,10 +120,7 @@ export function sectionSnapshot(section: string, d: any): SectionSnapshot {
                 : section === "Standard work audits"
                   ? "Completed process verifications"
                   : "Completed runs",
-        value:
-          section === "DL/TL Standard Work"
-            ? d.overview.leaderWork || 0
-            : d.overview[key] || 0,
+        value: section === "DL/TL Standard Work" ? d.overview.leaderWork || 0 : d.overview[key] || 0,
         detail: "All matching records",
       },
       {
@@ -170,10 +157,7 @@ export function sectionSnapshot(section: string, d: any): SectionSnapshot {
     const seconds = (d.records || [])
       .flatMap((r: any) => r.data?.cycles || [])
       .map((c: any) => c.seconds)
-      .filter(
-        (s: unknown): s is number =>
-          typeof s === "number" && Number.isFinite(s),
-      );
+      .filter((s: unknown): s is number => typeof s === "number" && Number.isFinite(s));
     metrics = [
       {
         label: "Saved studies",
@@ -190,11 +174,7 @@ export function sectionSnapshot(section: string, d: any): SectionSnapshot {
             {
               label: "Mean cycle shown (seconds)",
               value:
-                Math.round(
-                  (seconds.reduce((a: number, b: number) => a + b, 0) /
-                    seconds.length) *
-                    100,
-                ) / 100,
+                Math.round((seconds.reduce((a: number, b: number) => a + b, 0) / seconds.length) * 100) / 100,
               detail: "Loaded observations only",
             },
           ]
@@ -204,10 +184,7 @@ export function sectionSnapshot(section: string, d: any): SectionSnapshot {
   if (section === "Training" || section === "Troubleshooting")
     metrics = [
       {
-        label:
-          section === "Training"
-            ? "Training resources"
-            : "Troubleshooting guides",
+        label: section === "Training" ? "Training resources" : "Troubleshooting guides",
         value: d.content?.length || 0,
         detail: "Matching permitted resources",
       },
@@ -231,10 +208,7 @@ export function sectionSnapshot(section: string, d: any): SectionSnapshot {
       },
       {
         label: "Standard-work audits",
-        value: Math.max(
-          0,
-          (d.overview?.audits || 0) - (d.overview?.leaderWork || 0),
-        ),
+        value: Math.max(0, (d.overview?.audits || 0) - (d.overview?.leaderWork || 0)),
         detail: "All matching records",
       },
     ];
@@ -243,9 +217,8 @@ export function sectionSnapshot(section: string, d: any): SectionSnapshot {
       {
         label: "Cases",
         value: d.summary.groups.reduce(
-          (n: number, g: any) =>
-            n + (typeof g._count === "number" ? g._count : g._count?._all || 0),
-          0,
+          (n: number, g: any) => n + (typeof g._count === "number" ? g._count : g._count?._all || 0),
+          0
         ),
         detail: "All matching investigations",
       },
@@ -274,9 +247,7 @@ export function sectionSnapshot(section: string, d: any): SectionSnapshot {
       },
       {
         label: "Due plans shown",
-        value: (d.plans || []).filter(
-          (p: any) => p.active && p.nextDue <= d.today,
-        ).length,
+        value: (d.plans || []).filter((p: any) => p.active && p.nextDue <= d.today).length,
         detail: "Due today or earlier on this page",
       },
       {

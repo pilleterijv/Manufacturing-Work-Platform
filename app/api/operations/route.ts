@@ -11,21 +11,11 @@ import {
   notificationScope,
 } from "@/lib/location-access";
 import { annotateAutomaticTimers } from "@/lib/integrations";
-import {
-  downtimeEquipmentWhere,
-  authorizeDowntime,
-} from "@/lib/downtime-access";
+import { downtimeEquipmentWhere, authorizeDowntime } from "@/lib/downtime-access";
 import { z } from "zod";
 import { decodeCursor, pageInfo } from "@/lib/pagination";
 import { db } from "@/lib/db";
-import {
-  requireUser,
-  grants,
-  jsonBody,
-  HttpError,
-  failure,
-  limit,
-} from "@/lib/security";
+import { requireUser, grants, jsonBody, HttpError, failure, limit } from "@/lib/security";
 import {
   shiftConfigSchema,
   ShiftConfig,
@@ -75,9 +65,7 @@ export async function GET(req: Request) {
       : ids;
     const downtimeScope = {
       AND: [
-        ...(person
-          ? [{ OR: [{ startedBy: person }, { stoppedBy: person }] }]
-          : []),
+        ...(person ? [{ OR: [{ startedBy: person }, { stoppedBy: person }] }] : []),
         ...(search
           ? [
               {
@@ -96,13 +84,8 @@ export async function GET(req: Request) {
       ],
       equipmentId: { in: permittedEquipment.map((e) => e.id) },
     };
-    const location = department
-      ? { equipmentSnapshot: { path: ["department"], equals: department } }
-      : {};
-    if (
-      (view === "downtime" && !g.includes("downtime")) ||
-      (view === "ideas" && !g.includes("ideas"))
-    )
+    const location = department ? { equipmentSnapshot: { path: ["department"], equals: department } } : {};
+    if ((view === "downtime" && !g.includes("downtime")) || (view === "ideas" && !g.includes("ideas")))
       throw new HttpError(403, "You do not have permission for this section");
     if (view === "summary" || view === "live") {
       const [setting, notifications, active] = await Promise.all([
@@ -134,115 +117,106 @@ export async function GET(req: Request) {
           : {}),
       });
     }
-    const [reasons, setting, downtime, ideas, people, notifications] =
-      await Promise.all([
-        view !== "ideas" && g.includes("downtime")
-          ? db.downtimeReason.findMany({ orderBy: { name: "asc" } })
-          : [],
-        db.setting.findUniqueOrThrow({ where: { key: "shifts" } }),
-        view !== "ideas" && g.includes("downtime")
-          ? db.downtime.findMany({
-              where: {
-                ...location,
-                ...downtimeScope,
-                ...(cursor
-                  ? {
-                      OR: [
-                        { startedAt: { lt: cursor.at } },
-                        { startedAt: cursor.at, id: { lt: cursor.id } },
-                      ],
-                    }
-                  : {}),
-              },
-              orderBy: [{ startedAt: "desc" }, { id: "desc" }],
-              take: 101,
-              include: {
-                starter: { select: { name: true } },
-                stopper: { select: { name: true } },
-              },
-            })
-          : [],
-        view !== "downtime" && g.includes("ideas")
-          ? db.idea.findMany({
-              where: {
-                ...location,
-                equipmentId: { in: ids },
-                AND: [
-                  await workflowFocus(req.url, "ideas", u.id),
-                  ...(person
-                    ? [
-                        {
-                          OR: [
-                            { pilotId: person },
-                            { validatorId: person },
-                            { submitterId: person },
-                            { createdBy: person },
-                            { participants: { some: { userId: person } } },
-                          ],
-                        },
-                      ]
-                    : []),
-                  ...(search
-                    ? [
-                        {
-                          OR: [
-                            {
-                              title: {
-                                contains: search,
-                                mode: "insensitive" as const,
-                              },
+    const [reasons, setting, downtime, ideas, people, notifications] = await Promise.all([
+      view !== "ideas" && g.includes("downtime")
+        ? db.downtimeReason.findMany({ orderBy: { name: "asc" } })
+        : [],
+      db.setting.findUniqueOrThrow({ where: { key: "shifts" } }),
+      view !== "ideas" && g.includes("downtime")
+        ? db.downtime.findMany({
+            where: {
+              ...location,
+              ...downtimeScope,
+              ...(cursor
+                ? {
+                    OR: [{ startedAt: { lt: cursor.at } }, { startedAt: cursor.at, id: { lt: cursor.id } }],
+                  }
+                : {}),
+            },
+            orderBy: [{ startedAt: "desc" }, { id: "desc" }],
+            take: 101,
+            include: {
+              starter: { select: { name: true } },
+              stopper: { select: { name: true } },
+            },
+          })
+        : [],
+      view !== "downtime" && g.includes("ideas")
+        ? db.idea.findMany({
+            where: {
+              ...location,
+              equipmentId: { in: ids },
+              AND: [
+                await workflowFocus(req.url, "ideas", u.id),
+                ...(person
+                  ? [
+                      {
+                        OR: [
+                          { pilotId: person },
+                          { validatorId: person },
+                          { submitterId: person },
+                          { createdBy: person },
+                          { participants: { some: { userId: person } } },
+                        ],
+                      },
+                    ]
+                  : []),
+                ...(search
+                  ? [
+                      {
+                        OR: [
+                          {
+                            title: {
+                              contains: search,
+                              mode: "insensitive" as const,
                             },
-                            {
-                              proposal: {
-                                contains: search,
-                                mode: "insensitive" as const,
-                              },
+                          },
+                          {
+                            proposal: {
+                              contains: search,
+                              mode: "insensitive" as const,
                             },
-                            {
-                              currentState: {
-                                contains: search,
-                                mode: "insensitive" as const,
-                              },
+                          },
+                          {
+                            currentState: {
+                              contains: search,
+                              mode: "insensitive" as const,
                             },
-                            { equipmentId: { in: matchedEquipment } },
-                          ],
-                        },
-                      ]
-                    : []),
-                ],
-                ...(cursor
-                  ? {
-                      OR: [
-                        { createdAt: { lt: cursor.at } },
-                        { createdAt: cursor.at, id: { lt: cursor.id } },
-                      ],
-                    }
-                  : {}),
+                          },
+                          { equipmentId: { in: matchedEquipment } },
+                        ],
+                      },
+                    ]
+                  : []),
+              ],
+              ...(cursor
+                ? {
+                    OR: [{ createdAt: { lt: cursor.at } }, { createdAt: cursor.at, id: { lt: cursor.id } }],
+                  }
+                : {}),
+            },
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+            take: 101,
+            include: {
+              pilot: { select: { id: true, name: true } },
+              validator: { select: { id: true, name: true } },
+              submitter: { select: { id: true, name: true } },
+              creator: { select: { id: true, name: true } },
+              participants: {
+                include: { user: { select: { id: true, name: true } } },
               },
-              orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-              take: 101,
-              include: {
-                pilot: { select: { id: true, name: true } },
-                validator: { select: { id: true, name: true } },
-                submitter: { select: { id: true, name: true } },
-                creator: { select: { id: true, name: true } },
-                participants: {
-                  include: { user: { select: { id: true, name: true } } },
-                },
-              },
-            })
-          : [],
-        view !== "downtime" && g.includes("ideas") && !cursor
-          ? visiblePeople(u, ids).then((ps) =>
-              ps.map(({ id, name, username }) => ({ id, name, username })),
-            )
-          : [],
-        db.notification.findMany({
-          where: notices,
-          orderBy: { createdAt: "desc" },
-          take: 100,
-        }),
-      ]);
+            },
+          })
+        : [],
+      view !== "downtime" && g.includes("ideas") && !cursor
+        ? visiblePeople(u, ids).then((ps) => ps.map(({ id, name, username }) => ({ id, name, username })))
+        : [],
+      db.notification.findMany({
+        where: notices,
+        orderBy: { createdAt: "desc" },
+        take: 100,
+      }),
+    ]);
     const active =
       view !== "ideas" && g.includes("downtime")
         ? await db.downtime.findMany({
@@ -253,11 +227,7 @@ export async function GET(req: Request) {
             },
           })
         : [];
-    const all = [
-      ...new Map(
-        [...downtime.slice(0, 100), ...active].map((e) => [e.id, e]),
-      ).values(),
-    ];
+    const all = [...new Map([...downtime.slice(0, 100), ...active].map((e) => [e.id, e])).values()];
     const now = new Date();
     return Response.json({
       equipment: permittedEquipment,
@@ -279,26 +249,17 @@ export async function POST(req: Request) {
   try {
     const b = await jsonBody(req);
     const action = z
-      .enum([
-        "reason",
-        "shifts",
-        "start",
-        "stop",
-        "idea",
-        "ideaStatus",
-        "readNotification",
-      ])
+      .enum(["reason", "shifts", "start", "stop", "idea", "ideaStatus", "readNotification"])
       .parse(b.action);
     const u = await requireUser(
       action === "start" || action === "stop"
         ? "downtime"
         : action === "idea" || action === "ideaStatus"
           ? "ideas"
-          : undefined,
+          : undefined
     );
     if (action === "reason" || action === "shifts") {
-      if (u.role !== "Admin")
-        throw new HttpError(403, "Only Admin can configure reasons and shifts");
+      if (u.role !== "Admin") throw new HttpError(403, "Only Admin can configure reasons and shifts");
     }
     if (action === "reason") {
       const v = z
@@ -314,11 +275,7 @@ export async function POST(req: Request) {
           ...(v.id ? { id: { not: v.id } } : {}),
         },
       });
-      if (duplicate)
-        throw new HttpError(
-          409,
-          "This reason already exists; use the existing reason",
-        );
+      if (duplicate) throw new HttpError(409, "This reason already exists; use the existing reason");
       if (v.id)
         await db.downtimeReason.update({
           where: { id: v.id },
@@ -337,9 +294,7 @@ export async function POST(req: Request) {
       });
     }
     if (action === "start") {
-      const v = z
-        .object({ equipmentId: z.string(), reasonId: z.string() })
-        .parse(b);
+      const v = z.object({ equipmentId: z.string(), reasonId: z.string() }).parse(b);
       await limit(`downtime:${u.id}`, 120, 3600);
       await db.$transaction(
         async (tx) => {
@@ -364,7 +319,7 @@ export async function POST(req: Request) {
             },
           });
         },
-        { isolationLevel: "Serializable" },
+        { isolationLevel: "Serializable" }
       );
     }
     if (action === "stop") {
@@ -374,11 +329,7 @@ export async function POST(req: Request) {
           where: { id },
           include: { equipment: true },
         });
-        if (!event)
-          throw new HttpError(
-            409,
-            "This downtime has already stopped or no longer exists",
-          );
+        if (!event) throw new HttpError(409, "This downtime has already stopped or no longer exists");
         await authorizeDowntime(tx, u, event.equipment);
         if (event.externalSourceId) {
           await tx.$queryRaw`SELECT id FROM "IntegrationSource" WHERE id=${event.externalSourceId} FOR SHARE`;
@@ -393,18 +344,14 @@ export async function POST(req: Request) {
           if (source?.active && binding?.active)
             throw new HttpError(
               409,
-              "This timer is managed by its integration. Admin must disable its source or mapping before a manual stop",
+              "This timer is managed by its integration. Admin must disable its source or mapping before a manual stop"
             );
         }
         const result = await tx.downtime.updateMany({
           where: { id, endedAt: null },
           data: { endedAt: new Date(), stoppedBy: u.id },
         });
-        if (!result.count)
-          throw new HttpError(
-            409,
-            "This downtime has already stopped or no longer exists",
-          );
+        if (!result.count) throw new HttpError(409, "This downtime has already stopped or no longer exists");
       });
     }
 
@@ -417,26 +364,15 @@ export async function POST(req: Request) {
         const equipment = await tx.equipment.findUnique({
           where: { id: v.equipmentId },
         });
-        if (!equipment)
-          throw new HttpError(400, "Select equipment for department reporting");
+        if (!equipment) throw new HttpError(400, "Select equipment for department reporting");
         await assertEquipmentAccess(u, v.equipmentId, tx);
-        const ids = [
-          ...new Set([
-            v.pilotId,
-            v.validatorId,
-            v.submitterId,
-            ...v.participantIds,
-          ]),
-        ];
+        const ids = [...new Set([v.pilotId, v.validatorId, v.submitterId, ...v.participantIds])];
         if (
           (await tx.user.count({
             where: { id: { in: ids }, active: true },
           })) !== ids.length
         )
-          throw new HttpError(
-            400,
-            "Every assigned person must have an active account",
-          );
+          throw new HttpError(400, "Every assigned person must have an active account");
         await eligiblePeople(v.equipmentId, ids, tx);
         const { participantIds, ...fields } = v;
         const idea = await tx.idea.create({
@@ -485,17 +421,13 @@ export async function POST(req: Request) {
       if (!allowed)
         throw new HttpError(
           403,
-          "Only the pilot or validator can update progress; only the validator or Admin can complete it",
+          "Only the pilot or validator can update progress; only the validator or Admin can complete it"
         );
       const result = await db.idea.updateMany({
         where: { id: v.id, version: v.version },
         data: { status: v.status, version: { increment: 1 } },
       });
-      if (!result.count)
-        throw new HttpError(
-          409,
-          "This idea changed. Refresh before updating it",
-        );
+      if (!result.count) throw new HttpError(409, "This idea changed. Refresh before updating it");
     }
     if (action === "readNotification") {
       const { id } = z.object({ id: z.string() }).parse(b);
@@ -514,10 +446,9 @@ export async function POST(req: Request) {
             error:
               "A matching reason or active timer already exists, or the record changed. Refresh and try again.",
           },
-          { status: 409 },
+          { status: 409 }
         );
-      if (e.code === "P2025")
-        return Response.json({ error: "Record not found" }, { status: 404 });
+      if (e.code === "P2025") return Response.json({ error: "Record not found" }, { status: 404 });
     }
     return failure(e);
   }

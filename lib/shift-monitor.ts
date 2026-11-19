@@ -13,11 +13,7 @@ export async function checkShiftWork(now = new Date()) {
     missed = 0;
   for (const schedule of schedules) {
     const config = shiftConfigSchema.parse(schedule.config);
-    for (const window of endedShiftWindows(
-      config,
-      schedule.checkedThrough,
-      now,
-    ).slice(0, 100)) {
+    for (const window of endedShiftWindows(config, schedule.checkedThrough, now).slice(0, 100)) {
       await db.$transaction(
         async (tx) => {
           await tx.$queryRaw`SELECT id FROM "WorkSchedule" WHERE id=${schedule.id} FOR UPDATE`;
@@ -25,10 +21,7 @@ export async function checkShiftWork(now = new Date()) {
             where: { id: schedule.id },
           });
           if (!current.active || +current.checkedThrough >= +window.end) return;
-          if (
-            +window.start >= +current.effectiveFrom &&
-            scheduleWindowMatches(current, window)
-          ) {
+          if (+window.start >= +current.effectiveFrom && scheduleWindowMatches(current, window)) {
             const assignees = current.assigneeIds as string[],
               managerIds = current.managerIds as string[];
             const expected = await tx.standard.findFirst({
@@ -39,9 +32,7 @@ export async function checkShiftWork(now = new Date()) {
               },
               orderBy: { revision: "desc" },
             });
-            for (const assigneeKey of assignees.length
-              ? assignees
-              : ["station"]) {
+            for (const assigneeKey of assignees.length ? assignees : ["station"]) {
               const exists = await tx.shiftCheck.findUnique({
                 where: {
                   scheduleId_shiftStart_assigneeKey: {
@@ -58,9 +49,7 @@ export async function checkShiftWork(now = new Date()) {
                   standard: {
                     family: current.family,
                     equipmentId: current.equipmentId,
-                    ...(expected
-                      ? { revision: { gte: expected.revision } }
-                      : {}),
+                    ...(expected ? { revision: { gte: expected.revision } } : {}),
                   },
                   created: { gte: window.start, lt: window.end },
                   ...(assigneeKey === "station" ? {} : { userId: assigneeKey }),
@@ -73,8 +62,7 @@ export async function checkShiftWork(now = new Date()) {
                   scheduleId: current.id,
                   shiftStart: window.start,
                   shiftEnd: window.end,
-                  shiftName:
-                    (current.crewNames as string[]).join(" / ") || window.name,
+                  shiftName: (current.crewNames as string[]).join(" / ") || window.name,
                   assigneeKey,
                   missed: !record,
                   completedRecordId: record?.id,
@@ -94,9 +82,7 @@ export async function checkShiftWork(now = new Date()) {
                         where: { id: assigneeKey },
                         select: { name: true },
                       });
-                const crewDescription = (current.crewNames as string[]).join(
-                  " / ",
-                );
+                const crewDescription = (current.crewNames as string[]).join(" / ");
                 const shiftDescription = crewDescription
                   ? `${crewDescription} · ${window.name}`
                   : window.name;
@@ -109,11 +95,7 @@ export async function checkShiftWork(now = new Date()) {
                   },
                 });
                 for (const manager of managers.filter((m) =>
-                  allowedDowntimeEquipment(
-                    m.role,
-                    m.workspaceAccess,
-                    equipment,
-                  ),
+                  allowedDowntimeEquipment(m.role, m.workspaceAccess, equipment)
                 )) {
                   if (current.notifyInApp)
                     await tx.notification.create({
@@ -143,7 +125,7 @@ export async function checkShiftWork(now = new Date()) {
             data: { checkedThrough: window.end },
           });
         },
-        { timeout: 30000 },
+        { timeout: 30000 }
       );
     }
   }

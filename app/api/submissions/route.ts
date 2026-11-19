@@ -50,8 +50,7 @@ export async function GET(req: Request) {
         .uuid()
         .optional()
         .parse(p.get("id") || undefined);
-    if (!!source !== !!id)
-      throw new HttpError(400, "Choose a submission and its source");
+    if (!!source !== !!id) throw new HttpError(400, "Choose a submission and its source");
     const ids = await equipmentIds(u),
       areas = (await db.location.findMany()).filter((l) => allowedArea(u, l)),
       areaIds = areas.map((l) => l.id);
@@ -67,8 +66,7 @@ export async function GET(req: Request) {
                 where: { id, locationId: { in: areaIds } },
               })
             : null;
-      if (!record)
-        throw new HttpError(404, "Submission not found in your assigned area");
+      if (!record) throw new HttpError(404, "Submission not found in your assigned area");
       return Response.json(
         {
           source,
@@ -82,13 +80,10 @@ export async function GET(req: Request) {
                   })
                 )?.name
               : undefined,
-          areas:
-            source === "fiveS"
-              ? areas.filter((a) => a.id === (record as any).locationId)
-              : [],
+          areas: source === "fiveS" ? areas.filter((a) => a.id === (record as any).locationId) : [],
           readOnly: true,
         },
-        { headers: { "Cache-Control": "private, no-store" } },
+        { headers: { "Cache-Control": "private, no-store" } }
       );
     }
     const scope = z.enum(["area", "mine"]).parse(p.get("scope") || "area"),
@@ -113,9 +108,7 @@ export async function GET(req: Request) {
     if (raw) {
       try {
         if (raw.length > 1000) throw Error();
-        cursor = cursorSchema.parse(
-          JSON.parse(Buffer.from(raw, "base64url").toString()),
-        );
+        cursor = cursorSchema.parse(JSON.parse(Buffer.from(raw, "base64url").toString()));
       } catch {
         throw new HttpError(400, "Invalid submission history cursor");
       }
@@ -148,16 +141,11 @@ export async function GET(req: Request) {
             [e.name, e.plant, e.department, e.area, e.line]
               .join(" ")
               .toLowerCase()
-              .includes(search.toLowerCase()),
+              .includes(search.toLowerCase())
           )
           .map((e) => e.id)
       : [];
-    const workflow =
-      type === "leader"
-        ? "leader"
-        : type === "changeover"
-          ? "changeover"
-          : "process";
+    const workflow = type === "leader" ? "leader" : type === "changeover" ? "changeover" : "process";
     const recordFilter: Prisma.RecordWhereInput =
       type === "all"
         ? {}
@@ -189,10 +177,7 @@ export async function GET(req: Request) {
     const matchingAreas = search
       ? areas
           .filter((a) =>
-            [a.plant, a.department, a.area, a.line]
-              .join(" ")
-              .toLowerCase()
-              .includes(search.toLowerCase()),
+            [a.plant, a.department, a.area, a.line].join(" ").toLowerCase().includes(search.toLowerCase())
           )
           .map((a) => a.id)
       : [];
@@ -216,15 +201,10 @@ export async function GET(req: Request) {
               AND: [
                 readableSubmissionWhere(scopedIds, g, u.id),
                 recordFilter,
-                recordFilters(
-                  scope === "mine" ? u.id : person,
-                  search,
-                  matched,
-                  [
-                    ["snapshot", "title"],
-                    ["planSnapshot", "title"],
-                  ],
-                ),
+                recordFilters(scope === "mine" ? u.id : person, search, matched, [
+                  ["snapshot", "title"],
+                  ["planSnapshot", "title"],
+                ]),
                 after("record", "created"),
               ],
             },
@@ -241,17 +221,13 @@ export async function GET(req: Request) {
             orderBy: [{ created: "desc" }, { id: "desc" }],
             take: 51,
           }),
-      (g.includes("fiveS") || g.includes("history")) &&
-      ["all", "fiveS"].includes(type) &&
-      !equipment
+      (g.includes("fiveS") || g.includes("history")) && ["all", "fiveS"].includes(type) && !equipment
         ? db.fiveSAudit.findMany({
             where: {
               AND: [
                 { locationId: { in: areaIds } },
                 after("fiveS", "createdAt"),
-                ...(scope === "mine" || person
-                  ? [{ userId: scope === "mine" ? u.id : person }]
-                  : []),
+                ...(scope === "mine" || person ? [{ userId: scope === "mine" ? u.id : person }] : []),
                 ...(search
                   ? [
                       {
@@ -303,9 +279,7 @@ export async function GET(req: Request) {
     const rows = [
       ...records.map((r) => {
         const m = metadata.get(r.id) || {},
-          e = equipmentRows.find(
-            (e) => e.id === (r.standard?.equipmentId || m.equipmentId),
-          );
+          e = equipmentRows.find((e) => e.id === (r.standard?.equipmentId || m.equipmentId));
         return {
           id: r.id,
           source: "record",
@@ -334,9 +308,7 @@ export async function GET(req: Request) {
       })),
     ].sort(
       (a, b) =>
-        b.created.localeCompare(a.created) ||
-        a.source.localeCompare(b.source) ||
-        b.id.localeCompare(a.id),
+        b.created.localeCompare(a.created) || a.source.localeCompare(b.source) || b.id.localeCompare(a.id)
     );
     const items = rows.slice(0, 50),
       last = items.at(-1);
@@ -351,14 +323,14 @@ export async function GET(req: Request) {
                   created: last.created,
                   source: last.source,
                   id: last.id,
-                }),
+                })
               ).toString("base64url")
             : null,
         generatedAt: new Date().toISOString(),
         equipment: equipmentRows,
         readOnly: true,
       },
-      { headers: { "Cache-Control": "private, no-store" } },
+      { headers: { "Cache-Control": "private, no-store" } }
     );
   } catch (e) {
     return failure(e);

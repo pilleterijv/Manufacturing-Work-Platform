@@ -2,22 +2,10 @@ import { z } from "zod";
 import { db } from "./db";
 import { localToday, type ShiftConfig } from "./operations-rules";
 // Additional predicates always intersect the endpoint's existing access scope.
-export async function workflowFocus(
-  url: string,
-  kind: string,
-  userId: string,
-): Promise<any> {
+export async function workflowFocus(url: string, kind: string, userId: string): Promise<any> {
   const p = new URL(url).searchParams;
   const focus = z
-    .enum([
-      "",
-      "open",
-      "personal-open",
-      "department-open",
-      "overdue",
-      "due",
-      "upcoming",
-    ])
+    .enum(["", "open", "personal-open", "department-open", "overdue", "due", "upcoming"])
     .parse(p.get("focus") || "");
   const item = z
     .string()
@@ -63,7 +51,7 @@ export async function workflowFocus(
           ? { status: { not: "Closed" } }
           : kind === "defects"
             ? { status: "Open" }
-            : { active: true },
+            : { active: true }
     );
     if (focus === "personal-open")
       clauses.push(
@@ -92,29 +80,19 @@ export async function workflowFocus(
               ? { OR: [{ reportedBy: userId }, { assigneeId: userId }] }
               : kind === "fiveS"
                 ? {
-                    OR: [
-                      { assigneeIds: { array_contains: [userId] } },
-                      { assigneeIds: { equals: [] } },
-                    ],
+                    OR: [{ assigneeIds: { array_contains: [userId] } }, { assigneeIds: { equals: [] } }],
                   }
-                : { assigneeId: userId },
+                : { assigneeId: userId }
       );
   }
-  if (
-    ["overdue", "due", "upcoming"].includes(focus) &&
-    ["ideas", "problems", "maintenance"].includes(kind)
-  ) {
+  if (["overdue", "due", "upcoming"].includes(focus) && ["ideas", "problems", "maintenance"].includes(kind)) {
     const setting = await db.setting.findUniqueOrThrow({
         where: { key: "shifts" },
       }),
       today = localToday((setting.value as ShiftConfig).timezone);
     clauses.push({
       [kind === "maintenance" ? "nextDue" : "dueDate"]:
-        focus === "due"
-          ? { lte: today }
-          : focus === "upcoming"
-            ? { gt: today }
-            : { lt: today },
+        focus === "due" ? { lte: today } : focus === "upcoming" ? { gt: today } : { lt: today },
     });
   }
   return { AND: clauses };

@@ -53,10 +53,7 @@ async function screenshot(page, id, title, description) {
 }
 async function main() {
   assert(["localhost", "127.0.0.1"].includes(new URL(origin).hostname));
-  assert(
-    !process.env.AZURE_STORAGE_CONNECTION_STRING,
-    "Gallery must use isolated local storage",
-  );
+  assert(!process.env.AZURE_STORAGE_CONNECTION_STRING, "Gallery must use isolated local storage");
   await fs.mkdir(out, { recursive: true });
   const hash = await hashPassword(password);
   for (const [role, name] of [
@@ -74,7 +71,7 @@ async function main() {
           password: hash,
           mustChange: false,
         },
-      }),
+      })
     );
   for (const [name, department, line] of [
     ["Packing station 02", "Assembly", "Line A"],
@@ -90,7 +87,7 @@ async function main() {
           plant: "Main plant",
           area: "Production",
         },
-      }),
+      })
     );
   const steps = [
     {
@@ -115,29 +112,17 @@ async function main() {
         data: {
           family: randomUUID(),
           revision: 1,
-          title: i
-            ? "Machining first-piece verification"
-            : "Packing quality verification",
+          title: i ? "Machining first-piece verification" : "Packing quality verification",
           equipmentId: equipment[i].id,
           target: 45,
           tolerance: 10,
           steps,
         },
-      }),
+      })
     );
   for (const [kind, title, body, ei] of [
-    [
-      "video",
-      "Standard work: first-piece inspection",
-      "https://player.vimeo.com/video/76979871",
-      0,
-    ],
-    [
-      "video",
-      "Machine setup and changeover basics",
-      "https://player.vimeo.com/video/76979871",
-      1,
-    ],
+    ["video", "Standard work: first-piece inspection", "https://player.vimeo.com/video/76979871", 0],
+    ["video", "Machine setup and changeover basics", "https://player.vimeo.com/video/76979871", 1],
     [
       "guide",
       "Label alignment: checks before restart",
@@ -154,11 +139,10 @@ async function main() {
     content.push(
       await db.content.create({
         data: { kind, title, body, equipmentId: equipment[ei].id },
-      }),
+      })
     );
   const now = new Date(),
-    ago = (days, minutes = 0) =>
-      new Date(+now - days * 86400000 - minutes * 60000);
+    ago = (days, minutes = 0) => new Date(+now - days * 86400000 - minutes * 60000);
   for (let i = 0; i < 24; i++) {
     const s = standards[i % 2],
       eq = equipment[i % 2],
@@ -193,10 +177,7 @@ async function main() {
                 responses: steps.map((step, j) => ({
                   stepId: step.id,
                   answer: !(i % 7 === 0 && j === 1),
-                  comment:
-                    i % 7 === 0 && j === 1
-                      ? "Label guide adjusted before restart"
-                      : "",
+                  comment: i % 7 === 0 && j === 1 ? "Label guide adjusted before restart" : "",
                   photo: null,
                 })),
                 durationSeconds: 40 + (i % 12),
@@ -208,21 +189,15 @@ async function main() {
       },
     });
   }
-  for (const name of [
-    "Material shortage",
-    "Tool adjustment",
-    "Label alignment",
-  ])
+  for (const name of ["Material shortage", "Tool adjustment", "Label alignment"])
     reasons.push(
       await db.downtimeReason.upsert({
         where: { name },
         create: { name },
         update: {},
-      }),
+      })
     );
-  const config = (
-    await db.setting.findUniqueOrThrow({ where: { key: "shifts" } })
-  ).value;
+  const config = (await db.setting.findUniqueOrThrow({ where: { key: "shifts" } })).value;
   for (let i = 0; i < 6; i++)
     await db.downtime.create({
       data: {
@@ -251,14 +226,12 @@ async function main() {
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(origin);
-  await page
-    .getByRole("heading", { name: "Welcome back", exact: true })
-    .waitFor();
+  await page.getByRole("heading", { name: "Welcome back", exact: true }).waitFor();
   await screenshot(
     page,
     "01-sign-in",
     "Individual sign-in",
-    "Local individual accounts, remembered sessions and password recovery through an administrator.",
+    "Local individual accounts, remembered sessions and password recovery through an administrator."
   );
   await post(context, "/api/account", {
     action: "login",
@@ -277,8 +250,7 @@ async function main() {
     action: "idea",
     title: "Add a visual guide for label changeovers",
     equipmentId: equipment[0].id,
-    currentState:
-      "Operators reposition the label guide by eye. First-piece rejects occur after changeover.",
+    currentState: "Operators reposition the label guide by eye. First-piece rejects occur after changeover.",
     proposal:
       "Pilot a marked guide and approved setup photo on Line A. Compare first-piece rejects over two weeks.",
     process: "Label changeover",
@@ -294,10 +266,8 @@ async function main() {
         s.fields.map(([key]) => [
           key,
           {
-            problem:
-              "Labels drift after changeover; 5 of 30 first pieces need rework.",
-            rootCause:
-              "The guide stop is worn and its setup reference is unclear.",
+            problem: "Labels drift after changeover; 5 of 30 first pieces need rework.",
+            rootCause: "The guide stop is worn and its setup reference is unclear.",
             why1: "The guide moves during label application.",
             why2: "The stop no longer holds its reference position.",
             why3: "Wear was not identified during routine checks.",
@@ -306,36 +276,27 @@ async function main() {
             standardExists: "Yes",
             standardClear: "No",
             trained: "Yes",
-            effectiveness:
-              "Verify 30 consecutive first pieces and review recurrence after 7 days.",
-            corrective:
-              "Replace the guide stop and add a measurable setup reference.",
-            preventive:
-              "Update maintenance criteria and reapply to similar packing stations.",
-            recognition:
-              "Recognize the operator and maintenance team at the shift meeting.",
-            correction:
-              "Inspect first pieces and hold affected material for Quality review.",
-            emergency:
-              "Isolate affected material and protect the downstream process.",
-            customer:
-              "Internal assembly customer; no external shipment released.",
+            effectiveness: "Verify 30 consecutive first pieces and review recurrence after 7 days.",
+            corrective: "Replace the guide stop and add a measurable setup reference.",
+            preventive: "Update maintenance criteria and reapply to similar packing stations.",
+            recognition: "Recognize the operator and maintenance team at the shift meeting.",
+            correction: "Inspect first pieces and hold affected material for Quality review.",
+            emergency: "Isolate affected material and protect the downstream process.",
+            customer: "Internal assembly customer; no external shipment released.",
             product: "Packing station 02 / labeled assembly",
             scope: "Line A changeovers; 30 first pieces inspected.",
             fishbone:
               "Machine: worn stop. Method: unclear setup reference. Measurement: no wear acceptance limit.",
-            escape:
-              "The first-piece check did not include a measured guide position.",
-            implementation:
-              "Fit the new stop; verify the setup reference with Production and Quality.",
+            escape: "The first-piece check did not include a measured guide position.",
+            implementation: "Fit the new stop; verify the setup reference with Production and Quality.",
             who: "Packing operators and final inspection",
             what: "Misaligned labels after changeover",
             when: "First production run after label changeover",
             where: "Main plant / Assembly / Line A",
             howMuch: "5 of 30 first pieces required rework",
           }[key] || "Production, Quality and Maintenance review documented.",
-        ]),
-      ),
+        ])
+      )
     );
     const p = await post(context, "/api/problems", {
       action: "create",
@@ -357,9 +318,7 @@ async function main() {
       answers,
     });
     problemIds.push(p.id);
-    let d = await (
-      await context.request.get(origin + "/api/problems?id=" + p.id)
-    ).json();
+    let d = await (await context.request.get(origin + "/api/problems?id=" + p.id)).json();
     await post(context, "/api/problems", {
       action: "addAction",
       id: p.id,
@@ -370,9 +329,7 @@ async function main() {
       dueDate: due,
     });
     if (method !== "2D") {
-      d = await (
-        await context.request.get(origin + "/api/problems?id=" + p.id)
-      ).json();
+      d = await (await context.request.get(origin + "/api/problems?id=" + p.id)).json();
       await post(context, "/api/problems", {
         action: "addAction",
         id: p.id,
@@ -386,35 +343,22 @@ async function main() {
     }
   }
   await page.reload();
-  await page
-    .getByRole("heading", { name: "Welcome, Jordan.", exact: true })
-    .waitFor();
-  await page
-    .getByRole("heading", { name: "Whole-floor performance", exact: true })
-    .waitFor();
+  await page.getByRole("heading", { name: "Welcome, Jordan.", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Whole-floor performance", exact: true }).waitFor();
   await screenshot(
     page,
     "02-dashboard",
     "Workspace dashboard",
-    "Role-aware launchpad for all sections, overall/department reporting, record totals and recent activity.",
+    "Role-aware launchpad for all sections, overall/department reporting, record totals and recent activity."
   );
   async function go(tab, heading) {
-    await page
-      .locator("nav")
-      .getByRole("button", { name: tab, exact: false })
-      .click();
-    if (heading)
-      await page.getByRole("heading", { name: heading, exact: true }).waitFor();
+    await page.locator("nav").getByRole("button", { name: tab, exact: false }).click();
+    if (heading) await page.getByRole("heading", { name: heading, exact: true }).waitFor();
     await page.waitForTimeout(350);
   }
   await go("Standard work", "Start a verification");
-  await page
-    .getByLabel("Standard work", { exact: true })
-    .selectOption(standards[0].id);
-  await page
-    .getByRole("button", { name: "✓ Yes", exact: true })
-    .first()
-    .click();
+  await page.getByLabel("Standard work", { exact: true }).selectOption(standards[0].id);
+  await page.getByRole("button", { name: "✓ Yes", exact: true }).first().click();
   await page
     .getByLabel("Comment", { exact: true })
     .first()
@@ -423,148 +367,112 @@ async function main() {
     page,
     "03-standard-work",
     "Standard work: checklist and evidence",
-    "Revision-specific Yes/No checks, camera/file evidence, comments and completed verification history.",
+    "Revision-specific Yes/No checks, camera/file evidence, comments and completed verification history."
   );
   await page.getByText("View record", { exact: true }).first().click();
   await screenshot(
     page,
     "04-work-history",
     "Saved verification details",
-    "Expand a saved record to inspect the original revision, answers, comments and evidence references.",
+    "Expand a saved record to inspect the original revision, answers, comments and evidence references."
   );
   await go("Time studies", "New time study");
-  await page
-    .getByLabel("Study name", { exact: true })
-    .fill("Label application: changeover baseline");
-  await page
-    .getByLabel("Equipment", { exact: true })
-    .selectOption(equipment[0].id);
+  await page.getByLabel("Study name", { exact: true }).fill("Label application: changeover baseline");
+  await page.getByLabel("Equipment", { exact: true }).selectOption(equipment[0].id);
   await page.getByLabel("Work element", { exact: true }).fill("Position label");
   await page.getByRole("button", { name: "Start cycle", exact: true }).click();
   await page.waitForTimeout(1200);
-  await page
-    .getByRole("button", { name: "Stop & record cycle", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Stop & record cycle", exact: true }).click();
   await screenshot(
     page,
     "05-time-study",
     "Time studies: stopwatch and observations",
-    "Name work elements, record repeated stopwatch observations, review statistics and save raw timings. The visible short observation is a demonstration.",
+    "Name work elements, record repeated stopwatch observations, review statistics and save raw timings. The visible short observation is a demonstration."
   );
   await go("Supervisor audits", "New standard work audit");
-  await page
-    .getByLabel("Standard work", { exact: true })
-    .selectOption(standards[0].id);
+  await page.getByLabel("Standard work", { exact: true }).selectOption(standards[0].id);
   await page.getByLabel("Operator being audited").fill("Alex Operator");
-  await page
-    .getByRole("button", { name: "✓ Yes", exact: true })
-    .first()
-    .click();
+  await page.getByRole("button", { name: "✓ Yes", exact: true }).first().click();
   await page.getByRole("button", { name: "Start cycle", exact: true }).click();
   await page.waitForTimeout(1100);
-  await page
-    .getByRole("button", { name: "Stop & record cycle", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Stop & record cycle", exact: true }).click();
   await screenshot(
     page,
     "06-supervisor-audit",
     "Supervisor audits: checks and cycle timing",
-    "Identify the operator, verify the standard, collect evidence and compare actual cycles against target and tolerance.",
+    "Identify the operator, verify the standard, collect evidence and compare actual cycles against target and tolerance."
   );
   await go("Training", "Add training video");
   await screenshot(
     page,
     "07-training",
     "Training library and video editor",
-    "Search equipment-linked training, open linked YouTube/Vimeo playback and add resources. Live provider playback is not demonstrated.",
+    "Search equipment-linked training, open linked YouTube/Vimeo playback and add resources. Live provider playback is not demonstrated."
   );
   await go("Troubleshooting", "Add troubleshooting guide");
   await screenshot(
     page,
     "08-troubleshooting",
     "Troubleshooting library",
-    "Search readable equipment-specific instructions and add or archive guides.",
+    "Search readable equipment-specific instructions and add or archive guides."
   );
   await go("Analytics", "Time study statistics");
   await screenshot(
     page,
     "09-analytics",
     "Analytics and detailed statistics",
-    "Verification totals, No-answer rates, completion times, audit follow-ups, timing variation and detailed records.",
+    "Verification totals, No-answer rates, completion times, audit follow-ups, timing variation and detailed records."
   );
   await go("Downtime", "Track a stoppage");
-  await require("../tests/helpers/downtime.cjs").selectDowntimeMachine(
-    page,
-    equipment[0],
-  );
-  await page
-    .getByLabel("Downtime reason", { exact: true })
-    .selectOption(reasons[2].id);
+  await require("../tests/helpers/downtime.cjs").selectDowntimeMachine(page, equipment[0]);
+  await page.getByLabel("Downtime reason", { exact: true }).selectOption(reasons[2].id);
   await screenshot(
     page,
     "10-downtime-ready",
     "Downtime: ready to start",
-    "Choose the machine and reason. Admins also manage reasons, timer availability and shift schedules.",
+    "Choose the machine and reason. Admins also manage reasons, timer availability and shift schedules."
   );
-  await page
-    .getByRole("button", { name: "Start downtime", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Stop downtime", exact: true })
-    .waitFor();
+  await page.getByRole("button", { name: "Start downtime", exact: true }).click();
+  await page.getByRole("button", { name: "Stop downtime", exact: true }).waitFor();
   await screenshot(
     page,
     "11-downtime-running",
     "Downtime: shared timer running",
-    "An actual started event is persisted by the server and survives reload. Stop the timer when production resumes.",
+    "An actual started event is persisted by the server and survives reload. Stop the timer when production resumes."
   );
-  await page
-    .getByRole("button", { name: "Stop downtime", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Start downtime", exact: true })
-    .waitFor();
+  await page.getByRole("button", { name: "Stop downtime", exact: true }).click();
+  await page.getByRole("button", { name: "Start downtime", exact: true }).waitFor();
   await screenshot(
     page,
     "12-downtime-history",
     "Downtime: stopped event and shift history",
-    "Stopped records retain their duration, reason, equipment, shift schedule and starter/stopper identities.",
+    "Stopped records retain their duration, reason, equipment, shift schedule and starter/stopper identities."
   );
   await go("Leadership dashboard", "Whole-floor performance");
   await screenshot(
     page,
     "13-leadership-overall",
     "Leadership: overall performance",
-    "Complete date-filtered reporting across work, audits, studies, downtime, ideas, problem solving and current resource libraries.",
+    "Complete date-filtered reporting across work, audits, studies, downtime, ideas, problem solving and current resource libraries."
   );
   await page.getByLabel("Leadership department").selectOption("Assembly");
-  await page
-    .getByRole("button", { name: "Apply filters", exact: true })
-    .click();
-  await page
-    .getByRole("heading", { name: "Assembly — section dashboard", exact: true })
-    .waitFor();
+  await page.getByRole("button", { name: "Apply filters", exact: true }).click();
+  await page.getByRole("heading", { name: "Assembly — section dashboard", exact: true }).waitFor();
   await screenshot(
     page,
     "14-leadership-department",
     "Leadership: department performance",
-    "The same dashboard scoped to Assembly, with department totals, downtime reasons, shift losses and an Excel export.",
+    "The same dashboard scoped to Assembly, with department totals, downtime reasons, shift losses and an Excel export."
   );
   await go("Improvement ideas", "Submit an improvement idea");
-  await page
-    .getByLabel("Idea title", { exact: true })
-    .fill("Pilot a first-piece photo reference");
-  await page
-    .getByLabel("Equipment", { exact: true })
-    .selectOption(equipment[0].id);
+  await page.getByLabel("Idea title", { exact: true }).fill("Pilot a first-piece photo reference");
+  await page.getByLabel("Equipment", { exact: true }).selectOption(equipment[0].id);
   await page
     .getByLabel("Current state", { exact: true })
     .fill("Operators compare the first piece from memory.");
   await page
     .getByLabel("Proposed improvement", { exact: true })
-    .fill(
-      "Add an approved photo reference at the station and compare rework before and after the pilot.",
-    );
+    .fill("Add an approved photo reference at the station and compare rework before and after the pilot.");
   await page.getByLabel("Pilot", { exact: true }).selectOption(users[0].id);
   await page.getByLabel("Validator", { exact: true }).selectOption(users[1].id);
   await page.getByLabel("Due date", { exact: true }).fill(due);
@@ -578,76 +486,63 @@ async function main() {
     page,
     "15-improvement-ideas",
     "Improvement ideas: submit and follow progress",
-    "Assign submitter, pilot, validator and participants; describe current/proposed states, location and due date. Existing ideas appear in the pipeline below.",
+    "Assign submitter, pilot, validator and participants; describe current/proposed states, location and due date. Existing ideas appear in the pipeline below."
   );
   await go("Notifications", "Your messages");
   await screenshot(
     page,
     "16-notifications",
     "Pilot notifications",
-    "A real in-app assignment generated when the sample idea was created. Open the idea or mark the private message as read.",
+    "A real in-app assignment generated when the sample idea was created. Open the idea or mark the private message as read."
   );
   await go("Problem solving", "Problem-solving records");
   await screenshot(
     page,
     "17-problem-solving",
     "Problem solving: methodology and record dashboard",
-    "Workbook-based 2D / 4D / 8D selection guidance, department filters, open/closed counts, action totals, overdue follow-ups and the record viewer. Exact Microsoft Forms layouts await accessible references.",
+    "Workbook-based 2D / 4D / 8D selection guidance, department filters, open/closed counts, action totals, overdue follow-ups and the record viewer. Exact Microsoft Forms layouts await accessible references."
   );
   for (let i = 0; i < 3; i++) {
     const method = ["2D", "4D", "8D"][i];
-    const detail = await (
-      await context.request.get(origin + "/api/problems?id=" + problemIds[i])
-    ).json();
+    const detail = await (await context.request.get(origin + "/api/problems?id=" + problemIds[i])).json();
     await page
       .getByRole("row")
       .filter({ hasText: detail.reference })
       .getByRole("button", { name: "View / update", exact: true })
       .click();
-    await page
-      .getByRole("heading", { name: detail.reference, exact: true })
-      .waitFor();
+    await page.getByRole("heading", { name: detail.reference, exact: true }).waitFor();
     await screenshot(
       page,
       `${18 + i}-problem-${method.toLowerCase()}`,
       `${method} problem-solving record`,
-      `${methodology[method].description}. Method-specific evidence fields, assigned facilitator/reviewer, due date, tracked actions and change history.`,
+      `${methodology[method].description}. Method-specific evidence fields, assigned facilitator/reviewer, due date, tracked actions and change history.`
     );
   }
-  await page
-    .getByRole("button", { name: "Action update portal", exact: true })
-    .click();
-  await page
-    .getByRole("heading", { name: "Open actions & checkpoints", exact: true })
-    .waitFor();
-  await page
-    .getByText("Replace guide stop and verify 30 first pieces", { exact: true })
-    .first()
-    .waitFor();
+  await page.getByRole("button", { name: "Action update portal", exact: true }).click();
+  await page.getByRole("heading", { name: "Open actions & checkpoints", exact: true }).waitFor();
+  await page.getByText("Replace guide stop and verify 30 first pieces", { exact: true }).first().waitFor();
   await screenshot(
     page,
     "21-action-portal",
     "Problem solving: action update portal",
-    "One follow-up queue for open corrective actions and checkpoints. Authorized owners/managers submit status and evidence comments; completed items remain in record history.",
+    "One follow-up queue for open corrective actions and checkpoints. Authorized owners/managers submit status and evidence comments; completed items remain in record history."
   );
   await go("Manage", "Standard work editor");
   await page.locator(".page select").first().selectOption(standards[0].id);
-  await page
-    .getByRole("button", { name: "View revision history", exact: true })
-    .click();
+  await page.getByRole("button", { name: "View revision history", exact: true }).click();
   await page.locator(".revision-history details").first().waitFor();
   await screenshot(
     page,
     "22-manage",
     "Equipment and standard management",
-    "Create equipment hierarchies, author Yes/No steps, require photos, set targets/tolerance and publish immutable standard revisions.",
+    "Create equipment hierarchies, author Yes/No steps, require photos, set targets/tolerance and publish immutable standard revisions."
   );
   await go("Accounts", "Create individual account");
   await screenshot(
     page,
     "23-accounts",
     "Account administration",
-    "Create or update individual users, assign a role, reset access and deactivate accounts. No sample credentials are included in this gallery.",
+    "Create or update individual users, assign a role, reset access and deactivate accounts. No sample credentials are included in this gallery."
   );
   await go("Permissions");
   await page.getByText("problems", { exact: true }).first().waitFor();
@@ -655,7 +550,7 @@ async function main() {
     page,
     "24-permissions",
     "Role permissions",
-    "Configure server-enforced grants for each role, including the new Problem Solving section.",
+    "Configure server-enforced grants for each role, including the new Problem Solving section."
   );
   await go("My account");
   await page
@@ -666,50 +561,30 @@ async function main() {
     page,
     "25-my-account",
     "My account and session controls",
-    "Change your password and revoke other remembered sessions.",
+    "Change your password and revoke other remembered sessions."
   );
   await go("Overview", "Welcome, Jordan.");
-  await page
-    .getByRole("heading", { name: "Whole-floor performance", exact: true })
-    .waitFor();
+  await page.getByRole("heading", { name: "Whole-floor performance", exact: true }).waitFor();
   await page.setViewportSize({ width: 768, height: 1024 });
   await screenshot(
     page,
     "26-tablet-dashboard",
     "Tablet dashboard",
-    "The actual overview at a 768-pixel tablet width, with touch controls and responsive section cards.",
+    "The actual overview at a 768-pixel tablet width, with touch controls and responsive section cards."
   );
-  assert(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  );
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await page.setViewportSize({ width: 390, height: 844 });
   await screenshot(
     page,
     "27-mobile-dashboard",
     "Mobile dashboard",
-    "Single-column section cards and horizontally scrolling navigation on a phone-sized viewport.",
+    "Single-column section cards and horizontally scrolling navigation on a phone-sized viewport."
   );
-  assert(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  );
-  assert.deepEqual(
-    errors,
-    [],
-    "No client-side exceptions during gallery capture",
-  );
-  await fs.writeFile(
-    path.join(out, "manifest.json"),
-    JSON.stringify(shotList, null, 2),
-  );
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  assert.deepEqual(errors, [], "No client-side exceptions during gallery capture");
+  await fs.writeFile(path.join(out, "manifest.json"), JSON.stringify(shotList, null, 2));
   await fs.writeFile(path.join(out, "index.html"), await gallery(false));
-  await fs.writeFile(
-    path.join(out, "Floorwork-walkthrough.html"),
-    await gallery(true),
-  );
+  await fs.writeFile(path.join(out, "Floorwork-walkthrough.html"), await gallery(true));
   const sharp = require("sharp");
   const thumbs = [];
   for (const s of shotList) {
@@ -724,12 +599,12 @@ async function main() {
       y = Math.floor(i / 3) * 365 + 70;
     tiles.push({ input: thumbs[i], left: x, top: y });
     const label = Buffer.from(
-      `<svg width="430" height="40"><text x="0" y="23" font-family="Arial" font-size="15" fill="#173c3d">${shotList[i].title.replace(/&/g, "&amp;")}</text></svg>`,
+      `<svg width="430" height="40"><text x="0" y="23" font-family="Arial" font-size="15" fill="#173c3d">${shotList[i].title.replace(/&/g, "&amp;")}</text></svg>`
     );
     tiles.push({ input: label, left: x, top: y + 310 });
   }
   const top = Buffer.from(
-    '<svg width="1380" height="60"><text x="20" y="36" font-family="Arial" font-size="25" fill="#173c3d">Floorwork · all sections · sample data walkthrough</text></svg>',
+    '<svg width="1380" height="60"><text x="20" y="36" font-family="Arial" font-size="25" fill="#173c3d">Floorwork · all sections · sample data walkthrough</text></svg>'
   );
   await sharp({
     create: {
@@ -748,8 +623,7 @@ async function gallery(embed) {
   let cards = "";
   for (const [i, s] of shotList.entries()) {
     const src = embed
-      ? "data:image/png;base64," +
-        (await fs.readFile(path.join(out, s.id + ".png"))).toString("base64")
+      ? "data:image/png;base64," + (await fs.readFile(path.join(out, s.id + ".png"))).toString("base64")
       : s.id + ".png";
     cards += `<article id="${s.id}"><header><span>${String(i + 1).padStart(2, "0")}</span><div><h2>${s.title}</h2><p>${s.description}</p></div></header><a href="${src}" target="_blank"><img loading="lazy" src="${src}" alt="${s.title}"></a></article>`;
   }

@@ -14,15 +14,13 @@ export default function DepartmentAccounts() {
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
   async function load() {
-    const d = await api(
-      "/api/account-management?search=" + encodeURIComponent(search),
-    );
+    const d = await api("/api/account-management?search=" + encodeURIComponent(search));
     setData(d);
     return d;
   }
   useSectionRefresh(
     () => load(),
-    (e) => setError(e.message),
+    (e) => setError(e.message)
   );
   useEffect(() => {
     load().catch((e) => setError(e.message));
@@ -43,7 +41,7 @@ export default function DepartmentAccounts() {
           ? r.emailSent
             ? "Password email sent."
             : "Email was not sent. Ask Admin to check SMTP and the account email."
-          : "Account saved. Account changes revoke existing sessions.",
+          : "Account saved. Account changes revoke existing sessions."
       );
       return true;
     } catch (e) {
@@ -59,9 +57,8 @@ export default function DepartmentAccounts() {
       <section className="panel">
         <h2>Department accounts</h2>
         <p>
-          People in your assigned departments and areas. Protected or
-          broader-access accounts are visible when relevant and require Admin
-          management.
+          People in your assigned departments and areas. Protected or broader-access accounts are visible when
+          relevant and require Admin management.
         </p>
         {error && <p role="alert">{error}</p>}
         {notice && <p role="status">{notice}</p>}
@@ -138,9 +135,7 @@ export default function DepartmentAccounts() {
       </section>
       {draft && (
         <section className="panel">
-          <h2>
-            {selected ? `Account · ${selected.name}` : "New department account"}
-          </h2>
+          <h2>{selected ? `Account · ${selected.name}` : "New department account"}</h2>
           {selected && !selected.canManage ? (
             <p>{selected.readOnlyReason}</p>
           ) : (
@@ -150,9 +145,7 @@ export default function DepartmentAccounts() {
                   e.preventDefault();
                   const identityFields = new FormData(e.currentTarget);
                   if (!selected) {
-                    const l = data.locations.find(
-                      (l: any) => l.id === draft.locationId,
-                    );
+                    const l = data.locations.find((l: any) => l.id === draft.locationId);
                     if (!l && !draft.equipmentId) {
                       setError("Choose a department/area or machine");
                       return;
@@ -173,9 +166,7 @@ export default function DepartmentAccounts() {
                               },
                             ]
                           : [],
-                        equipmentIds: draft.equipmentId
-                          ? [draft.equipmentId]
-                          : [],
+                        equipmentIds: draft.equipmentId ? [draft.equipmentId] : [],
                       },
                     });
                   } else
@@ -198,9 +189,7 @@ export default function DepartmentAccounts() {
                       pattern="[a-z0-9._\-]{3,80}"
                       maxLength={80}
                       value={draft.username}
-                      onChange={(e) =>
-                        setDraft({ ...draft, username: e.target.value })
-                      }
+                      onChange={(e) => setDraft({ ...draft, username: e.target.value })}
                     />
                   </Field>
                 )}
@@ -219,25 +208,16 @@ export default function DepartmentAccounts() {
                     maxLength={254}
                     value={draft.email ?? ""}
                     disabled={!!selected && !p.includes("accounts.edit")}
-                    onChange={(e) =>
-                      setDraft({ ...draft, email: e.target.value })
-                    }
+                    onChange={(e) => setDraft({ ...draft, email: e.target.value })}
                   />
                 </Field>
                 <Field label="Department account role">
                   <select
                     value={draft.role}
                     disabled={!!selected && !p.includes("accounts.edit")}
-                    onChange={(e) =>
-                      setDraft({ ...draft, role: e.target.value })
-                    }
+                    onChange={(e) => setDraft({ ...draft, role: e.target.value })}
                   >
-                    {(
-                      data.assignableRoles || [
-                        { name: "Operator" },
-                        { name: "DL/TL" },
-                      ]
-                    ).map((r: any) => (
+                    {(data.assignableRoles || [{ name: "Operator" }, { name: "DL/TL" }]).map((r: any) => (
                       <option key={r.name} value={r.name}>
                         {r.name}
                       </option>
@@ -262,9 +242,7 @@ export default function DepartmentAccounts() {
                         <option value="">Choose a permitted area</option>
                         {data.locations.map((l: any) => (
                           <option key={l.id} value={l.id}>
-                            {[l.plant, l.department, l.area, l.line]
-                              .filter(Boolean)
-                              .join(" / ")}
+                            {[l.plant, l.department, l.area, l.line].filter(Boolean).join(" / ")}
                           </option>
                         ))}
                       </select>
@@ -284,9 +262,7 @@ export default function DepartmentAccounts() {
                         <option value="">Choose a machine instead</option>
                         {data.equipment.map((e: any) => (
                           <option key={e.id} value={e.id}>
-                            {[e.plant, e.department, e.area, e.name].join(
-                              " / ",
-                            )}
+                            {[e.plant, e.department, e.area, e.name].join(" / ")}
                           </option>
                         ))}
                       </select>
@@ -299,18 +275,14 @@ export default function DepartmentAccounts() {
                         maxLength={128}
                         autoComplete="new-password"
                         value={draft.password}
-                        onChange={(e) =>
-                          setDraft({ ...draft, password: e.target.value })
-                        }
+                        onChange={(e) => setDraft({ ...draft, password: e.target.value })}
                       />
                     </Field>
                   </>
                 )}
                 {(!selected || p.includes("accounts.edit")) && (
                   <button className="primary" disabled={busy}>
-                    {selected
-                      ? "Save account details"
-                      : "Create assigned account"}
+                    {selected ? "Save account details" : "Create assigned account"}
                   </button>
                 )}
               </form>
@@ -369,9 +341,7 @@ export default function DepartmentAccounts() {
                           maxLength={128}
                           autoComplete="new-password"
                           value={draft.password}
-                          onChange={(e) =>
-                            setDraft({ ...draft, password: e.target.value })
-                          }
+                          onChange={(e) => setDraft({ ...draft, password: e.target.value })}
                         />
                       </Field>
                       <button className="outline" disabled={busy}>

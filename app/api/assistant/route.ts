@@ -1,18 +1,10 @@
 import { answerNavigationQuestion } from "@/lib/navigation-ai";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import {
-  requireUser,
-  grants,
-  jsonBody,
-  failure,
-  HttpError,
-  limit,
-} from "@/lib/security";
+import { requireUser, grants, jsonBody, failure, HttpError, limit } from "@/lib/security";
 import { adminPrivileges } from "@/lib/capabilities";
 import { permittedHelp, guideAnswer } from "@/lib/help-catalog";
-const configured = () =>
-  !!(process.env.OPENAI_API_KEY && process.env.OPENAI_ASSISTANT_MODEL);
+const configured = () => !!(process.env.OPENAI_API_KEY && process.env.OPENAI_ASSISTANT_MODEL);
 async function enabled() {
   const s = await db.setting.findUnique({ where: { key: "navigation-ai" } });
   return !!(
@@ -45,8 +37,7 @@ export async function POST(req: Request) {
     const u = await requireUser(),
       b = await jsonBody(req, 16 * 1024);
     if (b.action === "configure") {
-      if (u.role !== "Admin")
-        throw new HttpError(403, "Only Admin can enable external AI");
+      if (u.role !== "Admin") throw new HttpError(403, "Only Admin can enable external AI");
       const v = z.object({ enabled: z.boolean() }).parse(b);
       await db.setting.upsert({
         where: { key: "navigation-ai" },
@@ -69,8 +60,7 @@ export async function POST(req: Request) {
         adminPrivileges: await adminPrivileges(u),
       }),
       fallback = guideAnswer(v.question, topics);
-    if (!v.useAI || !configured() || !(await enabled()))
-      return Response.json({ ...fallback, mode: "guide" });
+    if (!v.useAI || !configured() || !(await enabled())) return Response.json({ ...fallback, mode: "guide" });
     try {
       const answer = await answerNavigationQuestion(v.question, topics, {
         model: process.env.OPENAI_ASSISTANT_MODEL!,

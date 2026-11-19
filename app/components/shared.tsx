@@ -9,13 +9,7 @@ export const HistoryPagingContext = createContext({
 });
 import type { Data, Entry, Step, Cycle } from "@/lib/workspace-types";
 import { equipmentLabel } from "@/lib/equipment-label";
-export function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+export function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="field">
       <span>{label}</span>
@@ -23,21 +17,14 @@ export function Field({
     </label>
   );
 }
-export function Submit({
-  children,
-  busy = false,
-}: {
-  children: React.ReactNode;
-  busy?: boolean;
-}) {
+export function Submit({ children, busy = false }: { children: React.ReactNode; busy?: boolean }) {
   return (
     <button className="primary" disabled={busy} type="submit">
       {busy ? "Saving…" : children}
     </button>
   );
 }
-export const fmt = (n: number | undefined) =>
-  n === undefined ? "—" : n.toFixed(2);
+export const fmt = (n: number | undefined) => (n === undefined ? "—" : n.toFixed(2));
 export function Metric({
   label,
   value,
@@ -69,9 +56,7 @@ export function Metric({
       <span className="small">View →</span>
     </button>
   ) : (
-    <section className={"metric " + (accent ? "accent" : "")}>
-      {content}
-    </section>
+    <section className={"metric " + (accent ? "accent" : "")}>{content}</section>
   );
 }
 export function History({ data, records }: { data: Data; records: Entry[] }) {
@@ -83,10 +68,7 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
         <div className="empty">
           <span>◇</span>
           <h3>Your first observation starts here</h3>
-          <p>
-            Completed work, time studies, and DL/TL Standard Work will appear
-            here.
-          </p>
+          <p>Completed work, time studies, and DL/TL Standard Work will appear here.</p>
         </div>
       ) : (
         <div className="table-wrap">
@@ -109,9 +91,7 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
                     <small>
                       {r.data.snapshot
                         ? `Revision ${r.data.snapshot.revision}`
-                        : data.equipment.find(
-                            (e) => e.id === r.data.equipmentId,
-                          )?.name}
+                        : data.equipment.find((e) => e.id === r.data.equipmentId)?.name}
                     </small>
                   </td>
                   <td>
@@ -124,9 +104,7 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
                   <td>{r.user.name}</td>
                   <td>{new Date(r.created).toLocaleString()}</td>
                   <td>
-                    <span
-                      className={"badge " + (r.data.followUp ? "warn" : "")}
-                    >
+                    <span className={"badge " + (r.data.followUp ? "warn" : "")}>
                       {r.data.followUp ? "Follow up" : "Recorded"}
                     </span>
                   </td>
@@ -136,8 +114,7 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
                       {r.data.operator && <p>Operator: {r.data.operator}</p>}
                       {r.data.changeover && (
                         <p>
-                          Changeover: {r.data.changeover.fromProduct} →{" "}
-                          {r.data.changeover.toProduct} ·{" "}
+                          Changeover: {r.data.changeover.fromProduct} → {r.data.changeover.toProduct} ·{" "}
                           {r.data.changeover.type} · {r.data.changeover.notes}
                         </p>
                       )}
@@ -147,33 +124,23 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
                           <p>Pass-down: {r.data.handoff.notes}</p>
                           {r.data.handoff.rooms.map((room: any, i: number) => (
                             <p key={i}>
-                              {room.room} · item {room.item} · lot {room.lot} ·
-                              target {room.targetSpeed} / actual{" "}
-                              {room.actualSpeed} · remaining {room.remaining} ·
-                              issues {room.issues} · next order {room.nextOrder}
+                              {room.room} · item {room.item} · lot {room.lot} · target {room.targetSpeed} /
+                              actual {room.actualSpeed} · remaining {room.remaining} · issues {room.issues} ·
+                              next order {room.nextOrder}
                               {(
                                 [
                                   ["status", "Work order status"],
-                                  [
-                                    "materialsSplit",
-                                    "Materials split correctly",
-                                  ],
+                                  ["materialsSplit", "Materials split correctly"],
                                   ["weighsLeft", "Weighs left"],
                                   ["cleanBins", "Clean bins"],
                                   ["inspectingFor", "Inspecting for"],
-                                  [
-                                    "requiresYielding",
-                                    "Requires charging / yielding",
-                                  ],
+                                  ["requiresYielding", "Requires charging / yielding"],
                                   ["yielded", "Yielded"],
                                   ["round", "Current round"],
                                   ["totalRounds", "Total rounds"],
                                   ["solutionMixed", "Current solution mixed"],
                                   ["nextSolutionReady", "Next solution ready"],
-                                  [
-                                    "lastFourRecalculated",
-                                    "Last four rounds recalculated",
-                                  ],
+                                  ["lastFourRecalculated", "Last four rounds recalculated"],
                                 ] as const
                               )
                                 .filter(([key]) => room[key])
@@ -187,21 +154,15 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
                           ))}
                         </div>
                       )}
-                      {r.data.snapshot &&
-                        r.data.snapshot.workflow !== "leader" && (
-                          <p>
-                            Target {r.data.snapshot.target}s · tolerance{" "}
-                            {r.data.snapshot.tolerance}%
-                          </p>
-                        )}
+                      {r.data.snapshot && r.data.snapshot.workflow !== "leader" && (
+                        <p>
+                          Target {r.data.snapshot.target}s · tolerance {r.data.snapshot.tolerance}%
+                        </p>
+                      )}
                       {r.data.responses?.map((a: any) => (
                         <div className="record-step" key={a.stepId}>
                           <strong>{a.answer ? "✓ Yes" : "✕ No"}</strong>{" "}
-                          {
-                            r.data.snapshot.steps.find(
-                              (s: Step) => s.id === a.stepId,
-                            )?.text
-                          }
+                          {r.data.snapshot.steps.find((s: Step) => s.id === a.stepId)?.text}
                           <p>{a.comment}</p>
                           {a.video && (
                             <video
@@ -213,11 +174,7 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
                             />
                           )}
                           {a.photo && (
-                            <a
-                              href={`/api/photos/${a.photo}`}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
+                            <a href={`/api/photos/${a.photo}`} target="_blank" rel="noreferrer">
                               <img
                                 className="photo-preview"
                                 loading="lazy"
@@ -231,8 +188,7 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
                       ))}
                       {r.data.cycles?.map((c: Cycle, i: number) => (
                         <p key={i}>
-                          {c.element}: {fmt(c.seconds)}s ·{" "}
-                          {new Date(c.at).toLocaleString()}
+                          {c.element}: {fmt(c.seconds)}s · {new Date(c.at).toLocaleString()}
                         </p>
                       ))}
                     </details>
@@ -268,12 +224,7 @@ export function EquipmentSelect({
   onChange: (s: string) => void;
 }) {
   return (
-    <select
-      aria-label="Equipment"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      required
-    >
+    <select aria-label="Equipment" value={value} onChange={(e) => onChange(e.target.value)} required>
       <option value="">Select equipment</option>
       {data.equipment.map((e) => (
         <option key={e.id} value={e.id}>

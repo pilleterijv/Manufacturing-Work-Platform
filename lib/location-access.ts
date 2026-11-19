@@ -27,30 +27,15 @@ export function recordScope(ids: string[]): Prisma.RecordWhereInput {
     ],
   };
 }
-export async function assertEquipmentAccess(
-  u: ScopedUser,
-  id: string,
-  tx: Prisma.TransactionClient = db,
-) {
+export async function assertEquipmentAccess(u: ScopedUser, id: string, tx: Prisma.TransactionClient = db) {
   await tx.$queryRaw`SELECT id FROM "User" WHERE id=${u.id} FOR SHARE`;
   const fresh = await tx.user.findUniqueOrThrow({ where: { id: u.id } });
   const eq = await tx.equipment.findUnique({ where: { id } });
-  if (
-    !fresh.active ||
-    !eq ||
-    !allowedDowntimeEquipment(fresh.role, fresh.workspaceAccess, eq)
-  )
-    throw new HttpError(
-      403,
-      "This equipment is outside your assigned departments and areas",
-    );
+  if (!fresh.active || !eq || !allowedDowntimeEquipment(fresh.role, fresh.workspaceAccess, eq))
+    throw new HttpError(403, "This equipment is outside your assigned departments and areas");
   return eq;
 }
-export async function eligiblePeople(
-  equipmentId: string,
-  ids: string[],
-  tx: Prisma.TransactionClient = db,
-) {
+export async function eligiblePeople(equipmentId: string, ids: string[], tx: Prisma.TransactionClient = db) {
   const eq = await tx.equipment.findUniqueOrThrow({
     where: { id: equipmentId },
   });
@@ -63,7 +48,7 @@ export async function eligiblePeople(
   )
     throw new HttpError(
       400,
-      "Every assignee must be active and assigned to this department, area or machine",
+      "Every assignee must be active and assigned to this department, area or machine"
     );
 }
 export async function visiblePeople(u: ScopedUser, ids: string[]) {
@@ -83,11 +68,7 @@ export async function visiblePeople(u: ScopedUser, ids: string[]) {
   });
   return people
     .filter(
-      (p) =>
-        p.id === u.id ||
-        equipment.some((e) =>
-          allowedDowntimeEquipment(p.role, p.workspaceAccess, e),
-        ),
+      (p) => p.id === u.id || equipment.some((e) => allowedDowntimeEquipment(p.role, p.workspaceAccess, e))
     )
     .map(({ id, name, username, role, active, email }) => ({
       id,
@@ -102,7 +83,7 @@ export const equipmentSql = (ids: string[], column: Prisma.Sql) =>
   Prisma.sql`${column} = ANY(${ids}::text[])`;
 export async function notificationScope(
   u: ScopedUser,
-  ids: string[],
+  ids: string[]
 ): Promise<Prisma.NotificationWhereInput> {
   const g = await grants(u),
     types = [

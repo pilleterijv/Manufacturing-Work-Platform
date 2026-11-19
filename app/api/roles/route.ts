@@ -1,18 +1,11 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
-import {
-  requireUser,
-  jsonBody,
-  failure,
-  HttpError,
-  limit,
-} from "@/lib/security";
+import { requireUser, jsonBody, failure, HttpError, limit } from "@/lib/security";
 import { roleSchema, builtinRole } from "@/lib/role-rules";
 export async function GET() {
   try {
     const u = await requireUser();
-    if (u.role !== "Admin")
-      throw new HttpError(403, "Only Admin can manage roles");
+    if (u.role !== "Admin") throw new HttpError(403, "Only Admin can manage roles");
     const [roles, audit] = await Promise.all([
       db.policy.findMany({ orderBy: { role: "asc" } }),
       db.roleAudit.findMany({ orderBy: { createdAt: "desc" }, take: 100 }),
@@ -50,8 +43,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const u = await requireUser();
-    if (u.role !== "Admin")
-      throw new HttpError(403, "Only Admin can manage roles");
+    if (u.role !== "Admin") throw new HttpError(403, "Only Admin can manage roles");
     await limit(`roles:${u.id}`, 60, 3600);
     const b = await jsonBody(req),
       action = z.enum(["create", "update", "retire"]).parse(b.action),
@@ -60,8 +52,7 @@ export async function POST(req: Request) {
         .min(1)
         .max(60)
         .parse(b.role ?? b.name);
-    if (name.toLowerCase() === "admin")
-      throw new HttpError(400, "Admin is protected");
+    if (name.toLowerCase() === "admin") throw new HttpError(400, "Admin is protected");
     await db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${"role:" + name.toLowerCase()},0))`;
       await tx.$queryRaw`SELECT role FROM "Policy" WHERE role=${name} FOR UPDATE`;
@@ -94,23 +85,12 @@ export async function POST(req: Request) {
           },
         });
       } else {
-        if (
-          !old ||
-          !old.active ||
-          old.version !== z.number().int().positive().parse(b.version)
-        )
-          throw new HttpError(
-            409,
-            "Role changed or retired; refresh before saving",
-          );
+        if (!old || !old.active || old.version !== z.number().int().positive().parse(b.version))
+          throw new HttpError(409, "Role changed or retired; refresh before saving");
         if (action === "retire") {
-          if (builtinRole(name))
-            throw new HttpError(400, "Built-in roles cannot be retired");
+          if (builtinRole(name)) throw new HttpError(400, "Built-in roles cannot be retired");
           if (await tx.user.count({ where: { customRole: name } }))
-            throw new HttpError(
-              409,
-              "Reassign every account using this role before retiring it",
-            );
+            throw new HttpError(409, "Reassign every account using this role before retiring it");
           await tx.policy.update({
             where: { role: name },
             data: { active: false, version: { increment: 1 } },
@@ -118,19 +98,14 @@ export async function POST(req: Request) {
         } else {
           const v = roleSchema.parse({ ...b, name });
           if (v.baseRole !== old.baseRole)
-            throw new HttpError(
-              400,
-              "Keep the workflow type; create a new role to change it",
-            );
+            throw new HttpError(400, "Keep the workflow type; create a new role to change it");
           await tx.policy.update({
             where: { role: name },
             data: {
               grants: [...new Set(v.grants)],
               adminPrivileges: [...new Set(v.adminPrivileges)],
               description: v.description,
-              homeProfile: Object.hasOwn(b, "homeProfile")
-                ? v.homeProfile
-                : old.homeProfile,
+              homeProfile: Object.hasOwn(b, "homeProfile") ? v.homeProfile : old.homeProfile,
               version: { increment: 1 },
             },
           });
@@ -143,9 +118,7 @@ export async function POST(req: Request) {
             actorId: u.id,
             role: name,
             action: action === "retire" ? "Retired" : "Updated",
-            snapshot: JSON.parse(
-              JSON.stringify({ before: old, after: updated }),
-            ),
+            snapshot: JSON.parse(JSON.stringify({ before: old, after: updated })),
           },
         });
       }
@@ -153,10 +126,7 @@ export async function POST(req: Request) {
     return Response.json({ ok: true });
   } catch (e) {
     if ((e as any)?.code === "P2002")
-      return Response.json(
-        { error: "Role name is already in use" },
-        { status: 409 },
-      );
+      return Response.json({ error: "Role name is already in use" }, { status: 409 });
     return failure(e);
   }
 }

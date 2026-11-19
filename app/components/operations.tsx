@@ -28,13 +28,7 @@ import {
 import type { leadershipReport } from "@/lib/leadership";
 
 type Save = (body: unknown) => Promise<boolean>;
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="field">
       <span>{label}</span>
@@ -52,18 +46,11 @@ function Equipment({
   onChange: (v: string) => void;
 }) {
   return (
-    <select
-      aria-label="Equipment"
-      required
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    >
+    <select aria-label="Equipment" required value={value} onChange={(e) => onChange(e.target.value)}>
       <option value="">Select equipment</option>
       {equipment.map((e) => (
         <option key={e.id} value={e.id}>
-          {[e.plant, e.department, e.area, e.line, e.name]
-            .filter(Boolean)
-            .join(" / ")}
+          {[e.plant, e.department, e.area, e.line, e.name].filter(Boolean).join(" / ")}
         </option>
       ))}
     </select>
@@ -82,8 +69,7 @@ function useServerClock(serverNow: string) {
   }, [serverNow]);
   useEffect(() => {
     const id = setInterval(() => {
-      if (document.visibilityState === "visible")
-        setNow(anchor.time + Date.now() - anchor.local);
+      if (document.visibilityState === "visible") setNow(anchor.time + Date.now() - anchor.local);
     }, 1000);
     return () => clearInterval(id);
   }, [anchor]);
@@ -115,23 +101,13 @@ export function Downtime({
     [reason, setReason] = useState(""),
     [recordDepartment, setRecordDepartment] = useState(""),
     [recordArea, setRecordArea] = useState<string | null>(null);
-  const departments = [
-    ...new Map(equipment.map((e) => [departmentKey(e), e])).entries(),
-  ].sort(
-    (a, b) =>
-      a[1].department.localeCompare(b[1].department) ||
-      a[1].plant.localeCompare(b[1].plant),
+  const departments = [...new Map(equipment.map((e) => [departmentKey(e), e])).entries()].sort(
+    (a, b) => a[1].department.localeCompare(b[1].department) || a[1].plant.localeCompare(b[1].plant)
   );
   const areas = [
-    ...new Set(
-      equipment
-        .filter((e) => departmentKey(e) === recordDepartment)
-        .map((e) => e.area),
-    ),
+    ...new Set(equipment.filter((e) => departmentKey(e) === recordDepartment).map((e) => e.area)),
   ].sort();
-  const machines = equipment.filter(
-    (e) => departmentKey(e) === recordDepartment && e.area === recordArea,
-  );
+  const machines = equipment.filter((e) => departmentKey(e) === recordDepartment && e.area === recordArea);
   function chooseMachine(id: string) {
     const e = equipment.find((e) => e.id === id);
     if (e) {
@@ -146,30 +122,20 @@ export function Downtime({
       setEquipment("");
       setReason("");
     }
-    if (
-      recordDepartment &&
-      !equipment.some((e) => departmentKey(e) === recordDepartment)
-    ) {
+    if (recordDepartment && !equipment.some((e) => departmentKey(e) === recordDepartment)) {
       setRecordDepartment("");
       setRecordArea(null);
     } else if (
       recordArea !== null &&
-      !equipment.some(
-        (e) => departmentKey(e) === recordDepartment && e.area === recordArea,
-      )
+      !equipment.some((e) => departmentKey(e) === recordDepartment && e.area === recordArea)
     )
       setRecordArea(null);
   }, [equipment, equipmentId, recordDepartment, recordArea]);
   const now = useServerClock(data.serverNow);
-  const selected = data.downtime.find(
-    (d) => d.equipmentId === equipmentId && !d.endedAt,
-  );
+  const selected = data.downtime.find((d) => d.equipmentId === equipmentId && !d.endedAt);
   const visible = useMemo(
-      () =>
-        data.downtime.filter(
-          (d) => !department || d.equipmentSnapshot.department === department,
-        ),
-      [data.downtime, department],
+      () => data.downtime.filter((d) => !department || d.equipmentSnapshot.department === department),
+      [data.downtime, department]
     ),
     active = useMemo(() => visible.filter((d) => !d.endedAt), [visible]);
   return (
@@ -180,14 +146,13 @@ export function Downtime({
           <span className="badge">DOWNTIME TRACKING</span>
         </div>
         <p className="muted">
-          Choose the department, area, machine and reason. Start when it stops;
-          stop when production resumes. The timer survives refreshes and
-          sign-outs.
+          Choose the department, area, machine and reason. Start when it stops; stop when production resumes.
+          The timer survives refreshes and sign-outs.
         </p>
         {!equipment.length && (
           <p className="notice">
-            No machines are assigned to you for downtime recording. Ask an
-            administrator to assign your locations or machines.
+            No machines are assigned to you for downtime recording. Ask an administrator to assign your
+            locations or machines.
           </p>
         )}
         <div className="form-grid">
@@ -205,8 +170,7 @@ export function Downtime({
               <option value="">Select department</option>
               {departments.map(([key, d]) => (
                 <option key={key} value={key}>
-                  {d.department || "Unassigned department"} ·{" "}
-                  {d.plant || "Unassigned plant"}
+                  {d.department || "Unassigned department"} · {d.plant || "Unassigned plant"}
                 </option>
               ))}
             </select>
@@ -217,9 +181,7 @@ export function Downtime({
               disabled={!recordDepartment}
               value={recordArea === null ? "" : JSON.stringify(recordArea)}
               onChange={(e) => {
-                setRecordArea(
-                  e.target.value ? JSON.parse(e.target.value) : null,
-                );
+                setRecordArea(e.target.value ? JSON.parse(e.target.value) : null);
                 setEquipment("");
                 setReason("");
               }}
@@ -271,36 +233,25 @@ export function Downtime({
           </Field>
         </div>
         <div className={"downtime-clock " + (selected ? "is-down" : "")}>
-          <span className="eyebrow">
-            {selected ? "DOWNTIME IN PROGRESS" : "READY TO TRACK"}
-          </span>
+          <span className="eyebrow">{selected ? "DOWNTIME IN PROGRESS" : "READY TO TRACK"}</span>
           <strong>
-            {selected
-              ? durationText((now - +new Date(selected.startedAt)) / 1000)
-              : "00:00:00"}
+            {selected ? durationText((now - +new Date(selected.startedAt)) / 1000) : "00:00:00"}
           </strong>
           <p>
             {selected
               ? `${selected.reasonName} · started by ${selected.starter.name}`
               : "One shared timer per machine prevents overlapping records."}
           </p>
-          <RecordingContext
-            equipment={equipment.find((e) => e.id === equipmentId)}
-          />
+          <RecordingContext equipment={equipment.find((e) => e.id === equipmentId)} />
           <button
             className={selected ? "danger" : "primary"}
             type="button"
-            disabled={
-              busy ||
-              !equipmentId ||
-              (!selected && !reason) ||
-              !!selected?.integrationManaged
-            }
+            disabled={busy || !equipmentId || (!selected && !reason) || !!selected?.integrationManaged}
             onClick={() =>
               void save(
                 selected
                   ? { action: "stop", id: selected.id }
-                  : { action: "start", equipmentId, reasonId: reason },
+                  : { action: "start", equipmentId, reasonId: reason }
               )
             }
           >
@@ -315,14 +266,13 @@ export function Downtime({
         </div>
         {selected?.integrationManaged && (
           <p className="notice">
-            Managed by {selected.externalSourceName}. The source records machine
-            recovery automatically. Admin can disable the source or mapping
-            before a manual stop.
+            Managed by {selected.externalSourceName}. The source records machine recovery automatically. Admin
+            can disable the source or mapping before a manual stop.
           </p>
         )}
         <p className="small muted">
-          Shift reporting uses {data.config.timezone}. Admins can configure the
-          shift schedule; existing events retain their original schedule.
+          Shift reporting uses {data.config.timezone}. Admins can configure the shift schedule; existing
+          events retain their original schedule.
         </p>
       </section>
       {active.length > 0 && (
@@ -330,11 +280,7 @@ export function Downtime({
           <h2>Machines currently down</h2>
           <div className="active-downtime">
             {active.map((d) => (
-              <button
-                key={d.id}
-                className="active-down-card"
-                onClick={() => chooseMachine(d.equipmentId)}
-              >
+              <button key={d.id} className="active-down-card" onClick={() => chooseMachine(d.equipmentId)}>
                 <span className="badge warn">DOWN</span>
                 <strong>{d.equipmentSnapshot.name}</strong>
                 <span>{d.reasonName}</span>
@@ -383,28 +329,18 @@ export function Downtime({
           </thead>
           <tbody>
             {visible.map((d) => (
-              <DowntimeHistoryRow
-                key={d.id}
-                d={d}
-                now={d.endedAt ? +new Date(d.endedAt) : now}
-              />
+              <DowntimeHistoryRow key={d.id} d={d} now={d.endedAt ? +new Date(d.endedAt) : now} />
             ))}
           </tbody>
         </table>
-        {!visible.length && (
-          <p className="empty">No downtime events recorded yet.</p>
-        )}
+        {!visible.length && <p className="empty">No downtime events recorded yet.</p>}
       </section>
       <p className="small muted">
-        History loads 100 events at a time, plus active timers in the selected
-        department. Full records are available in Excel.
+        History loads 100 events at a time, plus active timers in the selected department. Full records are
+        available in Excel.
       </p>
       {data.downtimePage?.hasMore && (
-        <button
-          className="outline"
-          disabled={loadingMore}
-          onClick={() => void loadMore()}
-        >
+        <button className="outline" disabled={loadingMore} onClick={() => void loadMore()}>
           {loadingMore ? "Loading…" : "Load more downtime"}
         </button>
       )}
@@ -412,15 +348,7 @@ export function Downtime({
     </>
   );
 }
-function DowntimeSettings({
-  data,
-  save,
-  busy,
-}: {
-  data: OperationsData;
-  save: Save;
-  busy: boolean;
-}) {
+function DowntimeSettings({ data, save, busy }: { data: OperationsData; save: Save; busy: boolean }) {
   const [id, setId] = useState(""),
     [name, setName] = useState(""),
     [active, setActive] = useState(true),
@@ -437,11 +365,7 @@ function DowntimeSettings({
         <span className="eyebrow">ADMIN ONLY</span>
         <h2>Reasons & timer availability</h2>
         <Field label="Edit downtime reason">
-          <select
-            aria-label="Edit downtime reason"
-            value={id}
-            onChange={(e) => select(e.target.value)}
-          >
+          <select aria-label="Edit downtime reason" value={id} onChange={(e) => select(e.target.value)}>
             <option value="">Add a new reason</option>
             {data.reasons.map((r) => (
               <option key={r.id} value={r.id}>
@@ -475,11 +399,7 @@ function DowntimeSettings({
             />
           </Field>
           <label className="check">
-            <input
-              type="checkbox"
-              checked={active}
-              onChange={(e) => setActive(e.target.checked)}
-            />
+            <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
             Enable this reason for new timers
           </label>
           <button className="primary" disabled={busy}>
@@ -487,8 +407,8 @@ function DowntimeSettings({
           </button>
         </form>
         <p className="small muted">
-          Disabling a reason hides it from new timers. Running timers can still
-          be stopped, and historical reason names are retained.
+          Disabling a reason hides it from new timers. Running timers can still be stopped, and historical
+          reason names are retained.
         </p>
       </section>
       <section className="panel">
@@ -497,8 +417,8 @@ function DowntimeSettings({
         {config.crews?.length && (
           <>
             <p>
-              Rotating crews are configured. Manage their 12-hour times, time
-              zone and roster together under Shift requirements.
+              Rotating crews are configured. Manage their 12-hour times, time zone and roster together under
+              Shift requirements.
             </p>
             <button
               type="button"
@@ -521,9 +441,7 @@ function DowntimeSettings({
               aria-label="IANA time zone"
               required
               value={config.timezone}
-              onChange={(e) =>
-                setConfig({ ...config, timezone: e.target.value })
-              }
+              onChange={(e) => setConfig({ ...config, timezone: e.target.value })}
               placeholder="America/Chicago"
             />
           </Field>
@@ -538,9 +456,7 @@ function DowntimeSettings({
                   onChange={(e) =>
                     setConfig({
                       ...config,
-                      shifts: config.shifts.map((s, j) =>
-                        i === j ? { ...s, name: e.target.value } : s,
-                      ),
+                      shifts: config.shifts.map((s, j) => (i === j ? { ...s, name: e.target.value } : s)),
                     })
                   }
                 />
@@ -555,9 +471,7 @@ function DowntimeSettings({
                     const [h, m] = e.target.value.split(":").map(Number);
                     setConfig({
                       ...config,
-                      shifts: config.shifts.map((s, j) =>
-                        i === j ? { ...s, startMinute: h * 60 + m } : s,
-                      ),
+                      shifts: config.shifts.map((s, j) => (i === j ? { ...s, startMinute: h * 60 + m } : s)),
                     });
                   }}
                 />
@@ -604,9 +518,8 @@ function DowntimeSettings({
           </div>
         </form>
         <p className="small muted">
-          Each shift runs until the next shift starts. The last shift wraps
-          overnight. Shift dates identify when that shift started; elapsed time
-          accounts for daylight-saving changes.
+          Each shift runs until the next shift starts. The last shift wraps overnight. Shift dates identify
+          when that shift started; elapsed time accounts for daylight-saving changes.
         </p>
       </section>
     </div>
@@ -637,9 +550,7 @@ export function ImprovementIdeas({
 }) {
   const historyRefresh = useContext(HistoryPagingContext).refresh;
   const [ideaUploading, setIdeaUploading] = useState(false);
-  const [ideaMedia, setIdeaMedia] = useState<
-    import("@/lib/evidence-schema").Evidence[]
-  >([]);
+  const [ideaMedia, setIdeaMedia] = useState<import("@/lib/evidence-schema").Evidence[]>([]);
   const [participantSearch, setParticipantSearch] = useState("");
   const [equipmentId, setEquipment] = useState(""),
     [participants, setParticipants] = useState<string[]>([]);
@@ -662,10 +573,7 @@ export function ImprovementIdeas({
       <section className="idea-intro">
         <span className="eyebrow">SMALL IDEAS. MEASURABLE CHANGE.</span>
         <h2>Give a better way a place to start.</h2>
-        <p>
-          Describe the problem, propose a pilot, and bring the right people
-          together.
-        </p>
+        <p>Describe the problem, propose a pilot, and bring the right people together.</p>
       </section>
       <section className="panel">
         <h2>Submit an improvement idea</h2>
@@ -701,11 +609,7 @@ export function ImprovementIdeas({
               />
             </Field>
             <Field label="Equipment">
-              <Equipment
-                equipment={equipment}
-                value={equipmentId}
-                onChange={setEquipment}
-              />
+              <Equipment equipment={equipment} value={equipmentId} onChange={setEquipment} />
             </Field>
             <Field label="Current state">
               <textarea
@@ -740,27 +644,17 @@ export function ImprovementIdeas({
                 Location:{" "}
                 {equipment
                   .filter((e) => e.id === equipmentId)
-                  .map((e) =>
-                    [e.plant, e.department, e.area, e.line, e.name]
-                      .filter(Boolean)
-                      .join(" / "),
-                  )}
+                  .map((e) => [e.plant, e.department, e.area, e.line, e.name].filter(Boolean).join(" / "))}
               </p>
             )}
             {person("Submitted by", "submitterId", userId)}
             {person("Pilot", "pilotId")}
             <p className="small muted">
-              Pilot = person leading the improvement. Submitted by = person the
-              idea came from.
+              Pilot = person leading the improvement. Submitted by = person the idea came from.
             </p>
             {person("Validator", "validatorId")}
             <Field label="Due date">
-              <input
-                aria-label="Due date"
-                name="dueDate"
-                type="date"
-                required
-              />
+              <input aria-label="Due date" name="dueDate" type="date" required />
             </Field>
           </div>
           <fieldset className="field participant-fieldset">
@@ -771,18 +665,12 @@ export function ImprovementIdeas({
               value={participantSearch}
               onChange={(e) => setParticipantSearch(e.target.value)}
             />
-            <span
-              className="participant-picker"
-              role="group"
-              aria-label="Participants"
-            >
+            <span className="participant-picker" role="group" aria-label="Participants">
               {data.people
                 .filter(
                   (p) =>
                     participants.includes(p.id) ||
-                    `${p.name} ${p.username}`
-                      .toLowerCase()
-                      .includes(participantSearch.toLowerCase()),
+                    `${p.name} ${p.username}`.toLowerCase().includes(participantSearch.toLowerCase())
                 )
                 .map((p) => (
                   <label key={p.id} className="participant-option">
@@ -792,9 +680,7 @@ export function ImprovementIdeas({
                       checked={participants.includes(p.id)}
                       onChange={(e) =>
                         setParticipants((prev) =>
-                          e.target.checked
-                            ? [...prev, p.id]
-                            : prev.filter((id) => id !== p.id),
+                          e.target.checked ? [...prev, p.id] : prev.filter((id) => id !== p.id)
                         )
                       }
                     />
@@ -804,9 +690,9 @@ export function ImprovementIdeas({
             </span>
           </fieldset>
           <p className="small muted">
-            Select any supporting participants. The assigned pilot receives a
-            private in-app message immediately. Your account is recorded as the
-            creator, even when you submit on someone else's behalf.
+            Select any supporting participants. The assigned pilot receives a private in-app message
+            immediately. Your account is recorded as the creator, even when you submit on someone else's
+            behalf.
           </p>
           <EvidenceInput
             label="Improvement photo or video evidence"
@@ -842,23 +728,14 @@ export function ImprovementIdeas({
       </div>
       <div className="content-grid">
         {data.ideas
-          .filter(
-            (i) => !department || i.equipmentSnapshot.department === department,
-          )
+          .filter((i) => !department || i.equipmentSnapshot.department === department)
           .map((idea) => (
             <article key={idea.id} className="panel idea-card">
               <div className="section-title">
                 <span
-                  className={
-                    "badge " +
-                    (idea.status !== "Completed" && idea.dueDate < today
-                      ? "warn"
-                      : "")
-                  }
+                  className={"badge " + (idea.status !== "Completed" && idea.dueDate < today ? "warn" : "")}
                 >
-                  {idea.status !== "Completed" && idea.dueDate < today
-                    ? "Overdue · "
-                    : ""}
+                  {idea.status !== "Completed" && idea.dueDate < today ? "Overdue · " : ""}
                   {idea.status}
                 </span>
                 <small>Due {idea.dueDate}</small>
@@ -892,16 +769,11 @@ export function ImprovementIdeas({
                 <dt>Validator</dt>
                 <dd>{idea.validator.name}</dd>
                 <dt>Participants</dt>
-                <dd>
-                  {idea.participants.map((p) => p.user.name).join(", ") ||
-                    "None assigned"}
-                </dd>
+                <dd>{idea.participants.map((p) => p.user.name).join(", ") || "None assigned"}</dd>
                 <dt>Created by</dt>
                 <dd>{idea.creator.name}</dd>
               </dl>
-              {(admin ||
-                userId === idea.pilot.id ||
-                userId === idea.validator.id) && (
+              {(admin || userId === idea.pilot.id || userId === idea.validator.id) && (
                 <Field label={`Progress for ${idea.title}`}>
                   <select
                     aria-label={`Progress for ${idea.title}`}
@@ -922,7 +794,7 @@ export function ImprovementIdeas({
                           s !== "Completed" ||
                           admin ||
                           userId === idea.validator.id ||
-                          idea.status === "Completed",
+                          idea.status === "Completed"
                       )
                       .map((s) => (
                         <option key={s}>{s}</option>
@@ -934,22 +806,16 @@ export function ImprovementIdeas({
           ))}
       </div>
       {data.ideasPage?.hasMore && (
-        <button
-          className="outline"
-          disabled={loadingMore}
-          onClick={() => void loadMore()}
-        >
+        <button className="outline" disabled={loadingMore} onClick={() => void loadMore()}>
           {loadingMore ? "Loading…" : "Load more ideas"}
         </button>
       )}
       {!data.ideas.length && (
-        <section className="panel empty">
-          Your first improvement idea starts here.
-        </section>
+        <section className="panel empty">Your first improvement idea starts here.</section>
       )}
       <p className="small muted">
-        Ideas load 100 at a time. Pilots and validators can update progress; the
-        validator or Admin signs off completion.
+        Ideas load 100 at a time. Pilots and validators can update progress; the validator or Admin signs off
+        completion.
       </p>
     </>
   );
@@ -979,25 +845,16 @@ export function Notifications({
     <section className="panel">
       <h2>Your messages</h2>
       <p className="muted">
-        Pilot assignments and missed-shift alerts appear here. Only the
-        recipient can read or mark their messages.
+        Pilot assignments and missed-shift alerts appear here. Only the recipient can read or mark their
+        messages.
       </p>
       {data.notifications.map((n) => (
-        <article
-          className={"notification " + (!n.readAt ? "unread" : "")}
-          key={n.id}
-        >
+        <article className={"notification " + (!n.readAt ? "unread" : "")} key={n.id}>
           <span className="badge">
-            {n.readAt
-              ? "Read"
-              : n.kind === "missed-work"
-                ? "Missed standard work"
-                : "New assignment"}
+            {n.readAt ? "Read" : n.kind === "missed-work" ? "Missed standard work" : "New assignment"}
           </span>
           <p>{n.message}</p>
-          <small className="muted">
-            {new Date(n.createdAt).toLocaleString()}
-          </small>
+          <small className="muted">{new Date(n.createdAt).toLocaleString()}</small>
           <div className="button-row">
             <button
               className="primary"
@@ -1033,9 +890,7 @@ export function Notifications({
               <button
                 className="outline"
                 disabled={busy}
-                onClick={() =>
-                  void save({ action: "readNotification", id: n.id })
-                }
+                onClick={() => void save({ action: "readNotification", id: n.id })}
               >
                 Mark as read
               </button>
@@ -1044,9 +899,7 @@ export function Notifications({
         </article>
       ))}
       {!data.notifications.length && (
-        <p className="empty">
-          No messages yet. You'll see pilot assignments here.
-        </p>
+        <p className="empty">No messages yet. You'll see pilot assignments here.</p>
       )}
     </section>
   );
@@ -1069,9 +922,7 @@ export function Leadership({
 }) {
   const today = localToday(timezone);
   const [department, setDepartment] = useState(""),
-    [from, setFrom] = useState(
-      Temporal.PlainDate.from(today).subtract({ days: 29 }).toString(),
-    ),
+    [from, setFrom] = useState(Temporal.PlainDate.from(today).subtract({ days: 29 }).toString()),
     [to, setTo] = useState(today),
     [report, setReport] = useState<Report | null>(null),
     [error, setError] = useState(""),
@@ -1084,12 +935,9 @@ export function Leadership({
     setLoading(true);
     setError("");
     try {
-      const r = await fetch(
-        filterUrl(
-          endpoint + "?" + new URLSearchParams({ department, from, to }),
-        ),
-        { signal: controller.signal },
-      );
+      const r = await fetch(filterUrl(endpoint + "?" + new URLSearchParams({ department, from, to })), {
+        signal: controller.signal,
+      });
       const body = await r.json();
       if (!r.ok) throw Error(body.error);
       if (controller.signal.aborted) return;
@@ -1103,19 +951,14 @@ export function Leadership({
   }
   useSectionRefresh(
     () => load(),
-    (e) => setError(e.message),
+    (e) => setError(e.message)
   );
   useEffect(() => {
     void load();
     return () => request.current?.abort();
   }, []);
   const s = report?.summary;
-  function metric(
-    label: string,
-    value: number | string,
-    detail: string,
-    accent = false,
-  ) {
+  function metric(label: string, value: number | string, detail: string, accent = false) {
     const target = (
       {
         "Completed standard work": "Standard work",
@@ -1164,9 +1007,7 @@ export function Leadership({
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
             >
-              <option value="">
-                {canOverall ? "All departments" : "Choose a department"}
-              </option>
+              <option value="">{canOverall ? "All departments" : "Choose a department"}</option>
               {report?.departments.map((d) => (
                 <option key={d}>{d}</option>
               ))}
@@ -1195,8 +1036,8 @@ export function Leadership({
           </button>
         </form>
         <p className="small muted">
-          Reporting dates use {timezone}. Choose all departments for the overall
-          picture, or one department to focus the dashboard.
+          Reporting dates use {timezone}. Choose all departments for the overall picture, or one department to
+          focus the dashboard.
         </p>
       </section>
       {error && (
@@ -1208,13 +1049,9 @@ export function Leadership({
         <>
           <div className="leadership-heading">
             <div>
-              <span className="eyebrow">
-                LEADERSHIP / {report.department || "ALL DEPARTMENTS"}
-              </span>
+              <span className="eyebrow">LEADERSHIP / {report.department || "ALL DEPARTMENTS"}</span>
               <h2>
-                {report.department
-                  ? `${report.department} — section dashboard`
-                  : "Whole-floor performance"}
+                {report.department ? `${report.department} — section dashboard` : "Whole-floor performance"}
               </h2>
               <p className="small muted">
                 {report.from} through {report.to} · refreshed{" "}
@@ -1232,7 +1069,7 @@ export function Leadership({
                       from: report.from,
                       to: report.to,
                       format: "xlsx",
-                    }),
+                    })
                 )}
               >
                 ↓ Export dashboard
@@ -1240,27 +1077,19 @@ export function Leadership({
             )}
           </div>
           <div className="metrics">
-            {metric(
-              "Completed standard work",
-              s.runs,
-              `${s.noAnswers} No answers / ${s.responses} checks`,
-            )}
+            {metric("Completed standard work", s.runs, `${s.noAnswers} No answers / ${s.responses} checks`)}
             {metric(
               "Machine downtime",
               `${(s.downtimeSeconds / 60).toFixed(1)} min`,
               `${s.downtimeEvents} events in period`,
-              true,
+              true
             )}
-            {metric(
-              "DL/TL Standard Work",
-              s.leaderWork || 0,
-              `${s.leaderFollowUps || 0} require follow-up`,
-            )}
+            {metric("DL/TL Standard Work", s.leaderWork || 0, `${s.leaderFollowUps || 0} require follow-up`)}
             {metric(
               "Open improvement ideas",
               s.openIdeas,
               `${s.overdueIdeas} overdue · current pipeline`,
-              s.overdueIdeas > 0,
+              s.overdueIdeas > 0
             )}
           </div>
           <DashboardChart
@@ -1292,31 +1121,22 @@ export function Leadership({
                   ["Current standards", s.standards],
                   [
                     "Average work completion",
-                    s.averageCompletionSeconds === null
-                      ? "—"
-                      : `${s.averageCompletionSeconds.toFixed(2)}s`,
+                    s.averageCompletionSeconds === null ? "—" : `${s.averageCompletionSeconds.toFixed(2)}s`,
                   ],
                   ["Time studies", s.studies],
                   ["Raw cycle observations", s.observations],
                   [
                     "Average observation duration",
-                    s.cycleStats?.average != null
-                      ? `${s.cycleStats.average.toFixed(2)}s`
-                      : "—",
+                    s.cycleStats?.average != null ? `${s.cycleStats.average.toFixed(2)}s` : "—",
                   ],
                   ["Training videos", s.training],
                   ["Troubleshooting guides", s.guides],
                   ["Ideas submitted in period", s.ideasCreated],
                   ["Completed ideas · all time", s.completedIdeas],
                   ["Open problem-solving records · current", s.openProblems],
-                  [
-                    "Closed problem-solving records · all time",
-                    s.closedProblems,
-                  ],
+                  ["Closed problem-solving records · all time", s.closedProblems],
                   ["Open problem actions · current", s.openProblemActions],
-                  ...(s.activePeople === null
-                    ? []
-                    : [["Active accounts · workspace", s.activePeople]]),
+                  ...(s.activePeople === null ? [] : [["Active accounts · workspace", s.activePeople]]),
                 ].map(([name, value]) => (
                   <div key={String(name)}>
                     <span>{name}</span>
@@ -1325,10 +1145,9 @@ export function Leadership({
                 ))}
               </div>
               <p className="small muted">
-                Work, studies, DL/TL Standard Work, downtime, and new ideas use
-                the selected period. Equipment, standards, libraries, and the
-                idea pipeline show their current state. Department libraries
-                include shared resources.
+                Work, studies, DL/TL Standard Work, downtime, and new ideas use the selected period.
+                Equipment, standards, libraries, and the idea pipeline show their current state. Department
+                libraries include shared resources.
               </p>
             </section>
             <section className="panel">
@@ -1348,12 +1167,8 @@ export function Leadership({
                   </div>
                 </div>
               ))}
-              {!report.reasons.length && (
-                <p className="empty">No downtime in this reporting period.</p>
-              )}
-              <h3 className="pipeline-heading">
-                Improvement pipeline · current
-              </h3>
+              {!report.reasons.length && <p className="empty">No downtime in this reporting period.</p>}
+              <h3 className="pipeline-heading">Improvement pipeline · current</h3>
               <div className="pipeline-summary">
                 {Object.entries(report.ideaStatuses).map(([name, value]) => (
                   <div key={name}>
@@ -1386,14 +1201,11 @@ export function Leadership({
                 ))}
               </tbody>
             </table>
-            {!report.shifts.length && (
-              <p className="empty">No shift downtime to report.</p>
-            )}
+            {!report.shifts.length && <p className="empty">No shift downtime to report.</p>}
           </section>
           <p className="small muted">
-            Downtime totals sum machine time; simultaneous stoppages on
-            different machines both count. Records crossing the selected dates
-            are clipped to that period. Department filters organize reporting;
+            Downtime totals sum machine time; simultaneous stoppages on different machines both count. Records
+            crossing the selected dates are clipped to that period. Department filters organize reporting;
             workspace roles control access.
           </p>
         </>
@@ -1402,26 +1214,14 @@ export function Leadership({
   );
 }
 
-const DowntimeHistoryRow = memo(function DowntimeHistoryRow({
-  d,
-  now,
-}: {
-  d: DownEvent;
-  now: number;
-}) {
+const DowntimeHistoryRow = memo(function DowntimeHistoryRow({ d, now }: { d: DownEvent; now: number }) {
   const end = d.endedAt ? +new Date(d.endedAt) : now;
-  const slices = splitDowntime(
-    d.startedAt,
-    new Date(Math.max(+new Date(d.startedAt), end)),
-    d.shiftConfig,
-  );
+  const slices = splitDowntime(d.startedAt, new Date(Math.max(+new Date(d.startedAt), end)), d.shiftConfig);
   return (
     <tr key={d.id}>
       <td>
         <strong>{d.equipmentSnapshot.name}</strong>
-        {d.externalSourceName && (
-          <small>Automatic · {d.externalSourceName}</small>
-        )}
+        {d.externalSourceName && <small>Automatic · {d.externalSourceName}</small>}
         <small>
           {d.equipmentSnapshot.department} / {d.equipmentSnapshot.line}
         </small>
@@ -1432,9 +1232,7 @@ const DowntimeHistoryRow = memo(function DowntimeHistoryRow({
       </td>
       <td>
         {new Date(d.startedAt).toLocaleString()}
-        <small>
-          {d.endedAt ? new Date(d.endedAt).toLocaleString() : "Still down"}
-        </small>
+        <small>{d.endedAt ? new Date(d.endedAt).toLocaleString() : "Still down"}</small>
       </td>
       <td>{durationText((end - +new Date(d.startedAt)) / 1000)}</td>
       <td>

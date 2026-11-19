@@ -34,17 +34,14 @@ test("closure distinguishes optional fields/actions and required action categori
       "2D",
       { problem: "Known issue" },
       [...actions, { type: "Correction", status: "Open", required: false }],
-      requirements,
+      requirements
     ),
-    [],
+    []
   );
   assert(
-    closureErrors(
-      "2D",
-      { problem: "Known issue" },
-      actions.slice(0, 2),
-      requirements,
-    ).some((e) => e.includes("Preventive")),
+    closureErrors("2D", { problem: "Known issue" }, actions.slice(0, 2), requirements).some((e) =>
+      e.includes("Preventive")
+    )
   );
   assert(
     closureErrors("4D", {}, [], {
@@ -52,7 +49,7 @@ test("closure distinguishes optional fields/actions and required action categori
       fields: [],
       actionTypes: [],
       requireAction: false,
-    }).length === 0,
+    }).length === 0
   );
   assert(!defaultRequirements("2D").fields.includes("preventive"));
   assert(defaultRequirements("4D").fields.includes("preventive"));

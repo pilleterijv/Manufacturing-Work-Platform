@@ -3,14 +3,7 @@ import sharp from "sharp";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { storePhoto } from "@/lib/storage";
-import {
-  requireUser,
-  grants,
-  jsonBody,
-  limit,
-  HttpError,
-  failure,
-} from "@/lib/security";
+import { requireUser, grants, jsonBody, limit, HttpError, failure } from "@/lib/security";
 let processing = 0;
 export async function POST(req: Request) {
   let slot = false;
@@ -25,7 +18,7 @@ export async function POST(req: Request) {
         "centerlines.manage",
         "maintenance.manage",
         "fiveS.manage",
-      ].includes(p),
+      ].includes(p)
     );
     if (
       !mediaDelegate &&
@@ -43,20 +36,16 @@ export async function POST(req: Request) {
       throw new HttpError(403, "Photo upload is not permitted");
     await limit(`photo:${u.id}`, 60, 3600);
     await limit("photo:global", 500, 3600);
-    if (processing >= 2)
-      throw new HttpError(429, "Image processing is busy; try again");
+    if (processing >= 2) throw new HttpError(429, "Image processing is busy; try again");
     processing++;
     slot = true;
     const b = z
       .object({ image: z.string().max(12 * 1024 * 1024) })
       .parse(await jsonBody(req, 12 * 1024 * 1024));
-    const match = b.image.match(
-      /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/,
-    );
+    const match = b.image.match(/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/);
     if (!match) throw new HttpError(400, "Choose a JPEG, PNG, or WebP image");
     const input = Buffer.from(match[2], "base64");
-    if (input.length > 8 * 1024 * 1024)
-      throw new HttpError(413, "Images must be under 8 MB");
+    if (input.length > 8 * 1024 * 1024) throw new HttpError(413, "Images must be under 8 MB");
     let output: Buffer;
     try {
       output = await sharp(input, {

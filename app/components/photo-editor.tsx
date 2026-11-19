@@ -34,9 +34,7 @@ export default function PhotoEditor({
   }, [src]);
   function remember() {
     const c = canvas.current!;
-    history.current.push(
-      c.getContext("2d")!.getImageData(0, 0, c.width, c.height),
-    );
+    history.current.push(c.getContext("2d")!.getImageData(0, 0, c.width, c.height));
     if (history.current.length > 10) history.current.shift();
   }
   function point(e: React.PointerEvent<HTMLCanvasElement>) {
@@ -66,15 +64,10 @@ export default function PhotoEditor({
     <section className="panel">
       <h3>Edit photo</h3>
       <p className="small muted">
-        Draw to highlight an issue, add text, rotate, or drag a crop rectangle.
-        Save creates a new image.
+        Draw to highlight an issue, add text, rotate, or drag a crop rectangle. Save creates a new image.
       </p>
       <div className="button-row">
-        <select
-          aria-label="Photo tool"
-          value={tool}
-          onChange={(e) => setTool(e.target.value)}
-        >
+        <select aria-label="Photo tool" value={tool} onChange={(e) => setTool(e.target.value)}>
           <option value="draw">Draw</option>
           <option value="text">Place text</option>
           <option value="crop">Drag to crop</option>
@@ -153,18 +146,10 @@ export default function PhotoEditor({
               p = point(e),
               x = Math.floor(Math.min(p.x, last.current.x)),
               y = Math.floor(Math.min(p.y, last.current.y)),
-              w = Math.min(
-                c.width - x,
-                Math.floor(Math.abs(p.x - last.current.x)),
-              ),
-              h = Math.min(
-                c.height - y,
-                Math.floor(Math.abs(p.y - last.current.y)),
-              );
+              w = Math.min(c.width - x, Math.floor(Math.abs(p.x - last.current.x))),
+              h = Math.min(c.height - y, Math.floor(Math.abs(p.y - last.current.y)));
             if (w > 10 && h > 10) {
-              const image = c
-                .getContext("2d")!
-                .getImageData(Math.max(0, x), Math.max(0, y), w, h);
+              const image = c.getContext("2d")!.getImageData(Math.max(0, x), Math.max(0, y), w, h);
               c.width = w;
               c.height = h;
               c.getContext("2d")!.putImageData(image, 0, 0);

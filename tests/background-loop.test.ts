@@ -26,7 +26,7 @@ test("a blocked or failing email job cannot block SQL polling or shift checks", 
     },
     3,
     () => stop,
-    () => assert.fail("SQL should not fail"),
+    () => assert.fail("SQL should not fail")
   );
   const shifts = periodicJob(
     async () => {
@@ -34,7 +34,7 @@ test("a blocked or failing email job cannot block SQL polling or shift checks", 
     },
     3,
     () => stop,
-    () => assert.fail("Shift checks should not fail"),
+    () => assert.fail("Shift checks should not fail")
   );
   const email = periodicJob(
     async () => {
@@ -46,7 +46,7 @@ test("a blocked or failing email job cannot block SQL polling or shift checks", 
     () => stop,
     () => {
       errors++;
-    },
+    }
   );
   await Promise.all([sql, shifts, email]);
   assert.equal(sqlCalls, 3);

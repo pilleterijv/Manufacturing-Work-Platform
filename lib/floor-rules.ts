@@ -1,12 +1,6 @@
 import { z } from "zod";
 import { evidenceSchema } from "./evidence-schema";
-export const fiveSPillars = [
-  "Sort",
-  "Set in order",
-  "Shine",
-  "Standardize",
-  "Sustain",
-] as const;
+export const fiveSPillars = ["Sort", "Set in order", "Shine", "Standardize", "Sustain"] as const;
 export const fiveSQuestion = z.object({
   id: z.string().uuid(),
   pillar: z.enum(fiveSPillars),
@@ -35,17 +29,12 @@ export const fiveSResponse = z.object({
 });
 export function validateFiveS(
   questions: z.infer<typeof fiveSQuestion>[],
-  responses: z.infer<typeof fiveSResponse>[],
+  responses: z.infer<typeof fiveSResponse>[]
 ) {
   if (
     responses.length !== questions.length ||
     new Set(responses.map((r) => r.questionId)).size !== questions.length ||
-    questions.some(
-      (q) =>
-        !responses.some(
-          (r) => r.questionId === q.id && (!q.photo || r.media.length > 0),
-        ),
-    )
+    questions.some((q) => !responses.some((r) => r.questionId === q.id && (!q.photo || r.media.length > 0)))
   )
     throw Error("Answer each 5S question and attach required evidence");
   return {

@@ -8,13 +8,7 @@ import PersonSelect from "../person-select";
 import RelatedOpen from "../related-open";
 import RecordingContext from "../recording-context";
 import { equipmentLabel } from "@/lib/equipment-label";
-export default function Defects({
-  userId,
-  admin,
-}: {
-  userId: string;
-  admin: boolean;
-}) {
+export default function Defects({ userId, admin }: { userId: string; admin: boolean }) {
   const [data, setData] = useState<any>(null),
     [media, setMedia] = useState<any[]>([]),
     [uploading, setUploading] = useState(false),
@@ -27,18 +21,14 @@ export default function Defects({
   const [equipmentId, setEquipmentId] = useState("");
   async function load(more = false) {
     const sequence = ++loadSequence.current;
-    const d = await api(
-      "/api/defects" + (more ? "?cursor=" + data.cursor : ""),
-    );
+    const d = await api("/api/defects" + (more ? "?cursor=" + data.cursor : ""));
     if (sequence !== loadSequence.current) return;
-    setData((old: any) =>
-      more ? { ...d, defects: [...old.defects, ...d.defects] } : d,
-    );
+    setData((old: any) => (more ? { ...d, defects: [...old.defects, ...d.defects] } : d));
     setMapping(d.assets);
   }
   useSectionRefresh(
     () => load(),
-    (e) => setError(e.message),
+    (e) => setError(e.message)
   );
   useEffect(() => {
     load().catch((e) => setError(e.message));
@@ -53,9 +43,7 @@ export default function Defects({
       try {
         await load();
       } catch {
-        setNotice(
-          "Defect saved. Refresh the register before making another entry.",
-        );
+        setNotice("Defect saved. Refresh the register before making another entry.");
       }
       return true;
     } catch (e) {
@@ -75,8 +63,7 @@ export default function Defects({
       <section className="panel">
         <h2>Report a machine defect</h2>
         <p>
-          Record abnormalities and evidence. Local resolution and MaintainX
-          submission are tracked separately.
+          Record abnormalities and evidence. Local resolution and MaintainX submission are tracked separately.
         </p>
         {error && <p role="alert">{error}</p>}
         {notice && <p role="status">{notice}</p>}
@@ -135,9 +122,7 @@ export default function Defects({
             onChange={setMedia}
             onBusy={setUploading}
           />
-          <RecordingContext
-            equipment={data?.equipment.find((e: any) => e.id === equipmentId)}
-          />
+          <RecordingContext equipment={data?.equipment.find((e: any) => e.id === equipmentId)} />
           <button className="primary" disabled={busy || uploading}>
             Report defect
           </button>
@@ -150,8 +135,8 @@ export default function Defects({
             {data.maintainxConfigured
               ? "Server API key configured"
               : "IT must configure MAINTAINX_API_KEY on the server"}
-            . Photos and videos remain private in Floorwork; the work order
-            contains the defect description and reference.
+            . Photos and videos remain private in Floorwork; the work order contains the defect description
+            and reference.
           </p>
           <form
             onSubmit={(e) => {
@@ -201,10 +186,8 @@ export default function Defects({
             <p>{machine(d.equipmentId)}</p>
             <p>{d.description}</p>
             <p>
-              Reported by{" "}
-              {data.people.find((p: any) => p.id === d.reportedBy)?.name ??
-                d.reportedBy}{" "}
-              · {new Date(d.createdAt).toLocaleString()}
+              Reported by {data.people.find((p: any) => p.id === d.reportedBy)?.name ?? d.reportedBy} ·{" "}
+              {new Date(d.createdAt).toLocaleString()}
             </p>
             <EvidenceView media={d.media} />
             <p>
@@ -212,9 +195,7 @@ export default function Defects({
               {d.maintainxId ? ` · Work order ${d.maintainxId}` : ""}
             </p>
             {d.submissionError && <p role="status">{d.submissionError}</p>}
-            {(data.canManage ||
-              d.reportedBy === userId ||
-              d.assigneeId === userId) && (
+            {(data.canManage || d.reportedBy === userId || d.assigneeId === userId) && (
               <>
                 <form
                   className="form-grid"
@@ -226,9 +207,7 @@ export default function Defects({
                       id: d.id,
                       version: d.version,
                       status: f.get("status"),
-                      assigneeId: data.canManage
-                        ? f.get("assigneeId") || null
-                        : d.assigneeId,
+                      assigneeId: data.canManage ? f.get("assigneeId") || null : d.assigneeId,
                       comment: f.get("comment"),
                     });
                   }}
@@ -255,48 +234,42 @@ export default function Defects({
                     Update defect
                   </button>
                 </form>
-                {d.status === "Open" &&
-                  d.maintainxStatus === "Not submitted" && (
-                    <button
-                      className="outline"
-                      disabled={
-                        busy ||
-                        !data.maintainxConfigured ||
-                        !data.assets[d.equipmentId]
-                      }
-                      onClick={() => void save({ action: "submit", id: d.id })}
-                    >
-                      Submit work order to MaintainX
-                    </button>
-                  )}
+                {d.status === "Open" && d.maintainxStatus === "Not submitted" && (
+                  <button
+                    className="outline"
+                    disabled={busy || !data.maintainxConfigured || !data.assets[d.equipmentId]}
+                    onClick={() => void save({ action: "submit", id: d.id })}
+                  >
+                    Submit work order to MaintainX
+                  </button>
+                )}
               </>
             )}
-            {admin &&
-              ["Sending", "Review required"].includes(d.maintainxStatus) && (
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const f = new FormData(e.currentTarget);
-                    void save({
-                      action: "reconcile",
-                      id: d.id,
-                      workOrderId: f.get("workOrderId") || null,
-                      confirmedAbsent: f.get("confirmedAbsent") === "on",
-                    });
-                  }}
-                >
-                  <Field label="Existing MaintainX work order ID">
-                    <input name="workOrderId" pattern="[0-9]+" />
-                  </Field>
-                  <label className="check">
-                    <input type="checkbox" name="confirmedAbsent" />I checked
-                    MaintainX and no work order exists for this defect
-                  </label>
-                  <button className="outline" disabled={busy}>
-                    Reconcile MaintainX submission
-                  </button>
-                </form>
-              )}
+            {admin && ["Sending", "Review required"].includes(d.maintainxStatus) && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const f = new FormData(e.currentTarget);
+                  void save({
+                    action: "reconcile",
+                    id: d.id,
+                    workOrderId: f.get("workOrderId") || null,
+                    confirmedAbsent: f.get("confirmedAbsent") === "on",
+                  });
+                }}
+              >
+                <Field label="Existing MaintainX work order ID">
+                  <input name="workOrderId" pattern="[0-9]+" />
+                </Field>
+                <label className="check">
+                  <input type="checkbox" name="confirmedAbsent" />I checked MaintainX and no work order exists
+                  for this defect
+                </label>
+                <button className="outline" disabled={busy}>
+                  Reconcile MaintainX submission
+                </button>
+              </form>
+            )}
             <details>
               <summary>Defect change history</summary>
               {d.history.map((h: any, i: number) => (

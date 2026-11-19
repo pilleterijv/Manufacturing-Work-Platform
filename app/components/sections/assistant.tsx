@@ -19,9 +19,8 @@ export default function Assistant({ go }: { go: (section: string) => void }) {
       <section className="panel">
         <h2>Platform assistant</h2>
         <p>
-          Find the right section and get step-by-step help. The assistant cannot
-          make changes or view your work records, employee directory, photos or
-          videos.
+          Find the right section and get step-by-step help. The assistant cannot make changes or view your
+          work records, employee directory, photos or videos.
         </p>
         {error && <p role="alert">{error}</p>}
         {data?.canConfigure && (
@@ -77,11 +76,7 @@ export default function Assistant({ go }: { go: (section: string) => void }) {
           </Field>
           {data?.aiConfigured && data.aiEnabled && (
             <label className="check">
-              <input
-                type="checkbox"
-                checked={useAI}
-                onChange={(e) => setUseAI(e.target.checked)}
-              />
+              <input type="checkbox" checked={useAI} onChange={(e) => setUseAI(e.target.checked)} />
               Use external AI for this question
             </label>
           )}
@@ -91,16 +86,12 @@ export default function Assistant({ go }: { go: (section: string) => void }) {
         </form>
         {result && (
           <article className="assistant-answer" aria-live="polite">
-            <span className="badge">
-              {result.mode === "ai" ? "AI answer" : "Built-in guide"}
-            </span>
+            <span className="badge">{result.mode === "ai" ? "AI answer" : "Built-in guide"}</span>
             {result.notice && <p>{result.notice}</p>}
             <p className="guide-body">{result.answer}</p>
             <div className="button-row">
               {result.links
-                .filter((s: string) =>
-                  data?.topics.some((t: any) => t.section === s),
-                )
+                .filter((s: string) => data?.topics.some((t: any) => t.section === s))
                 .map((s: string) => (
                   <button key={s} className="outline" onClick={() => go(s)}>
                     Open {s}
@@ -119,10 +110,7 @@ export default function Assistant({ go }: { go: (section: string) => void }) {
               className="module-card"
               onClick={() => {
                 setResult({
-                  answer: [
-                    t.text,
-                    ...t.steps.map((s: string, i: number) => `${i + 1}. ${s}`),
-                  ].join("\n"),
+                  answer: [t.text, ...t.steps.map((s: string, i: number) => `${i + 1}. ${s}`)].join("\n"),
                   links: [t.section],
                   mode: "guide",
                 });

@@ -25,10 +25,7 @@ export default function Maintenance({
     [draft, setDraft] = useState<any>(null),
     [selected, setSelected] = useState<any>(null),
     [responses, setResponses] = useState<
-      Record<
-        string,
-        { answer: boolean | null; comment: string; media: Evidence[] }
-      >
+      Record<string, { answer: boolean | null; comment: string; media: Evidence[] }>
     >({}),
     [busy, setBusy] = useState(false),
     [uploading, setUploading] = useState(false),
@@ -38,18 +35,14 @@ export default function Maintenance({
   async function load(more = false) {
     const sequence = ++loadSequence.current;
     const d = await api(
-      "/api/maintenance?kind=" +
-        kind +
-        (more && data?.cursor ? "&cursor=" + data.cursor : ""),
+      "/api/maintenance?kind=" + kind + (more && data?.cursor ? "&cursor=" + data.cursor : "")
     );
     if (sequence !== loadSequence.current) return;
-    setData((old: any) =>
-      more ? { ...d, plans: [...old.plans, ...d.plans] } : d,
-    );
+    setData((old: any) => (more ? { ...d, plans: [...old.plans, ...d.plans] } : d));
   }
   useSectionRefresh(
     () => load(),
-    (e) => setError(e.message),
+    (e) => setError(e.message)
   );
   useEffect(() => {
     load().catch((e) => setError(e.message));
@@ -80,18 +73,9 @@ export default function Maintenance({
   return (
     <>
       <section className="panel">
-        <h2>
-          {kind === "cil"
-            ? "TPM · Clean, Inspect and Lubricate"
-            : "Machine preventive maintenance"}
-        </h2>
-        <p>
-          Assigned {label} tasks, due dates and permanent completion evidence.
-        </p>
-        <a
-          className="outline"
-          href={filterUrl("/api/maintenance?format=xlsx&kind=" + kind)}
-        >
+        <h2>{kind === "cil" ? "TPM · Clean, Inspect and Lubricate" : "Machine preventive maintenance"}</h2>
+        <p>Assigned {label} tasks, due dates and permanent completion evidence.</p>
+        <a className="outline" href={filterUrl("/api/maintenance?format=xlsx&kind=" + kind)}>
           Export {label} plans and history
         </a>
         {error && <p role="alert">{error}</p>}
@@ -146,18 +130,14 @@ export default function Maintenance({
                   required
                   maxLength={150}
                   value={draft.title}
-                  onChange={(e) =>
-                    setDraft({ ...draft, title: e.target.value })
-                  }
+                  onChange={(e) => setDraft({ ...draft, title: e.target.value })}
                 />
               </Field>
               <Field label={`${label} machine`}>
                 <select
                   required
                   value={draft.equipmentId}
-                  onChange={(e) =>
-                    setDraft({ ...draft, equipmentId: e.target.value })
-                  }
+                  onChange={(e) => setDraft({ ...draft, equipmentId: e.target.value })}
                 >
                   <option value="">Choose equipment</option>
                   {data.equipment.map((e: any) => (
@@ -173,9 +153,7 @@ export default function Maintenance({
                   people={data.people}
                   required
                   value={draft.assigneeId}
-                  onChange={(e) =>
-                    setDraft({ ...draft, assigneeId: e.target.value })
-                  }
+                  onChange={(e) => setDraft({ ...draft, assigneeId: e.target.value })}
                 />
               </Field>
               <Field label={`Next ${label} due`}>
@@ -183,9 +161,7 @@ export default function Maintenance({
                   required
                   type="date"
                   value={draft.nextDue}
-                  onChange={(e) =>
-                    setDraft({ ...draft, nextDue: e.target.value })
-                  }
+                  onChange={(e) => setDraft({ ...draft, nextDue: e.target.value })}
                 />
               </Field>
               <Field label="Repeat every (days)">
@@ -195,9 +171,7 @@ export default function Maintenance({
                   min={1}
                   max={3660}
                   value={draft.intervalDays}
-                  onChange={(e) =>
-                    setDraft({ ...draft, intervalDays: Number(e.target.value) })
-                  }
+                  onChange={(e) => setDraft({ ...draft, intervalDays: Number(e.target.value) })}
                 />
               </Field>
             </div>
@@ -205,9 +179,7 @@ export default function Maintenance({
               <input
                 type="checkbox"
                 checked={draft.active}
-                onChange={(e) =>
-                  setDraft({ ...draft, active: e.target.checked })
-                }
+                onChange={(e) => setDraft({ ...draft, active: e.target.checked })}
               />
               Plan active
             </label>
@@ -222,7 +194,7 @@ export default function Maintenance({
                       setDraft({
                         ...draft,
                         steps: draft.steps.map((x: any, j: number) =>
-                          j === i ? { ...x, text: e.target.value } : x,
+                          j === i ? { ...x, text: e.target.value } : x
                         ),
                       })
                     }
@@ -236,7 +208,7 @@ export default function Maintenance({
                       setDraft({
                         ...draft,
                         steps: draft.steps.map((x: any, j: number) =>
-                          j === i ? { ...x, photo: e.target.checked } : x,
+                          j === i ? { ...x, photo: e.target.checked } : x
                         ),
                       })
                     }
@@ -266,10 +238,7 @@ export default function Maintenance({
                 onClick={() =>
                   setDraft({
                     ...draft,
-                    steps: [
-                      ...draft.steps,
-                      { id: crypto.randomUUID(), text: "", photo: false },
-                    ],
+                    steps: [...draft.steps, { id: crypto.randomUUID(), text: "", photo: false }],
                   })
                 }
               >
@@ -278,11 +247,7 @@ export default function Maintenance({
               <button className="primary" disabled={busy}>
                 Save {label} plan
               </button>
-              <button
-                className="outline"
-                type="button"
-                onClick={() => setDraft(null)}
-              >
+              <button className="outline" type="button" onClick={() => setDraft(null)}>
                 Cancel {label} edit
               </button>
             </div>
@@ -292,11 +257,7 @@ export default function Maintenance({
       <section className="panel">
         <h2>{label} task list</h2>
         <label className="check">
-          <input
-            type="checkbox"
-            checked={showRetired}
-            onChange={(e) => setShowRetired(e.target.checked)}
-          />
+          <input type="checkbox" checked={showRetired} onChange={(e) => setShowRetired(e.target.checked)} />
           Show retired / inactive tasks
         </label>
         {data?.plans
@@ -305,12 +266,7 @@ export default function Maintenance({
             <article className="problem-action" key={p.id}>
               <h3>
                 {p.title}{" "}
-                <span
-                  className={
-                    "badge " +
-                    (p.active && p.nextDue < data.today ? "warn" : "")
-                  }
-                >
+                <span className={"badge " + (p.active && p.nextDue < data.today ? "warn" : "")}>
                   {!p.active
                     ? "Paused"
                     : p.nextDue < data.today
@@ -322,26 +278,23 @@ export default function Maintenance({
               </h3>
               <p>
                 {location(p.equipmentId)} ·{" "}
-                {data.people.find((x: any) => x.id === p.assigneeId)?.name ??
-                  p.assigneeId}{" "}
-                · due {p.nextDue} · every {p.intervalDays} days
+                {data.people.find((x: any) => x.id === p.assigneeId)?.name ?? p.assigneeId} · due {p.nextDue}{" "}
+                · every {p.intervalDays} days
               </p>
               <div className="button-row">
-                {p.active &&
-                  p.nextDue <= data.today &&
-                  (admin || p.assigneeId === userId) && (
-                    <button
-                      className="primary"
-                      onClick={() => {
-                        if (!confirmDraftChange()) return;
-                        setDraft(null);
-                        setSelected(p);
-                        setResponses({});
-                      }}
-                    >
-                      Perform {label}
-                    </button>
-                  )}
+                {p.active && p.nextDue <= data.today && (admin || p.assigneeId === userId) && (
+                  <button
+                    className="primary"
+                    onClick={() => {
+                      if (!confirmDraftChange()) return;
+                      setDraft(null);
+                      setSelected(p);
+                      setResponses({});
+                    }}
+                  >
+                    Perform {label}
+                  </button>
+                )}
               </div>
               {data.canManage && (
                 <details className="plan-tools">
@@ -366,7 +319,7 @@ export default function Maintenance({
                       onClick={() => {
                         if (
                           confirm(
-                            "Retire this task? Its completed history and evidence will remain available.",
+                            "Retire this task? Its completed history and evidence will remain available."
                           )
                         )
                           void save({
@@ -383,14 +336,9 @@ export default function Maintenance({
               )}
             </article>
           ))}
-        {data && !data.plans.length && (
-          <p>No {label} plans match these filters.</p>
-        )}
+        {data && !data.plans.length && <p>No {label} plans match these filters.</p>}
         {data?.hasMore && (
-          <button
-            className="outline"
-            onClick={() => load(true).catch((e) => setError(e.message))}
-          >
+          <button className="outline" onClick={() => load(true).catch((e) => setError(e.message))}>
             Load more {label} plans
           </button>
         )}
@@ -408,12 +356,10 @@ export default function Maintenance({
                   (s: any) =>
                     !responses[s.id] ||
                     responses[s.id].answer == null ||
-                    (s.photo && !responses[s.id].media.length),
+                    (s.photo && !responses[s.id].media.length)
                 )
               ) {
-                setError(
-                  `Answer every ${label} step and attach required photo/video evidence`,
-                );
+                setError(`Answer every ${label} step and attach required photo/video evidence`);
                 return;
               }
               void save({
@@ -470,16 +416,11 @@ export default function Maintenance({
                 </Field>
                 <EvidenceInput
                   label={
-                    s.photo
-                      ? `${label} photo or video · required`
-                      : `${label} photo or video · optional`
+                    s.photo ? `${label} photo or video · required` : `${label} photo or video · optional`
                   }
                   value={responses[s.id]?.media ?? []}
                   onBusy={(b) => {
-                    uploads.current = Math.max(
-                      0,
-                      uploads.current + (b ? 1 : -1),
-                    );
+                    uploads.current = Math.max(0, uploads.current + (b ? 1 : -1));
                     setUploading(uploads.current > 0);
                   }}
                   onChange={(media) =>
@@ -494,19 +435,11 @@ export default function Maintenance({
                 />
               </section>
             ))}
-            <RecordingContext
-              equipment={data.equipment.find(
-                (e: any) => e.id === selected.equipmentId,
-              )}
-            />
+            <RecordingContext equipment={data.equipment.find((e: any) => e.id === selected.equipmentId)} />
             <button className="primary" disabled={busy || uploading}>
               Complete {label} and save evidence
             </button>
-            <button
-              className="outline"
-              type="button"
-              onClick={() => setSelected(null)}
-            >
+            <button className="outline" type="button" onClick={() => setSelected(null)}>
               Cancel {label}
             </button>
           </form>
@@ -516,29 +449,20 @@ export default function Maintenance({
         <h2>{label} completion history</h2>
         <RefreshControl onRefresh={() => load()} />
         <p className="small muted">
-          Latest 100 matching completions. Export contains the full matching
-          history.
+          Latest 100 matching completions. Export contains the full matching history.
         </p>
         {data?.records.map((r: any) => (
           <details key={r.id}>
             <summary>
-              {r.data.title} · {r.user.name} ·{" "}
-              {new Date(r.created).toLocaleString()}
+              {r.data.title} · {r.user.name} · {new Date(r.created).toLocaleString()}
             </summary>
             <p>
-              Scheduled due {r.data.scheduledDue} ·{" "}
-              {location(r.data.equipmentId)} ·{" "}
+              Scheduled due {r.data.scheduledDue} · {location(r.data.equipmentId)} ·{" "}
               {r.data.followUp ? "Follow up required" : "Completed"}
             </p>
             {r.data.responses?.map((x: any) => (
               <div key={x.stepId}>
-                <strong>
-                  {
-                    r.data.planSnapshot.steps.find(
-                      (s: any) => s.id === x.stepId,
-                    )?.text
-                  }
-                </strong>
+                <strong>{r.data.planSnapshot.steps.find((s: any) => s.id === x.stepId)?.text}</strong>
                 <p>
                   {x.answer ? "Yes" : "No"} · {x.comment}
                 </p>

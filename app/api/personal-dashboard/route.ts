@@ -1,13 +1,7 @@
 import { dashboardPreferences } from "@/lib/dashboard-preferences";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import {
-  requireUser,
-  grants,
-  jsonBody,
-  failure,
-  HttpError,
-} from "@/lib/security";
+import { requireUser, grants, jsonBody, failure, HttpError } from "@/lib/security";
 import { equipmentIds, equipmentScope } from "@/lib/location-access";
 import { visibleAreas } from "@/lib/area-access";
 import { dashboardDepartmentSchema } from "@/lib/floor-rules";
@@ -24,41 +18,25 @@ export async function GET(req: Request) {
           all.map((e) => [
             JSON.stringify([e.plant, e.department]),
             { plant: e.plant, department: e.department },
-          ]),
+          ])
         ).values(),
       ],
       saved = dashboardDepartmentSchema.safeParse(u.dashboardDepartment),
       department =
         saved.success &&
         saved.data &&
-        departments.some(
-          (d) =>
-            d.plant === saved.data!.plant &&
-            d.department === saved.data!.department,
-        )
+        departments.some((d) => d.plant === saved.data!.plant && d.department === saved.data!.department)
           ? saved.data
           : null;
     const dept = new URL(req.url).searchParams.get("scope") === "department";
-    if (
-      dept &&
-      (!department ||
-        !g.includes("dashboard") ||
-        !["Admin", "Manager", "DL/TL"].includes(u.role))
-    )
+    if (dept && (!department || !g.includes("dashboard") || !["Admin", "Manager", "DL/TL"].includes(u.role)))
       throw new HttpError(403, "Choose an assigned department dashboard first");
     const equipment = dept
-        ? all.filter(
-            (e) =>
-              e.plant === department!.plant &&
-              e.department === department!.department,
-          )
+        ? all.filter((e) => e.plant === department!.plant && e.department === department!.department)
         : all,
       scope = equipment.map((e) => e.id),
       areas = (await visibleAreas(u)).filter(
-        (l) =>
-          !dept ||
-          (l.plant === department!.plant &&
-            l.department === department!.department),
+        (l) => !dept || (l.plant === department!.plant && l.department === department!.department)
       ),
       setting = await db.setting.findUniqueOrThrow({
         where: { key: "shifts" },
@@ -110,71 +88,63 @@ export async function GET(req: Request) {
       active: true,
       ...(!dept
         ? {
-            OR: [
-              { assigneeIds: { array_contains: [u.id] } },
-              { assigneeIds: { equals: [] } },
-            ],
+            OR: [{ assigneeIds: { array_contains: [u.id] } }, { assigneeIds: { equals: [] } }],
           }
         : {}),
     };
-    const [ideas, problems, maintenance, defects, fiveS, counts] =
-      await Promise.all([
-        g.includes("ideas")
-          ? db.idea.findMany({
-              where: ideaWhere,
-              orderBy: { dueDate: "asc" },
-              take: 100,
-            })
-          : [],
-        g.includes("problems")
-          ? db.problem.findMany({
-              where: problemWhere,
-              include: {
-                actions: {
-                  where: {
-                    status: { not: "Completed" },
-                    ...(!dept ? { ownerId: u.id } : {}),
-                  },
-                  orderBy: { dueDate: "asc" },
+    const [ideas, problems, maintenance, defects, fiveS, counts] = await Promise.all([
+      g.includes("ideas")
+        ? db.idea.findMany({
+            where: ideaWhere,
+            orderBy: { dueDate: "asc" },
+            take: 100,
+          })
+        : [],
+      g.includes("problems")
+        ? db.problem.findMany({
+            where: problemWhere,
+            include: {
+              actions: {
+                where: {
+                  status: { not: "Completed" },
+                  ...(!dept ? { ownerId: u.id } : {}),
                 },
+                orderBy: { dueDate: "asc" },
               },
-              orderBy: { dueDate: "asc" },
-              take: 100,
-            })
-          : [],
-        g.includes("maintenance")
-          ? db.maintenancePlan.findMany({
-              where: pmWhere,
-              orderBy: { nextDue: "asc" },
-              take: 100,
-            })
-          : [],
-        g.includes("defects")
-          ? db.defect.findMany({
-              where: defectWhere,
-              orderBy: { createdAt: "desc" },
-              take: 100,
-            })
-          : [],
-        g.includes("fiveS")
-          ? db.fiveSPlan.findMany({
-              where: fiveSWhere,
-              orderBy: { title: "asc" },
-              take: 100,
-            })
-          : [],
-        Promise.all([
-          g.includes("ideas") ? db.idea.count({ where: ideaWhere }) : 0,
-          g.includes("problems")
-            ? db.problem.count({ where: problemWhere })
-            : 0,
-          g.includes("maintenance")
-            ? db.maintenancePlan.count({ where: pmWhere })
-            : 0,
-          g.includes("defects") ? db.defect.count({ where: defectWhere }) : 0,
-          g.includes("fiveS") ? db.fiveSPlan.count({ where: fiveSWhere }) : 0,
-        ]),
-      ]);
+            },
+            orderBy: { dueDate: "asc" },
+            take: 100,
+          })
+        : [],
+      g.includes("maintenance")
+        ? db.maintenancePlan.findMany({
+            where: pmWhere,
+            orderBy: { nextDue: "asc" },
+            take: 100,
+          })
+        : [],
+      g.includes("defects")
+        ? db.defect.findMany({
+            where: defectWhere,
+            orderBy: { createdAt: "desc" },
+            take: 100,
+          })
+        : [],
+      g.includes("fiveS")
+        ? db.fiveSPlan.findMany({
+            where: fiveSWhere,
+            orderBy: { title: "asc" },
+            take: 100,
+          })
+        : [],
+      Promise.all([
+        g.includes("ideas") ? db.idea.count({ where: ideaWhere }) : 0,
+        g.includes("problems") ? db.problem.count({ where: problemWhere }) : 0,
+        g.includes("maintenance") ? db.maintenancePlan.count({ where: pmWhere }) : 0,
+        g.includes("defects") ? db.defect.count({ where: defectWhere }) : 0,
+        g.includes("fiveS") ? db.fiveSPlan.count({ where: fiveSWhere }) : 0,
+      ]),
+    ]);
     return Response.json({
       preferences: dashboardPreferences(u.dashboardPreferences),
       ideas,
@@ -199,9 +169,7 @@ export async function GET(req: Request) {
       areas,
       today,
       scope: dept ? "department" : "personal",
-      canDepartment:
-        g.includes("dashboard") &&
-        ["Admin", "Manager", "DL/TL"].includes(u.role),
+      canDepartment: g.includes("dashboard") && ["Admin", "Manager", "DL/TL"].includes(u.role),
     });
   } catch (e) {
     return failure(e);
@@ -213,35 +181,20 @@ export async function POST(req: Request) {
       b = await jsonBody(req),
       userId = z.string().uuid().optional().parse(b.userId) ?? u.id;
     if (userId !== u.id && u.role !== "Admin")
-      throw new HttpError(
-        403,
-        "Only Admin can assign another manager's dashboard",
-      );
+      throw new HttpError(403, "Only Admin can assign another manager's dashboard");
     const department = dashboardDepartmentSchema.parse(b.department);
     await db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM "User" WHERE id=${userId} FOR UPDATE`;
       const target = await tx.user.findUniqueOrThrow({ where: { id: userId } });
       if (department) {
         if (!["Admin", "Manager", "DL/TL"].includes(target.role))
-          throw new HttpError(
-            400,
-            "Department dashboards are for managers and DL/TLs",
-          );
+          throw new HttpError(400, "Department dashboards are for managers and DL/TLs");
         const equipment = await tx.equipment.findMany({
           where: equipmentScope(target),
           select: { id: true, plant: true, department: true },
         });
-        if (
-          !equipment.some(
-            (e) =>
-              e.plant === department.plant &&
-              e.department === department.department,
-          )
-        )
-          throw new HttpError(
-            403,
-            "Dashboard must be within this person's assigned departments",
-          );
+        if (!equipment.some((e) => e.plant === department.plant && e.department === department.department))
+          throw new HttpError(403, "Dashboard must be within this person's assigned departments");
       }
       await tx.user.update({
         where: { id: userId },

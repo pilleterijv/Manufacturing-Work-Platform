@@ -7,7 +7,7 @@ async function main() {
     logo = await fs.readFile(path.join(root, "company-logo.svg")),
     src = logo.toString("base64");
   const svg = Buffer.from(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" fill="white"/><image href="data:image/svg+xml;base64,${src}" x="64" y="128" width="384" height="256" preserveAspectRatio="xMidYMid meet"/></svg>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" fill="white"/><image href="data:image/svg+xml;base64,${src}" x="64" y="128" width="384" height="256" preserveAspectRatio="xMidYMid meet"/></svg>`
   );
   for (const [name, size] of [
     ["icon-192.png", 192],
@@ -19,8 +19,6 @@ async function main() {
   console.log("App icons exported from public/company-logo.svg.");
 }
 main().catch(() => {
-  console.error(
-    "Unable to export company logo icons; check the approved SVG and image tooling.",
-  );
+  console.error("Unable to export company logo icons; check the approved SVG and image tooling.");
   process.exitCode = 1;
 });

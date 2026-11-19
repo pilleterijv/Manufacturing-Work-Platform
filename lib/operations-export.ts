@@ -4,11 +4,7 @@ import { downtimeEquipmentWhere } from "./downtime-access";
 import { paged, type ExportBook } from "./excel-stream";
 import { db } from "./db";
 import { Capability } from "./rules";
-import {
-  splitDowntime,
-  ShiftConfig,
-  EquipmentSnapshot,
-} from "./operations-rules";
+import { splitDowntime, ShiftConfig, EquipmentSnapshot } from "./operations-rules";
 export async function addOperationsSheets(
   book: ExportBook,
   grants: Capability[],
@@ -20,12 +16,10 @@ export async function addOperationsSheets(
     ideasWhere?: Prisma.IdeaWhereInput;
   } = {
     search: "",
-  },
+  }
 ) {
   const allowed = await equipmentIds(user);
-  const ids = filters.equipmentIds
-    ? allowed.filter((id) => filters.equipmentIds!.includes(id))
-    : allowed;
+  const ids = filters.equipmentIds ? allowed.filter((id) => filters.equipmentIds!.includes(id)) : allowed;
   const matchedEquipment = filters.search
     ? (
         await db.equipment.findMany({
@@ -78,10 +72,7 @@ export async function addOperationsSheets(
             ...(filters.person
               ? [
                   {
-                    OR: [
-                      { startedBy: filters.person },
-                      { stoppedBy: filters.person },
-                    ],
+                    OR: [{ startedBy: filters.person }, { stoppedBy: filters.person }],
                   },
                 ]
               : []),
@@ -111,7 +102,7 @@ export async function addOperationsSheets(
           starter: { select: { name: true } },
           stopper: { select: { name: true } },
         },
-      }),
+      })
     );
     const now = asOf;
     for await (const d of downtime) {
@@ -230,7 +221,7 @@ export async function addOperationsSheets(
           creator: { select: { name: true } },
           participants: { include: { user: { select: { name: true } } } },
         },
-      }),
+      })
     );
     for await (const i of ideas) {
       book.check();

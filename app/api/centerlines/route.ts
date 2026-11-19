@@ -2,21 +2,9 @@ import { z } from "zod";
 import { focusedEquipmentIds } from "@/lib/equipment-label";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import {
-  requireUser,
-  requireDelegated,
-  grants,
-  jsonBody,
-  failure,
-  HttpError,
-} from "@/lib/security";
+import { requireUser, requireDelegated, grants, jsonBody, failure, HttpError } from "@/lib/security";
 import { canAdminister } from "@/lib/capabilities";
-import {
-  equipmentIds,
-  assertEquipmentAccess,
-  visiblePeople,
-  recordScope,
-} from "@/lib/location-access";
+import { equipmentIds, assertEquipmentAccess, visiblePeople, recordScope } from "@/lib/location-access";
 import { readFilters, recordFilters } from "@/lib/filters";
 import {
   centerlineSchema,
@@ -33,7 +21,7 @@ const responsesSchema = z
       actual: z.string().trim().min(1).max(150),
       comment: z.string().trim().max(1000),
       media: evidenceSchema,
-    }),
+    })
   )
   .min(1)
   .max(100);
@@ -49,10 +37,7 @@ export async function GET(req: Request) {
     });
     const matches = equipment
       .filter((e) =>
-        [e.name, e.plant, e.department, e.area, e.line]
-          .join(" ")
-          .toLowerCase()
-          .includes(search.toLowerCase()),
+        [e.name, e.plant, e.department, e.area, e.line].join(" ").toLowerCase().includes(search.toLowerCase())
       )
       .map((e) => e.id);
     const where: Prisma.CenterlineWhereInput = {
@@ -69,12 +54,7 @@ export async function GET(req: Request) {
     };
     const recordWhere: Prisma.RecordWhereInput = {
       kind: "centerline",
-      AND: [
-        recordScope(ids),
-        recordFilters(person, search, matches, [
-          ["centerlineSnapshot", "setup"],
-        ]),
-      ],
+      AND: [recordScope(ids), recordFilters(person, search, matches, [["centerlineSnapshot", "setup"]])],
     };
     if (p.get("format") === "xlsx") {
       await requireUser("export");
@@ -106,7 +86,7 @@ export async function GET(req: Request) {
               orderBy: { id: "asc" },
               take: 100,
               ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-            }),
+            })
           ))
             for (const s of c.parameters as CenterlineParameter[])
               await settings.addRow([
@@ -154,13 +134,11 @@ export async function GET(req: Request) {
               take: 100,
               orderBy: { id: "asc" },
               ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-            }),
+            })
           )) {
             const d = r.data as any;
             for (const a of d.responses) {
-              const s = d.centerlineSnapshot.parameters.find(
-                (x: any) => x.id === a.parameterId,
-              );
+              const s = d.centerlineSnapshot.parameters.find((x: any) => x.id === a.parameterId);
               await audits.addRow([
                 r.id,
                 r.created,
@@ -185,7 +163,7 @@ export async function GET(req: Request) {
             }
           }
         },
-        req.signal,
+        req.signal
       );
     }
     const cursor = z
@@ -198,30 +176,29 @@ export async function GET(req: Request) {
         .uuid()
         .optional()
         .parse(p.get("historyCursor") || undefined);
-    const [plans, records, people, active, total, followUps] =
-      await Promise.all([
-        db.centerline.findMany({
-          where,
-          orderBy: { id: "asc" },
-          take: 101,
-          ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-        }),
-        db.record.findMany({
-          where: recordWhere,
-          include: { user: { select: { name: true } } },
-          orderBy: [{ created: "desc" }, { id: "desc" }],
-          take: 101,
-          ...(historyCursor ? { cursor: { id: historyCursor }, skip: 1 } : {}),
-        }),
-        visiblePeople(u, ids),
-        db.centerline.count({ where: { ...where, active: true } }),
-        db.record.count({ where: recordWhere }),
-        db.record.count({
-          where: {
-            AND: [recordWhere, { data: { path: ["followUp"], equals: true } }],
-          },
-        }),
-      ]);
+    const [plans, records, people, active, total, followUps] = await Promise.all([
+      db.centerline.findMany({
+        where,
+        orderBy: { id: "asc" },
+        take: 101,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      }),
+      db.record.findMany({
+        where: recordWhere,
+        include: { user: { select: { name: true } } },
+        orderBy: [{ created: "desc" }, { id: "desc" }],
+        take: 101,
+        ...(historyCursor ? { cursor: { id: historyCursor }, skip: 1 } : {}),
+      }),
+      visiblePeople(u, ids),
+      db.centerline.count({ where: { ...where, active: true } }),
+      db.record.count({ where: recordWhere }),
+      db.record.count({
+        where: {
+          AND: [recordWhere, { data: { path: ["followUp"], equals: true } }],
+        },
+      }),
+    ]);
     return Response.json({
       plans: plans.slice(0, 100),
       cursor: plans.length > 100 ? plans[99].id : null,
@@ -230,9 +207,7 @@ export async function GET(req: Request) {
       equipment,
       people,
       summary: { active, total, followUps },
-      canManage:
-        (await grants(u)).includes("manage") ||
-        (await canAdminister(u, "centerlines.manage")),
+      canManage: (await grants(u)).includes("manage") || (await canAdminister(u, "centerlines.manage")),
     });
   } catch (e) {
     return failure(e);
@@ -254,16 +229,10 @@ export async function POST(req: Request) {
           await tx.$queryRaw`SELECT id FROM "Centerline" WHERE id=${id} FOR UPDATE`;
           const old = await tx.centerline.findUnique({ where: { id } });
           if (!old || old.version !== version || !old.active)
-            throw new HttpError(
-              409,
-              "Centerline changed or retired; refresh before saving",
-            );
+            throw new HttpError(409, "Centerline changed or retired; refresh before saving");
           await assertEquipmentAccess(u, old.equipmentId, tx);
           if (v && v.equipmentId !== old.equipmentId)
-            throw new HttpError(
-              400,
-              "Create a separate centerline for another machine",
-            );
+            throw new HttpError(400, "Create a separate centerline for another machine");
           await tx.centerline.update({
             where: { id },
             data: {
@@ -321,30 +290,18 @@ export async function POST(req: Request) {
             d.centerlineId !== c.id ||
             d.centerlineSnapshot.version !== v.version ||
             d.context !== v.context ||
-            JSON.stringify(responsesSchema.parse(d.submittedResponses)) !==
-              JSON.stringify(v.responses)
+            JSON.stringify(responsesSchema.parse(d.submittedResponses)) !== JSON.stringify(v.responses)
           )
-            throw new HttpError(
-              409,
-              "Submission ID already used; start a new audit",
-            );
+            throw new HttpError(409, "Submission ID already used; start a new audit");
           return;
         }
         if (!c.active || c.version !== v.version)
-          throw new HttpError(
-            409,
-            "Centerline changed or retired; refresh and start a new audit",
-          );
-        const parameters = z
-          .array(centerlineParameterSchema)
-          .parse(c.parameters);
+          throw new HttpError(409, "Centerline changed or retired; refresh and start a new audit");
+        const parameters = z.array(centerlineParameterSchema).parse(c.parameters);
         if (
           v.responses.length !== parameters.length ||
-          new Set(v.responses.map((r) => r.parameterId)).size !==
-            parameters.length ||
-          parameters.some(
-            (s) => !v.responses.some((r) => r.parameterId === s.id),
-          )
+          new Set(v.responses.map((r) => r.parameterId)).size !== parameters.length ||
+          parameters.some((s) => !v.responses.some((r) => r.parameterId === s.id))
         )
           throw new HttpError(400, "Record every centerline setting once");
         const responses = v.responses.map((r) => {
@@ -355,12 +312,11 @@ export async function POST(req: Request) {
           } catch (e) {
             throw new HttpError(400, (e as Error).message);
           }
-          if (s.photo && !r.media.length)
-            throw new HttpError(400, "Attach required photo/video evidence");
+          if (s.photo && !r.media.length) throw new HttpError(400, "Attach required photo/video evidence");
           if (!result.withinLimits && !r.comment)
             throw new HttpError(
               400,
-              "Describe the abnormality or action taken for each out-of-limit setting",
+              "Describe the abnormality or action taken for each out-of-limit setting"
             );
           return { ...r, ...result };
         });

@@ -37,7 +37,7 @@ async function main() {
           area: "Compressing",
           line,
         },
-      }),
+      })
     );
   const scope = {
       mode: "restricted",
@@ -61,16 +61,7 @@ async function main() {
       "Supervisor",
       "DL/TL",
       "supervisor",
-      [
-        "work",
-        "audits",
-        "analytics",
-        "dashboard",
-        "maintenance",
-        "defects",
-        "problems",
-        "ideas",
-      ],
+      ["work", "audits", "analytics", "dashboard", "maintenance", "defects", "problems", "ideas"],
       [],
     ],
   ]) {
@@ -104,7 +95,7 @@ async function main() {
           mustChange: false,
           workspaceAccess: name === "Foreign" ? otherScope : scope,
         },
-      }),
+      })
     );
   const setting = await db.setting.findUniqueOrThrow({
       where: { key: "shifts" },
@@ -112,9 +103,7 @@ async function main() {
     config = setting.value,
     now = new Date(),
     today = localToday(config.timezone, now),
-    current = nearbyShifts(config, now).find(
-      (w) => +w.start <= +now && +w.end > +now,
-    ),
+    current = nearbyShifts(config, now).find((w) => +w.start <= +now && +w.end > +now),
     family = randomUUID();
   assert(current);
   for (const revision of [1, 2])
@@ -128,11 +117,9 @@ async function main() {
           target: 60,
           tolerance: 10,
           steps: [{ id: "guard", text: "Guard ready", photo: false }],
-          created: new Date(
-            +current.start - (revision === 1 ? 2 * 86400000 : 1000),
-          ),
+          created: new Date(+current.start - (revision === 1 ? 2 * 86400000 : 1000)),
         },
-      }),
+      })
     );
   schedules.push(
     await db.workSchedule.create({
@@ -152,7 +139,7 @@ async function main() {
         checkedThrough: new Date(+current.start - 2 * 86400000),
         createdBy: users[2].id,
       },
-    }),
+    })
   );
   for (const [id, kind, nextDue, assigneeId, equipmentId, title] of [
     [
@@ -171,30 +158,9 @@ async function main() {
       equipment[0].id,
       "Overdue guard inspection",
     ],
-    [
-      randomUUID(),
-      "pm",
-      today,
-      users[1].id,
-      equipment[0].id,
-      "Due today inspection",
-    ],
-    [
-      randomUUID(),
-      "cil",
-      today,
-      users[1].id,
-      equipment[0].id,
-      "Clean and inspect",
-    ],
-    [
-      randomUUID(),
-      "pm",
-      "2000-01-01",
-      users[4].id,
-      equipment[2].id,
-      "Restricted PM",
-    ],
+    [randomUUID(), "pm", today, users[1].id, equipment[0].id, "Due today inspection"],
+    [randomUUID(), "cil", today, users[1].id, equipment[0].id, "Clean and inspect"],
+    [randomUUID(), "pm", "2000-01-01", users[4].id, equipment[2].id, "Restricted PM"],
   ])
     plans.push(
       await db.maintenancePlan.create({
@@ -210,7 +176,7 @@ async function main() {
           createdBy: users[2].id,
           history: [],
         },
-      }),
+      })
     );
   await db.defect.create({
     data: {
@@ -288,7 +254,7 @@ async function main() {
   async function req(c, path, body, status = 200) {
     const r = await c.request[body ? "post" : "get"](
       origin + path,
-      body ? { headers: { Origin: origin }, data: body } : {},
+      body ? { headers: { Origin: origin }, data: body } : {}
     );
     assert.equal(r.status(), status, await r.text());
     return r.json();
@@ -325,9 +291,7 @@ async function main() {
       data: {
         snapshot: { ...standards[0], equipment: equipment[0] },
         equipmentId: equipment[0].id,
-        responses: [
-          { stepId: "guard", answer: true, comment: "Fixture", photo: null },
-        ],
+        responses: [{ stepId: "guard", answer: true, comment: "Fixture", photo: null }],
         durationSeconds: 5,
         followUp: false,
       },
@@ -344,9 +308,7 @@ async function main() {
       data: {
         snapshot: { ...standards[1], equipment: equipment[0] },
         equipmentId: equipment[0].id,
-        responses: [
-          { stepId: "guard", answer: true, comment: "Fixture", photo: null },
-        ],
+        responses: [{ stepId: "guard", answer: true, comment: "Fixture", photo: null }],
         durationSeconds: 5,
         followUp: false,
       },
@@ -357,64 +319,34 @@ async function main() {
   assert(!q.items.some((r) => r.status === "Due this shift"));
   assert(q.items.some((r) => r.status === "Missed"));
   const team = await req(supervisor, "/api/work-queue?scope=team");
-  assert(
-    team.items.some(
-      (r) => r.type === "Investigation" && r.status === "Awaiting validation",
-    ),
-  );
-  assert(
-    team.items
-      .filter((r) => r.id.startsWith("schedule:"))
-      .every((r) => !r.canPerform),
-  );
+  assert(team.items.some((r) => r.type === "Investigation" && r.status === "Awaiting validation"));
+  assert(team.items.filter((r) => r.id.startsWith("schedule:")).every((r) => !r.canPerform));
   const mine = await req(maintenance, "/api/work-queue");
   assert(mine.items[0].type === "Defect" && mine.items[0].status === "Urgent");
-  assert(
-    mine.items.some(
-      (r) => r.type === "PM" && r.status === "Due today" && r.canPerform,
-    ),
-  );
+  assert(mine.items.some((r) => r.type === "PM" && r.status === "Due today" && r.canPerform));
   assert(mine.items.every((r) => r.equipmentId !== equipment[2].id));
   assert(!mine.items.some((r) => r.type === "Investigation"));
-  const scoped = await req(
-    manager,
-    "/api/work-queue?equipment=" + equipment[2].id,
-  );
+  const scoped = await req(manager, "/api/work-queue?equipment=" + equipment[2].id);
   assert.equal(scoped.items.length, 0);
   const assets = await req(maintenance, "/api/assets");
   assert(!assets.equipment.some((e) => e.id === equipment[2].id));
-  assert.equal(
-    new Set(assets.equipment.map((e) => e.label)).size,
-    assets.equipment.length,
-  );
-  assert(
-    assets.equipment.every(
-      (e) => e.label.includes(e.id) && e.label.includes(e.line),
-    ),
-  );
+  assert.equal(new Set(assets.equipment.map((e) => e.label)).size, assets.equipment.length);
+  assert(assets.equipment.every((e) => e.label.includes(e.id) && e.label.includes(e.line)));
   const pm = await req(maintenance, "/api/maintenance?kind=pm");
   assert.equal(pm.plans[0].id, plans[1].id);
   assert.equal(pm.plans[1].id, plans[2].id);
   await req(maintenance, "/api/maintenance?cursor=" + plans[4].id, null, 400);
-  const restricted = await req(
-    maintenance,
-    "/api/maintenance?equipment=" + equipment[2].id,
-  );
+  const restricted = await req(maintenance, "/api/maintenance?equipment=" + equipment[2].id);
   assert.equal(restricted.plans.length, 0);
   assert.equal(restricted.records.length, 0);
-  const selected = await req(
-    operator,
-    "/api/platform?view=work&equipment=" + equipment[1].id,
-  );
+  const selected = await req(operator, "/api/platform?view=work&equipment=" + equipment[1].id);
   assert.equal(selected.standards.length, 0);
   assert.equal(selected.records.length, 0);
   const page = await maintenance.newPage(),
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(origin);
-  await page
-    .getByRole("heading", { name: "My maintenance work", exact: true })
-    .waitFor();
+  await page.getByRole("heading", { name: "My maintenance work", exact: true }).waitFor();
   await page.locator(".work-queue .queue-row").first().waitFor();
   assert(
     (
@@ -424,7 +356,7 @@ async function main() {
         .getByRole("button", { name: "Review item", exact: true })
         .boundingBox()
     ).y < 1000,
-    "The first maintenance action should be visible without scrolling",
+    "The first maintenance action should be visible without scrolling"
   );
   assert((await page.locator("nav > .nav-group:visible").count()) <= 8);
   const machineLabels = await page
@@ -441,60 +373,30 @@ async function main() {
     .locator("nav")
     .getByRole("button", { name: /Machines/ })
     .click();
-  await page
-    .getByRole("combobox", { name: "Find a machine", exact: true })
-    .fill("Line 1");
-  await page
-    .locator('[role="listbox"] [role="option"]')
-    .filter({ hasText: equipment[0].id })
-    .click();
+  await page.getByRole("combobox", { name: "Find a machine", exact: true }).fill("Line 1");
+  await page.locator('[role="listbox"] [role="option"]').filter({ hasText: equipment[0].id }).click();
   await page.getByText("Guard guide " + suffix, { exact: true }).waitFor();
   await page.getByRole("button", { name: "Maintenance", exact: true }).click();
   await page.getByText("Due today inspection", { exact: true }).waitFor();
-  assert(
-    !(await page.locator(".machine-workspace").innerText()).includes(
-      "Restricted PM",
-    ),
-  );
+  assert(!(await page.locator(".machine-workspace").innerText()).includes("Restricted PM"));
   await page.screenshot({
     path: "docs/screenshots/shift-queues-assets/machine-workspace.png",
     fullPage: true,
   });
-  await page
-    .getByRole("button", { name: "Work queue for this machine", exact: true })
-    .click();
-  await page
-    .getByRole("heading", { name: "My maintenance work queue", exact: true })
-    .waitFor();
-  await page
-    .getByRole("button", { name: "Perform task", exact: true })
-    .first()
-    .click();
+  await page.getByRole("button", { name: "Work queue for this machine", exact: true }).click();
+  await page.getByRole("heading", { name: "My maintenance work queue", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Perform task", exact: true }).first().click();
   await page.getByRole("button", { name: "Perform PM", exact: true }).click();
   await page.getByLabel("Recording target", { exact: true }).waitFor();
-  assert(
-    (
-      await page.getByLabel("Recording target", { exact: true }).innerText()
-    ).includes(equipment[0].id),
-  );
-  await page
-    .getByLabel("Machine context", { exact: true })
-    .selectOption(equipment[1].id);
-  assert(
-    (
-      await page.getByLabel("Recording target", { exact: true }).innerText()
-    ).includes(equipment[0].id),
-  );
+  assert((await page.getByLabel("Recording target", { exact: true }).innerText()).includes(equipment[0].id));
+  await page.getByLabel("Machine context", { exact: true }).selectOption(equipment[1].id);
+  assert((await page.getByLabel("Recording target", { exact: true }).innerText()).includes(equipment[0].id));
   await page.screenshot({
     path: "docs/screenshots/shift-queues-assets/recording-target.png",
     fullPage: true,
   });
   await page.setViewportSize({ width: 820, height: 1180 });
-  assert(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  );
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await page.screenshot({
     path: "docs/screenshots/shift-queues-assets/tablet-recording.png",
     fullPage: true,
@@ -507,31 +409,20 @@ async function main() {
       exact: true,
     })
     .waitFor();
-  await mp
-    .getByRole("button", { name: "Work queue", exact: false })
-    .first()
-    .count();
+  await mp.getByRole("button", { name: "Work queue", exact: false }).first().count();
   await mp
     .locator("nav")
     .getByRole("button", { name: /Work queue/ })
     .click();
-  await mp
-    .getByRole("button", { name: "Awaiting validation", exact: true })
-    .click();
+  await mp.getByRole("button", { name: "Awaiting validation", exact: true }).click();
   await mp.getByText("Validation idea " + suffix, { exact: false }).waitFor();
-  assert(
-    !(await mp.locator(".work-queue").innerText()).includes(
-      "Restricted defect",
-    ),
-  );
+  assert(!(await mp.locator(".work-queue").innerText()).includes("Restricted defect"));
   await mp.getByLabel("Find a section", { exact: true }).fill("Accounts");
   await mp
     .locator("nav > .nav-group:visible")
     .getByRole("button", { name: /Accounts/ })
     .click();
-  await mp
-    .getByRole("heading", { name: "Department accounts", exact: false })
-    .waitFor();
+  await mp.getByRole("heading", { name: "Department accounts", exact: false }).waitFor();
   // Equal due dates must paginate without skipping or duplicating plans,
   // even when the plan represented by the page cursor is removed.
   const pagingIds = Array.from({ length: 105 }, () => randomUUID()).sort();
@@ -555,17 +446,14 @@ async function main() {
     assert.equal(first.plans.length, 100);
     assert.deepEqual(
       first.plans.map((p) => p.id),
-      pagingIds.slice(0, 100),
+      pagingIds.slice(0, 100)
     );
     assert(first.cursor);
     await db.maintenancePlan.delete({ where: { id: pagingIds[99] } });
-    const second = await req(
-      maintenance,
-      path + "&cursor=" + encodeURIComponent(first.cursor),
-    );
+    const second = await req(maintenance, path + "&cursor=" + encodeURIComponent(first.cursor));
     assert.deepEqual(
       second.plans.map((p) => p.id),
-      pagingIds.slice(100),
+      pagingIds.slice(100)
     );
     assert.equal(second.hasMore, false);
   } finally {
@@ -573,7 +461,7 @@ async function main() {
   }
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: scoped current/missed/completed shift checks, revision matching, task ownership, maintenance priority and due-today labels, role home profiles, distinct machine labels, machine workspace, recording target, compact navigation and manager validation queue.",
+    "PASS: scoped current/missed/completed shift checks, revision matching, task ownership, maintenance priority and due-today labels, role home profiles, distinct machine labels, machine workspace, recording target, compact navigation and manager validation queue."
   );
 }
 main()

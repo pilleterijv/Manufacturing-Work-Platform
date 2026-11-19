@@ -13,8 +13,7 @@ export async function GET(req: Request) {
       p = new URL(req.url).searchParams,
       { person, search } = readFilters(req.url),
       section = z.enum(feedSections).parse(p.get("section") ?? "Overview");
-    if (feedCapabilities[section])
-      await requireUser(feedCapabilities[section] as any);
+    if (feedCapabilities[section]) await requireUser(feedCapabilities[section] as any);
     const equipment = await db.equipment.findMany({
       where: { id: { in: ids } },
       select: {
@@ -32,7 +31,7 @@ export async function GET(req: Request) {
             [e.name, e.plant, e.department, e.area, e.line]
               .join(" ")
               .toLowerCase()
-              .includes(search.toLowerCase()),
+              .includes(search.toLowerCase())
           )
           .map((e) => e.id)
       : ids;
@@ -51,9 +50,7 @@ export async function GET(req: Request) {
       where: { active: true },
       select: { id: true, name: true },
     });
-    const enabled = feeds.filter((f) =>
-      sources.some((s) => s.id === f.sourceId),
-    );
+    const enabled = feeds.filter((f) => sources.some((s) => s.id === f.sourceId));
     const scope: Prisma.ExternalRowWhereInput = {
       feedId: { in: enabled.map((f) => f.id) },
       equipmentId: { in: ids },
@@ -100,7 +97,7 @@ export async function GET(req: Request) {
               orderBy: { id: "asc" },
               take: 100,
               ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-            }),
+            })
           )) {
             const e = equipment.find((e) => e.id === row.equipmentId),
               v = row.values as any;
@@ -125,7 +122,7 @@ export async function GET(req: Request) {
             ]);
           }
         },
-        req.signal,
+        req.signal
       );
     }
     const cursor = z
@@ -154,8 +151,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const u = await requireUser();
-    if (u.role !== "Admin")
-      throw new HttpError(403, "Only Admin can configure external feeds");
+    if (u.role !== "Admin") throw new HttpError(403, "Only Admin can configure external feeds");
     const b = await jsonBody(req);
     if (b.action === "create") {
       const v = z
@@ -176,9 +172,7 @@ export async function POST(req: Request) {
       return Response.json({ id: feed.id });
     }
     if (b.action === "toggle") {
-      const v = z
-        .object({ id: z.string().uuid(), active: z.boolean() })
-        .parse(b);
+      const v = z.object({ id: z.string().uuid(), active: z.boolean() }).parse(b);
       await db.externalFeed.update({
         where: { id: v.id },
         data: { active: v.active },

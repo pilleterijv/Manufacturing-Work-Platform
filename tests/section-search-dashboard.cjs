@@ -37,7 +37,7 @@ const check = async (r, status = 200) => {
             area: "Area " + department,
             line: "",
           },
-        }),
+        })
       );
       equipment.push(
         await db.equipment.create({
@@ -48,15 +48,13 @@ const check = async (r, status = 200) => {
             line: "Line 1",
             name: prefix + " " + department + " Filler",
           },
-        }),
+        })
       );
       users.push(
         await db.user.create({
           data: {
             username: prefix.toLowerCase() + "-" + users.length,
-            name: users.length
-              ? "Hidden Person " + suffix
-              : "Morgan Search " + suffix,
+            name: users.length ? "Hidden Person " + suffix : "Morgan Search " + suffix,
             role: "Manager",
             password: hash,
             mustChange: false,
@@ -66,7 +64,7 @@ const check = async (r, status = 200) => {
               equipmentIds: [],
             },
           },
-        }),
+        })
       );
     }
     standards.push(
@@ -82,7 +80,7 @@ const check = async (r, status = 200) => {
           steps: [{ id: randomUUID(), text: "Check guard", photo: false }],
           assigneeIds: [],
         },
-      }),
+      })
     );
     plans.push(
       await db.fiveSPlan.create({
@@ -102,7 +100,7 @@ const check = async (r, status = 200) => {
           createdBy: users[0].id,
           history: [],
         },
-      }),
+      })
     );
     const addStudy = async (title) => {
       const r = await db.record.create({
@@ -112,9 +110,7 @@ const check = async (r, status = 200) => {
           data: {
             title,
             equipmentId: equipment[0].id,
-            cycles: [
-              { element: "Pack", seconds: 5, at: new Date().toISOString() },
-            ],
+            cycles: [{ element: "Pack", seconds: 5, at: new Date().toISOString() }],
           },
         },
       });
@@ -141,46 +137,29 @@ const check = async (r, status = 200) => {
           password,
           remember: false,
         },
-      }),
+      })
     );
     const options = await check(
       await context.request.get(
-        origin +
-          "/api/section-options?" +
-          new URLSearchParams({ section: "Standard work", q: prefix }),
-      ),
+        origin + "/api/section-options?" + new URLSearchParams({ section: "Standard work", q: prefix })
+      )
     );
     assert(options.options.some((o) => o.value === equipment[0].name));
     assert(options.options.some((o) => o.value === standards[0].title));
-    assert(
-      !options.options.some((o) =>
-        JSON.stringify(o).includes(equipment[1].department),
-      ),
-    );
-    await check(
-      await context.request.get(
-        origin + "/api/section-options?section=Permissions&q=",
-      ),
-      403,
-    );
+    assert(!options.options.some((o) => JSON.stringify(o).includes(equipment[1].department)));
+    await check(await context.request.get(origin + "/api/section-options?section=Permissions&q="), 403);
     const people = await check(
-      await context.request.get(
-        origin + "/api/people?search=" + encodeURIComponent(users[1].name),
-      ),
+      await context.request.get(origin + "/api/people?search=" + encodeURIComponent(users[1].name))
     );
     assert.equal(people.people.length, 0);
     const filtered = await check(
       await context.request.get(
-        origin +
-          "/api/platform?view=work&search=" +
-          encodeURIComponent(equipment[0].name),
-      ),
+        origin + "/api/platform?view=work&search=" + encodeURIComponent(equipment[0].name)
+      )
     );
     assert(filtered.standards.some((s) => s.id === standards[0].id));
     const fiveS = await check(
-      await context.request.get(
-        origin + "/api/five-s?search=" + encodeURIComponent(locations[0].area),
-      ),
+      await context.request.get(origin + "/api/five-s?search=" + encodeURIComponent(locations[0].area))
     );
     assert(fiveS.plans.some((p) => p.id === plans[0].id));
     const page = await context.newPage();
@@ -207,23 +186,14 @@ const check = async (r, status = 200) => {
         .waitFor();
     };
     await nav("Time studies");
-    await page
-      .getByRole("heading", { name: "New time study", exact: true })
-      .waitFor();
-    await page
-      .getByLabel("Study name", { exact: true })
-      .fill("Keep this unsaved draft");
+    await page.getByRole("heading", { name: "New time study", exact: true }).waitFor();
+    await page.getByLabel("Study name", { exact: true }).fill("Keep this unsaved draft");
     await addStudy(prefix + " New observation after refresh");
-    await page
-      .locator(".history")
-      .getByRole("button", { name: "↻ Refresh history", exact: true })
-      .click();
-    await page
-      .getByText(prefix + " New observation after refresh", { exact: true })
-      .waitFor();
+    await page.locator(".history").getByRole("button", { name: "↻ Refresh history", exact: true }).click();
+    await page.getByText(prefix + " New observation after refresh", { exact: true }).waitFor();
     assert.equal(
       await page.getByLabel("Study name", { exact: true }).inputValue(),
-      "Keep this unsaved draft",
+      "Keep this unsaved draft"
     );
     const search = page.getByRole("combobox", {
       name: "Search time studies",
@@ -262,35 +232,19 @@ const check = async (r, status = 200) => {
       .filter({ hasText: users[0].name })
       .click();
     assert((await person.inputValue()).includes(users[0].username));
-    await page
-      .getByRole("button", { name: "Apply filters", exact: true })
-      .click();
-    await page
-      .getByRole("heading", { name: "New time study", exact: true })
-      .waitFor();
+    await page.getByRole("button", { name: "Apply filters", exact: true }).click();
+    await page.getByRole("heading", { name: "New time study", exact: true }).waitFor();
     await page.getByRole("button", { name: "Dashboard", exact: true }).click();
-    await page
-      .getByRole("heading", { name: "Time studies at a glance", exact: true })
-      .waitFor();
+    await page.getByRole("heading", { name: "Time studies at a glance", exact: true }).waitFor();
     const board = page.getByRole("region", { name: "Time studies dashboard" });
-    assert(
-      await board
-        .getByText(prefix + " New observation after refresh", { exact: true })
-        .isVisible(),
-    );
+    assert(await board.getByText(prefix + " New observation after refresh", { exact: true }).isVisible());
     await page.screenshot({
       path: "docs/screenshots/search-dashboards/time-studies-dashboard.png",
       fullPage: true,
     });
-    await page
-      .getByRole("button", { name: "Open in detail", exact: true })
-      .click();
-    await page
-      .getByRole("heading", { name: "Saved studies", exact: true })
-      .waitFor();
-    await page
-      .getByRole("button", { name: "Clear filters", exact: true })
-      .click();
+    await page.getByRole("button", { name: "Open in detail", exact: true }).click();
+    await page.getByRole("heading", { name: "Saved studies", exact: true }).waitFor();
+    await page.getByRole("button", { name: "Clear filters", exact: true }).click();
     for (const name of [
       "Preventive maintenance",
       "TPM / CIL",
@@ -307,9 +261,7 @@ const check = async (r, status = 200) => {
       "Problem solving",
     ]) {
       await nav(name);
-      await page
-        .getByRole("button", { name: "Dashboard", exact: true })
-        .click();
+      await page.getByRole("button", { name: "Dashboard", exact: true }).click();
       await page
         .getByRole("heading", {
           name: sectionLabel(name) + " at a glance",
@@ -318,9 +270,7 @@ const check = async (r, status = 200) => {
         .waitFor();
     }
     await nav("Defect reporting");
-    await page
-      .getByLabel("Defect title", { exact: true })
-      .fill("Keep unsubmitted defect draft");
+    await page.getByLabel("Defect title", { exact: true }).fill("Keep unsubmitted defect draft");
     defects.push(
       await db.defect.create({
         data: {
@@ -333,29 +283,19 @@ const check = async (r, status = 200) => {
           media: [],
           history: [],
         },
-      }),
+      })
     );
-    await page
-      .getByRole("button", { name: "↻ Refresh section", exact: true })
-      .click();
-    await page
-      .getByRole("heading", { name: new RegExp(prefix + " Incoming defect") })
-      .waitFor();
+    await page.getByRole("button", { name: "↻ Refresh section", exact: true }).click();
+    await page.getByRole("heading", { name: new RegExp(prefix + " Incoming defect") }).waitFor();
     assert.equal(
       await page.getByLabel("Defect title", { exact: true }).inputValue(),
-      "Keep unsubmitted defect draft",
+      "Keep unsubmitted defect draft"
     );
     await nav("5S audits");
     await page.getByRole("button", { name: "Dashboard", exact: true }).click();
-    await page
-      .getByRole("heading", { name: "5S audits at a glance" })
-      .waitFor();
+    await page.getByRole("heading", { name: "5S audits at a glance" }).waitFor();
     await page.setViewportSize({ width: 820, height: 1180 });
-    assert(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    );
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.screenshot({
       path: "docs/screenshots/search-dashboards/tablet-five-s-dashboard.png",
       fullPage: true,
@@ -363,7 +303,7 @@ const check = async (r, status = 200) => {
     assert.deepEqual(errors, []);
     await context.close();
     console.log(
-      "PASS: scoped machine/area/task/person suggestions, keyboard selection, 14 dashboards/detail menus, machine and area filters, history refresh preserves drafts and sees new work, tablet layout.",
+      "PASS: scoped machine/area/task/person suggestions, keyboard selection, 14 dashboards/detail menus, machine and area filters, history refresh preserves drafts and sees new work, tablet layout."
     );
   } finally {
     await browser?.close();
@@ -388,6 +328,10 @@ const check = async (r, status = 200) => {
     await db.session.deleteMany({
       where: { userId: { in: users.map((u) => u.id) } },
     });
+    await db.notification.deleteMany({
+      where: { userId: { in: users.map((u) => u.id) }, kind: "assignment" },
+    });
+    await db.assignmentDelivery.deleteMany({ where: { userId: { in: users.map((u) => u.id) } } });
     await db.user.deleteMany({ where: { id: { in: users.map((u) => u.id) } } });
     await db.$disconnect();
   }

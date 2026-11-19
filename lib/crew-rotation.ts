@@ -8,18 +8,12 @@ export const crewSchema = z.object({
     .array(z.boolean())
     .min(2)
     .max(28)
-    .refine(
-      (v) => v.some(Boolean) && v.some((x) => !x),
-      "Include working and off days",
-    ),
+    .refine((v) => v.some(Boolean) && v.some((x) => !x), "Include working and off days"),
 });
 export function crewWorks(crew: z.infer<typeof crewSchema>, date: string) {
-  const offset = Temporal.PlainDate.from(crew.anchorDate).until(
-    Temporal.PlainDate.from(date),
-  ).days;
+  const offset = Temporal.PlainDate.from(crew.anchorDate).until(Temporal.PlainDate.from(date)).days;
   return crew.workingDays[
-    ((offset % crew.workingDays.length) + crew.workingDays.length) %
-      crew.workingDays.length
+    ((offset % crew.workingDays.length) + crew.workingDays.length) % crew.workingDays.length
   ];
 }
 export function scheduleWindowMatches(
@@ -29,16 +23,13 @@ export function scheduleWindowMatches(
     crewNames?: unknown;
     config: unknown;
   },
-  window: { name: string; date: string; weekday: number },
+  window: { name: string; date: string; weekday: number }
 ) {
   const crews = (schedule.crewNames || []) as string[];
   if (crews.length) {
     const config = schedule.config as { crews?: z.infer<typeof crewSchema>[] };
     return !!config.crews?.some(
-      (c) =>
-        crews.includes(c.name) &&
-        c.shiftName === window.name &&
-        crewWorks(c, window.date),
+      (c) => crews.includes(c.name) && c.shiftName === window.name && crewWorks(c, window.date)
     );
   }
   return (
@@ -48,22 +39,7 @@ export function scheduleWindowMatches(
 }
 
 export function plantCrewPreset() {
-  const paired = [
-    true,
-    true,
-    false,
-    false,
-    true,
-    true,
-    true,
-    false,
-    false,
-    true,
-    true,
-    false,
-    false,
-    false,
-  ];
+  const paired = [true, true, false, false, true, true, true, false, false, true, true, false, false, false];
   return {
     shifts: [
       { name: "Day", startMinute: 330 },

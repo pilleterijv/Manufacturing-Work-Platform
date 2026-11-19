@@ -5,6 +5,5 @@ export default defineConfig({
   schema: "prisma/schema.prisma",
   experimental: { adapter: true },
   engine: "js",
-  adapter: async () =>
-    new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+  adapter: async () => new PrismaPg({ connectionString: process.env.DATABASE_URL }),
 });

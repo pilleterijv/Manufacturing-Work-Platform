@@ -26,7 +26,7 @@ export const leaderHandoffSchema = z.object({
         solutionMixed: handoffChoice.optional(),
         nextSolutionReady: handoffChoice.optional(),
         lastFourRecalculated: handoffChoice.optional(),
-      }),
+      })
     )
     .max(30),
 });

@@ -5,15 +5,11 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { readPhoto } from "@/lib/storage";
 import { requireUser, grants, HttpError, failure } from "@/lib/security";
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const u = await requireUser();
     const { id } = await params;
-    if (!/^[a-f0-9-]{36}$/.test(id))
-      throw new HttpError(404, "Photo not found");
+    if (!/^[a-f0-9-]{36}$/.test(id)) throw new HttpError(404, "Photo not found");
     const photo = await db.photo.findUnique({ where: { id } });
     if (!photo) throw new HttpError(404, "Photo not found");
     if (!(await canReadEvidence(u, id, "photo", photo.userId)))

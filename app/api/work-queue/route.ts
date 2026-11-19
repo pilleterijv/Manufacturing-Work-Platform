@@ -5,12 +5,7 @@ import { requireUser, grants, failure, HttpError } from "@/lib/security";
 import { equipmentIds, visiblePeople } from "@/lib/location-access";
 import { focusedEquipmentIds } from "@/lib/equipment-label";
 import { localToday, shiftConfigSchema } from "@/lib/operations-rules";
-import {
-  nearbyShifts,
-  scheduledQueue,
-  queueOrder,
-  type QueueItem,
-} from "@/lib/work-queue-rules";
+import { nearbyShifts, scheduledQueue, queueOrder, type QueueItem } from "@/lib/work-queue-rules";
 export async function GET(req: Request) {
   try {
     const u = await requireUser(),
@@ -20,14 +15,8 @@ export async function GET(req: Request) {
       team = scope === "team";
     const canTeam =
       ["Admin", "Manager", "DL/TL"].includes(u.role) &&
-      (g.includes("dashboard") ||
-        g.includes("leadership") ||
-        g.includes("analytics"));
-    if (team && !canTeam)
-      throw new HttpError(
-        403,
-        "Department review is not assigned to this account",
-      );
+      (g.includes("dashboard") || g.includes("leadership") || g.includes("analytics"));
+    if (team && !canTeam) throw new HttpError(403, "Department review is not assigned to this account");
     const plant = z
         .string()
         .max(100)
@@ -57,7 +46,7 @@ export async function GET(req: Request) {
           (e) =>
             (!plant || e.plant === plant) &&
             (!department || e.department === department) &&
-            (!area || e.area === area),
+            (!area || e.area === area)
         )
         .map((e) => e.id),
       now = new Date(),
@@ -74,162 +63,154 @@ export async function GET(req: Request) {
     const config = shiftConfigSchema.parse(setting.value),
       today = localToday(config.timezone, now),
       families = [...new Set(schedules.slice(0, 1000).map((s) => s.family))];
-    const [baseline, recent, records, plans, defects, actions, ideas, cases] =
-      await Promise.all([
-        families.length
-          ? db.$queryRaw<
-              any[]
-            >`SELECT DISTINCT ON (family) id,family,revision,created,title,kind,workflow,archived,"assigneeIds" FROM "Standard" WHERE family=ANY(${families}::text[]) AND "equipmentId"=ANY(${ids}::text[]) AND created<=${cutoff} ORDER BY family,revision DESC`
-          : [],
-        families.length
-          ? db.standard.findMany({
-              where: {
+    const [baseline, recent, records, plans, defects, actions, ideas, cases] = await Promise.all([
+      families.length
+        ? db.$queryRaw<
+            any[]
+          >`SELECT DISTINCT ON (family) id,family,revision,created,title,kind,workflow,archived,"assigneeIds" FROM "Standard" WHERE family=ANY(${families}::text[]) AND "equipmentId"=ANY(${ids}::text[]) AND created<=${cutoff} ORDER BY family,revision DESC`
+        : [],
+      families.length
+        ? db.standard.findMany({
+            where: {
+              family: { in: families },
+              equipmentId: { in: ids },
+              created: { gt: cutoff, lte: now },
+            },
+            select: {
+              id: true,
+              family: true,
+              revision: true,
+              created: true,
+              title: true,
+              kind: true,
+              workflow: true,
+              archived: true,
+              assigneeIds: true,
+            },
+          })
+        : [],
+      families.length
+        ? db.record.findMany({
+            where: {
+              kind: {
+                in: [
+                  ...(g.includes("work") || (team && g.includes("analytics")) ? ["run"] : []),
+                  ...(g.includes("audits") || (team && g.includes("analytics")) ? ["audit"] : []),
+                ],
+              },
+              standard: {
                 family: { in: families },
                 equipmentId: { in: ids },
-                created: { gt: cutoff, lte: now },
               },
-              select: {
-                id: true,
-                family: true,
-                revision: true,
-                created: true,
-                title: true,
-                kind: true,
-                workflow: true,
-                archived: true,
-                assigneeIds: true,
-              },
-            })
-          : [],
-        families.length
-          ? db.record.findMany({
-              where: {
-                kind: {
-                  in: [
-                    ...(g.includes("work") || (team && g.includes("analytics"))
-                      ? ["run"]
-                      : []),
-                    ...(g.includes("audits") ||
-                    (team && g.includes("analytics"))
-                      ? ["audit"]
-                      : []),
-                  ],
-                },
-                standard: {
-                  family: { in: families },
-                  equipmentId: { in: ids },
-                },
-                created: { gte: cutoff, lte: now },
-              },
-              select: {
-                kind: true,
-                userId: true,
-                created: true,
-                standard: { select: { family: true, revision: true } },
-              },
-            })
-          : [],
-        g.includes("maintenance")
-          ? db.maintenancePlan.findMany({
-              where: {
-                equipmentId: { in: ids },
-                active: true,
-                ...(!team ? { assigneeId: u.id } : {}),
-              },
-              orderBy: [{ nextDue: "asc" }, { id: "asc" }],
-              take: 501,
-              select: {
-                id: true,
-                title: true,
-                equipmentId: true,
-                assigneeId: true,
-                nextDue: true,
-                kind: true,
-              },
-            })
-          : [],
-        g.includes("defects")
-          ? db.$queryRaw<
-              any[]
-            >`SELECT id,title,"equipmentId","assigneeId",priority,"createdAt" FROM "Defect" WHERE "equipmentId"=ANY(${ids}::text[]) AND status='Open' AND (${team} OR "reportedBy"=${u.id} OR "assigneeId"=${u.id}) ORDER BY CASE priority WHEN 'Critical' THEN 0 WHEN 'High' THEN 1 WHEN 'Medium' THEN 2 ELSE 3 END,"createdAt",id LIMIT 501`
-          : [],
-        g.includes("problems")
-          ? db.problemAction.findMany({
-              where: {
-                problem: {
-                  equipmentId: { in: ids },
-                  status: { not: "Closed" },
-                },
-                status: { not: "Completed" },
-                ...(!team ? { ownerId: u.id } : {}),
-              },
-              orderBy: [{ dueDate: "asc" }, { id: "asc" }],
-              take: 501,
-              select: {
-                id: true,
-                title: true,
-                ownerId: true,
-                dueDate: true,
-                problem: {
-                  select: { id: true, reference: true, equipmentId: true },
-                },
-              },
-            })
-          : [],
-        g.includes("ideas")
-          ? db.idea.findMany({
-              where: {
-                equipmentId: { in: ids },
-                status: { not: "Completed" },
-                ...(!team
-                  ? {
-                      OR: [
-                        { pilotId: u.id },
-                        { validatorId: u.id },
-                        { submitterId: u.id },
-                        { participants: { some: { userId: u.id } } },
-                      ],
-                    }
-                  : {}),
-              },
-              orderBy: [{ dueDate: "asc" }, { id: "asc" }],
-              take: 501,
-              select: {
-                id: true,
-                title: true,
-                equipmentId: true,
-                dueDate: true,
-                status: true,
-                validatorId: true,
-                pilotId: true,
-              },
-            })
-          : [],
-        g.includes("problems")
-          ? db.problem.findMany({
-              where: {
+              created: { gte: cutoff, lte: now },
+            },
+            select: {
+              kind: true,
+              userId: true,
+              created: true,
+              standard: { select: { family: true, revision: true } },
+            },
+          })
+        : [],
+      g.includes("maintenance")
+        ? db.maintenancePlan.findMany({
+            where: {
+              equipmentId: { in: ids },
+              active: true,
+              ...(!team ? { assigneeId: u.id } : {}),
+            },
+            orderBy: [{ nextDue: "asc" }, { id: "asc" }],
+            take: 501,
+            select: {
+              id: true,
+              title: true,
+              equipmentId: true,
+              assigneeId: true,
+              nextDue: true,
+              kind: true,
+            },
+          })
+        : [],
+      g.includes("defects")
+        ? db.$queryRaw<
+            any[]
+          >`SELECT id,title,"equipmentId","assigneeId",priority,"createdAt" FROM "Defect" WHERE "equipmentId"=ANY(${ids}::text[]) AND status='Open' AND (${team} OR "reportedBy"=${u.id} OR "assigneeId"=${u.id}) ORDER BY CASE priority WHEN 'Critical' THEN 0 WHEN 'High' THEN 1 WHEN 'Medium' THEN 2 ELSE 3 END,"createdAt",id LIMIT 501`
+        : [],
+      g.includes("problems")
+        ? db.problemAction.findMany({
+            where: {
+              problem: {
                 equipmentId: { in: ids },
                 status: { not: "Closed" },
-                OR: [{ dueDate: { lte: today } }, { status: "Verification" }],
-                ...(!team
-                  ? { AND: [{ OR: [{ ownerId: u.id }, { reviewerId: u.id }] }] }
-                  : {}),
               },
-              orderBy: [{ dueDate: "asc" }, { id: "asc" }],
-              take: 501,
-              select: {
-                id: true,
-                reference: true,
-                title: true,
-                equipmentId: true,
-                dueDate: true,
-                status: true,
-                ownerId: true,
-                reviewerId: true,
+              status: { not: "Completed" },
+              ...(!team ? { ownerId: u.id } : {}),
+            },
+            orderBy: [{ dueDate: "asc" }, { id: "asc" }],
+            take: 501,
+            select: {
+              id: true,
+              title: true,
+              ownerId: true,
+              dueDate: true,
+              problem: {
+                select: { id: true, reference: true, equipmentId: true },
               },
-            })
-          : [],
-      ]);
+            },
+          })
+        : [],
+      g.includes("ideas")
+        ? db.idea.findMany({
+            where: {
+              equipmentId: { in: ids },
+              status: { not: "Completed" },
+              ...(!team
+                ? {
+                    OR: [
+                      { pilotId: u.id },
+                      { validatorId: u.id },
+                      { submitterId: u.id },
+                      { participants: { some: { userId: u.id } } },
+                    ],
+                  }
+                : {}),
+            },
+            orderBy: [{ dueDate: "asc" }, { id: "asc" }],
+            take: 501,
+            select: {
+              id: true,
+              title: true,
+              equipmentId: true,
+              dueDate: true,
+              status: true,
+              validatorId: true,
+              pilotId: true,
+            },
+          })
+        : [],
+      g.includes("problems")
+        ? db.problem.findMany({
+            where: {
+              equipmentId: { in: ids },
+              status: { not: "Closed" },
+              OR: [{ dueDate: { lte: today } }, { status: "Verification" }],
+              ...(!team ? { AND: [{ OR: [{ ownerId: u.id }, { reviewerId: u.id }] }] } : {}),
+            },
+            orderBy: [{ dueDate: "asc" }, { id: "asc" }],
+            take: 501,
+            select: {
+              id: true,
+              reference: true,
+              title: true,
+              equipmentId: true,
+              dueDate: true,
+              status: true,
+              ownerId: true,
+              reviewerId: true,
+            },
+          })
+        : [],
+    ]);
     const names = new Map(people.map((v) => [v.id, v.name])),
       scheduled = scheduledQueue({
         schedules: schedules.slice(0, 1000),
@@ -265,9 +246,7 @@ export async function GET(req: Request) {
         type: "Defect",
         title: v.title,
         equipmentId: v.equipmentId,
-        assignee: v.assigneeId
-          ? names.get(v.assigneeId) || "Reassignment needed"
-          : "Unassigned",
+        assignee: v.assigneeId ? names.get(v.assigneeId) || "Reassignment needed" : "Unassigned",
         due: v.createdAt.toISOString(),
         status: ["Critical", "High"].includes(v.priority) ? "Urgent" : "Open",
         priority: v.priority === "Critical" ? 0 : v.priority === "High" ? 1 : 4,
@@ -296,16 +275,9 @@ export async function GET(req: Request) {
         type: "Improvement idea",
         title: v.title,
         equipmentId: v.equipmentId,
-        assignee:
-          names.get(v.status === "Validation" ? v.validatorId : v.pilotId) ||
-          "Reassignment needed",
+        assignee: names.get(v.status === "Validation" ? v.validatorId : v.pilotId) || "Reassignment needed",
         due: v.dueDate,
-        status:
-          v.status === "Validation"
-            ? "Awaiting validation"
-            : v.dueDate < today
-              ? "Overdue"
-              : "Open",
+        status: v.status === "Validation" ? "Awaiting validation" : v.dueDate < today ? "Overdue" : "Open",
         priority: v.dueDate < today ? 2 : 4,
         tab: "Improvement ideas",
         filters: { equipment: v.equipmentId, item: v.id },
@@ -317,16 +289,10 @@ export async function GET(req: Request) {
         type: "Investigation",
         title: `${v.reference} · ${v.title}`,
         equipmentId: v.equipmentId,
-        assignee:
-          names.get(v.status === "Verification" ? v.reviewerId : v.ownerId) ||
-          "Reassignment needed",
+        assignee: names.get(v.status === "Verification" ? v.reviewerId : v.ownerId) || "Reassignment needed",
         due: v.dueDate,
         status:
-          v.status === "Verification"
-            ? "Awaiting validation"
-            : v.dueDate < today
-              ? "Overdue"
-              : "Due today",
+          v.status === "Verification" ? "Awaiting validation" : v.dueDate < today ? "Overdue" : "Due today",
         priority: v.dueDate < today ? 2 : 3,
         tab: "Problem solving",
         filters: { equipment: v.equipmentId, item: v.id },
@@ -353,8 +319,7 @@ export async function GET(req: Request) {
         })
       : [];
     const counts: Record<string, number> = {};
-    for (const v of items.slice(0, 500))
-      counts[v.status] = (counts[v.status] || 0) + 1;
+    for (const v of items.slice(0, 500)) counts[v.status] = (counts[v.status] || 0) + 1;
     return Response.json({
       items: items.slice(0, 500),
       counts,
@@ -377,8 +342,7 @@ export async function GET(req: Request) {
         items.length > 500 ||
         [plans, defects, actions, ideas, cases].some((v) => v.length > 500),
       hasSchedules: schedules.length > 0,
-      window:
-        "Current shift and previous 24 hours; PM/CIL and actions use their displayed due dates",
+      window: "Current shift and previous 24 hours; PM/CIL and actions use their displayed due dates",
       generatedAt: now.toISOString(),
       handovers: handovers.map((r) => ({
         id: r.id,

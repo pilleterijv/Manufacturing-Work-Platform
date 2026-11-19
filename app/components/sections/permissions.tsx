@@ -63,7 +63,7 @@ export default function Permissions(_props: {
       setNotice(
         action === "retire"
           ? "Role retired. History preserved."
-          : "Role saved. Assign the role and departments/areas in Accounts.",
+          : "Role saved. Assign the role and departments/areas in Accounts."
       );
     } catch (e) {
       setError((e as Error).message);
@@ -76,14 +76,10 @@ export default function Permissions(_props: {
       <section className="panel">
         <h2>Roles and permissions</h2>
         <p>
-          A role defines what an account can do. Its department, area and
-          machine assignments define where it can do it. Neither a custom role
-          nor an editing privilege bypasses those assignments.
+          A role defines what an account can do. Its department, area and machine assignments define where it
+          can do it. Neither a custom role nor an editing privilege bypasses those assignments.
         </p>
-        <p>
-          Admin stays protected. Global role administration and unrestricted
-          access remain with Admin.
-        </p>
+        <p>Admin stays protected. Global role administration and unrestricted access remain with Admin.</p>
         {error && (
           <p role="alert" className="error">
             {error}
@@ -119,9 +115,7 @@ export default function Permissions(_props: {
               aria-label="Choose role to review"
               value={creating ? "" : draft?.name || ""}
               onChange={(e) => {
-                const r = data.roles.find(
-                  (r: any) => r.role === e.target.value,
-                );
+                const r = data.roles.find((r: any) => r.role === e.target.value);
                 if (r) select(r);
               }}
             >
@@ -164,14 +158,10 @@ export default function Permissions(_props: {
                   aria-label="Workflow type"
                   disabled={!creating}
                   value={draft.baseRole}
-                  onChange={(e) =>
-                    setDraft({ ...draft, baseRole: e.target.value })
-                  }
+                  onChange={(e) => setDraft({ ...draft, baseRole: e.target.value })}
                 >
                   <option value="Operator">Operator / floor tasks</option>
-                  <option value="DL/TL">
-                    Department / team leader workflows
-                  </option>
+                  <option value="DL/TL">Department / team leader workflows</option>
                   <option value="Manager">Manager workflows</option>
                 </select>
               </Field>
@@ -180,9 +170,7 @@ export default function Permissions(_props: {
                   maxLength={500}
                   value={draft.description}
                   disabled={!draft.active}
-                  onChange={(e) =>
-                    setDraft({ ...draft, description: e.target.value })
-                  }
+                  onChange={(e) => setDraft({ ...draft, description: e.target.value })}
                 />
               </Field>
               <Field label="Home view">
@@ -190,9 +178,7 @@ export default function Permissions(_props: {
                   aria-label="Home view"
                   value={draft.homeProfile || "auto"}
                   disabled={!draft.active}
-                  onChange={(e) =>
-                    setDraft({ ...draft, homeProfile: e.target.value })
-                  }
+                  onChange={(e) => setDraft({ ...draft, homeProfile: e.target.value })}
                 >
                   {[
                     ["auto", "Use workflow default"],
@@ -210,14 +196,13 @@ export default function Permissions(_props: {
               </Field>
             </div>
             <p>
-              Workflow type determines leader-task eligibility and
-              manager/leader notification eligibility. It does not grant extra
-              editing or account-management rights to a custom role. Choose
-              those explicitly below.
+              Workflow type determines leader-task eligibility and manager/leader notification eligibility. It
+              does not grant extra editing or account-management rights to a custom role. Choose those
+              explicitly below.
             </p>
             <p>
-              Home view changes presentation only. Permissions and
-              department/area assignments still control every record and action.
+              Home view changes presentation only. Permissions and department/area assignments still control
+              every record and action.
             </p>
             <h3>Functions this role can use</h3>
             <div className="permission-grid">
@@ -247,25 +232,21 @@ export default function Permissions(_props: {
             </div>
             {draft.grants.includes("manage") && (
               <p className="notice">
-                Broad content editing is enabled. Use the specific editing
-                privileges below if this role should edit only PMs, guides,
-                equipment or a particular kind of content.
+                Broad content editing is enabled. Use the specific editing privileges below if this role
+                should edit only PMs, guides, equipment or a particular kind of content.
               </p>
             )}
             <h3>Specific management privileges</h3>
             {draft.name === "Manager" && !creating && (
               <p>
-                The built-in Manager role keeps its existing department-account
-                rights. Use a custom Manager workflow role to choose those
-                rights individually.
+                The built-in Manager role keeps its existing department-account rights. Use a custom Manager
+                workflow role to choose those rights individually.
               </p>
             )}
             <div className="permission-grid">
               {privilegeKeys.map((key) => {
                 const inherited =
-                  draft.name === "Manager" &&
-                  !creating &&
-                  managerAccountPrivileges.includes(key);
+                  draft.name === "Manager" && !creating && managerAccountPrivileges.includes(key);
                 return (
                   <label className="permission" key={key}>
                     <input
@@ -293,47 +274,39 @@ export default function Permissions(_props: {
               })}
             </div>
             <p>
-              {draft.grants.length} function permissions and{" "}
-              {draft.adminPrivileges.length} explicit management privileges.
-              Account-level extra permissions can add to this role; review them
-              in Accounts when checking someone's effective access.
+              {draft.grants.length} function permissions and {draft.adminPrivileges.length} explicit
+              management privileges. Account-level extra permissions can add to this role; review them in
+              Accounts when checking someone's effective access.
             </p>
             <div className="button-row">
               <button className="primary" disabled={busy || !draft.active}>
                 Save role permissions
               </button>
-              {!creating &&
-                !["Manager", "Operator", "DL/TL"].includes(draft.name) &&
-                draft.active && (
-                  <button
-                    className="outline"
-                    type="button"
-                    disabled={busy || !!draft.assigned}
-                    onClick={() => {
-                      if (
-                        confirm(
-                          `Retire ${draft.name}? Reassign all accounts first. Role history remains available.`,
-                        )
+              {!creating && !["Manager", "Operator", "DL/TL"].includes(draft.name) && draft.active && (
+                <button
+                  className="outline"
+                  type="button"
+                  disabled={busy || !!draft.assigned}
+                  onClick={() => {
+                    if (
+                      confirm(
+                        `Retire ${draft.name}? Reassign all accounts first. Role history remains available.`
                       )
-                        void save("retire");
-                    }}
-                  >
-                    Retire role
-                  </button>
-                )}
-              <button
-                type="button"
-                className="outline"
-                disabled={busy}
-                onClick={() => setDraft(null)}
-              >
+                    )
+                      void save("retire");
+                  }}
+                >
+                  Retire role
+                </button>
+              )}
+              <button type="button" className="outline" disabled={busy} onClick={() => setDraft(null)}>
                 Close role editor
               </button>
             </div>
             {!!draft.assigned && (
               <p>
-                {draft.assigned} accounts use this role, including any disabled
-                accounts. Reassign them before retirement.
+                {draft.assigned} accounts use this role, including any disabled accounts. Reassign them before
+                retirement.
               </p>
             )}
           </form>
@@ -343,8 +316,7 @@ export default function Permissions(_props: {
         <section className="panel">
           <h2>Recent role changes</h2>
           <p>
-            Changes apply on subsequent requests. Existing account locations and
-            completed work are preserved.
+            Changes apply on subsequent requests. Existing account locations and completed work are preserved.
           </p>
           {!data.audit.length && <p>No role changes recorded yet.</p>}
           {data.audit.map((a: any) => (

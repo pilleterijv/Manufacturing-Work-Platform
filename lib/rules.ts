@@ -81,9 +81,7 @@ export const standardSchema = z
   .object({
     kind: z.enum(["run", "audit"]).default("run"),
     workflow: z.enum(["process", "leader", "changeover"]).default("process"),
-    handoffProfile: z
-      .enum(["generic", "compressing", "blending", "weigh-room", "coating"])
-      .optional(),
+    handoffProfile: z.enum(["generic", "compressing", "blending", "weigh-room", "coating"]).optional(),
     assigneeIds: z.array(z.string().uuid()).max(1000).default([]),
     title: z.string().min(1).max(150),
     equipmentId: z.string(),
@@ -112,7 +110,7 @@ export const cyclesSchema = z
       element: z.string().min(1).max(150),
       seconds: z.number().positive().max(86400),
       at: z.iso.datetime(),
-    }),
+    })
   )
   .min(1)
   .max(10000);
@@ -124,14 +122,11 @@ export function stats(values: number[]) {
   return {
     count: n,
     average: mean,
-    median:
-      n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2,
+    median: n % 2 ? sorted[(n - 1) / 2] : (sorted[n / 2 - 1] + sorted[n / 2]) / 2,
     min: sorted[0],
     max: sorted[n - 1],
     range: sorted[n - 1] - sorted[0],
-    standardDeviation: Math.sqrt(
-      values.reduce((s, x) => s + (x - mean) ** 2, 0) / n,
-    ),
+    standardDeviation: Math.sqrt(values.reduce((s, x) => s + (x - mean) ** 2, 0) / n),
   };
 }
 export function videoUrl(input: string) {
@@ -145,12 +140,8 @@ export function videoUrl(input: string) {
         ? u.searchParams.get("v")
         : (u.pathname.match(/^\/shorts\/([\w-]{11})$/)?.[1] ?? null);
   if (u.hostname === "youtu.be") id = u.pathname.slice(1);
-  if (id && /^[\w-]{11}$/.test(id))
-    return `https://www.youtube-nocookie.com/embed/${id}`;
-  if (
-    ["vimeo.com", "www.vimeo.com"].includes(u.hostname) &&
-    /^\/\d{1,15}$/.test(u.pathname)
-  )
+  if (id && /^[\w-]{11}$/.test(id)) return `https://www.youtube-nocookie.com/embed/${id}`;
+  if (["vimeo.com", "www.vimeo.com"].includes(u.hostname) && /^\/\d{1,15}$/.test(u.pathname))
     return `https://player.vimeo.com/video${u.pathname}`;
   throw Error("Use an HTTPS YouTube or Vimeo video link");
 }

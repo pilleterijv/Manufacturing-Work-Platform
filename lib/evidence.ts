@@ -10,33 +10,20 @@ export async function ownEvidence(
   userId: string,
   media: Evidence[],
   retained: unknown = [],
-  tx: Prisma.TransactionClient = db,
+  tx: Prisma.TransactionClient = db
 ) {
   const old = Array.isArray(retained) ? retained : [];
   for (const m of media) {
-    if (
-      old.some(
-        (x) => x && typeof x === "object" && x.id === m.id && x.kind === m.kind,
-      )
-    )
-      continue;
+    if (old.some((x) => x && typeof x === "object" && x.id === m.id && x.kind === m.kind)) continue;
     const found =
       m.kind === "photo"
         ? await tx.photo.findFirst({ where: { id: m.id, userId } })
         : await tx.guideMedia.findFirst({ where: { id: m.id, userId } });
     if (!found)
-      throw new HttpError(
-        403,
-        "Evidence must be uploaded by you or already attached to this record",
-      );
+      throw new HttpError(403, "Evidence must be uploaded by you or already attached to this record");
   }
 }
-export async function canReadEvidence(
-  u: ScopedUser,
-  id: string,
-  kind: "photo" | "video",
-  ownerId: string,
-) {
+export async function canReadEvidence(u: ScopedUser, id: string, kind: "photo" | "video", ownerId: string) {
   const ids = await equipmentIds(u),
     g = await grants(u),
     part = JSON.stringify([{ id, kind }]);
@@ -112,9 +99,7 @@ export async function canReadEvidence(
   )
     return true;
   if (g.includes("fiveS") || g.includes("history")) {
-    const areas = (await db.location.findMany()).filter((area) =>
-      allowedArea(u, area),
-    );
+    const areas = (await db.location.findMany()).filter((area) => allowedArea(u, area));
     if (
       await db.fiveSAudit.findFirst({
         where: {

@@ -15,17 +15,8 @@ export async function POST(req: Request) {
       })
       .parse(await readJsonBody(req, 4 * 1024 * 1024));
     const feed = await db.externalFeed.findUnique({ where: { id: b.feedId } });
-    if (!feed || feed.sourceId !== source.id)
-      throw new HttpError(403, "Feed does not belong to this source");
-    return Response.json(
-      await ingestExternalRows(
-        feed.id,
-        b.rows,
-        source.tokenHash,
-        undefined,
-        b.sequence,
-      ),
-    );
+    if (!feed || feed.sourceId !== source.id) throw new HttpError(403, "Feed does not belong to this source");
+    return Response.json(await ingestExternalRows(feed.id, b.rows, source.tokenHash, undefined, b.sequence));
   } catch (e) {
     return failure(e);
   }

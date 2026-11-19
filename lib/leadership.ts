@@ -9,12 +9,7 @@ import {
 import { Temporal } from "@js-temporal/polyfill";
 import { Prisma } from "@prisma/client";
 import { db } from "./db";
-import {
-  dateSchema,
-  ShiftConfig,
-  splitDowntime,
-  localToday,
-} from "./operations-rules";
+import { dateSchema, ShiftConfig, splitDowntime, localToday } from "./operations-rules";
 import { HttpError } from "./security";
 import { paged } from "./paged";
 
@@ -36,10 +31,7 @@ type CycleStats = {
   range: number | null;
   standardDeviation: number | null;
 };
-export async function leadershipReport(
-  params: URLSearchParams,
-  user: ScopedUser,
-) {
+export async function leadershipReport(params: URLSearchParams, user: ScopedUser) {
   const ids = await equipmentIds(user);
   const { person, search } = readFilters("http://localhost/?" + params);
   const assignmentIds = await assignedEquipmentIds(ids, person);
@@ -63,11 +55,7 @@ export async function leadershipReport(
       ...(person
         ? [
             {
-              OR: [
-                { ownerId: person },
-                { reviewerId: person },
-                { actions: { some: { ownerId: person } } },
-              ],
+              OR: [{ ownerId: person }, { reviewerId: person }, { actions: { some: { ownerId: person } } }],
             },
           ]
         : []),
@@ -89,23 +77,15 @@ export async function leadershipReport(
   const config = setting.value as ShiftConfig;
   const today = localToday(config.timezone);
   const from = dateSchema.parse(
-    params.get("from") ??
-      Temporal.PlainDate.from(today).subtract({ days: 29 }).toString(),
+    params.get("from") ?? Temporal.PlainDate.from(today).subtract({ days: 29 }).toString()
   );
   const to = dateSchema.parse(params.get("to") ?? today);
   const first = Temporal.PlainDate.from(from),
     last = Temporal.PlainDate.from(to);
-  if (
-    Temporal.PlainDate.compare(first, last) > 0 ||
-    first.until(last).days > 365
-  )
+  if (Temporal.PlainDate.compare(first, last) > 0 || first.until(last).days > 365)
     throw new HttpError(400, "Choose a reporting range of 1–366 days");
-  const start = new Date(
-    first.toZonedDateTime(config.timezone).epochMilliseconds,
-  );
-  const end = new Date(
-    last.add({ days: 1 }).toZonedDateTime(config.timezone).epochMilliseconds,
-  );
+  const start = new Date(first.toZonedDateTime(config.timezone).epochMilliseconds);
+  const end = new Date(last.add({ days: 1 }).toZonedDateTime(config.timezone).epochMilliseconds);
   const now = new Date();
   const department = params.get("department") ?? "";
   if (department.length > 100) throw new HttpError(400, "Invalid department");
@@ -151,21 +131,15 @@ export async function leadershipReport(
       percentile_cont(0.5) WITHIN GROUP (ORDER BY seconds) AS median,
       min(seconds) AS min, max(seconds) AS max, max(seconds)-min(seconds) AS range,
       stddev_pop(seconds) AS "standardDeviation" FROM observations`),
-    db.$queryRaw<
-      { status: string; total: number; overdue: number; created: number }[]
-    >(Prisma.sql`
+    db.$queryRaw<{ status: string; total: number; overdue: number; created: number }[]>(Prisma.sql`
       SELECT status, count(*)::int AS total,
       (count(*) FILTER (WHERE "dueDate" < ${today}))::int AS overdue,
       (count(*) FILTER (WHERE "createdAt" >= ${start} AND "createdAt" < ${end}))::int AS created
       FROM "Idea" ${ideaScope} GROUP BY status`),
-    db.$queryRaw<
-      { kind: string; total: number }[]
-    >(Prisma.sql`SELECT c.kind,count(*)::int AS total
+    db.$queryRaw<{ kind: string; total: number }[]>(Prisma.sql`SELECT c.kind,count(*)::int AS total
       FROM "Content" c LEFT JOIN "Equipment" e ON e.id=c."equipmentId" WHERE c.active AND (c."equipmentId" IS NULL OR ${equipmentSql(assignmentIds, Prisma.sql`c."equipmentId"`)})
       ${department ? Prisma.sql`AND (c."equipmentId" IS NULL OR e.department=${department})` : Prisma.empty} GROUP BY c.kind`),
-    db.$queryRaw<
-      { total: number }[]
-    >(Prisma.sql`SELECT count(*)::int AS total FROM (
+    db.$queryRaw<{ total: number }[]>(Prisma.sql`SELECT count(*)::int AS total FROM (
       SELECT DISTINCT ON (family) "equipmentId" FROM "Standard" WHERE NOT archived ORDER BY family, revision DESC
     ) s JOIN "Equipment" e ON e.id=s."equipmentId"
     WHERE ${equipmentSql(assignmentIds, Prisma.sql`e.id`)} ${department ? Prisma.sql`AND e.department=${department}` : Prisma.empty}`),
@@ -177,9 +151,7 @@ export async function leadershipReport(
     }),
     department
       ? Promise.resolve(null)
-      : visiblePeople(user, ids).then(
-          (p) => p.filter((p) => !person || p.id === person).length,
-        ),
+      : visiblePeople(user, ids).then((p) => p.filter((p) => !person || p.id === person).length),
     db.equipment.findMany({
       where: { id: { in: ids } },
       select: { department: true },
@@ -189,9 +161,7 @@ export async function leadershipReport(
       by: ["method", "status"],
       where: {
         ...problemFilter,
-        ...(department
-          ? { equipmentSnapshot: { path: ["department"], equals: department } }
-          : {}),
+        ...(department ? { equipmentSnapshot: { path: ["department"], equals: department } } : {}),
       },
       _count: true,
     }),
@@ -211,10 +181,7 @@ export async function leadershipReport(
   ]);
   // Scan events in bounded batches; aggregate slices immediately instead of
   // constructing a second full array containing every shift of every event.
-  const shifts = new Map<
-    string,
-    { shift: string; shiftDate: string; timezone: string; seconds: number }
-  >();
+  const shifts = new Map<string, { shift: string; shiftDate: string; timezone: string; seconds: number }>();
   const reasons = new Map<string, number>();
   let downtimeSeconds = 0,
     downtimeEvents = 0,
@@ -224,9 +191,7 @@ export async function leadershipReport(
       where: {
         ...permitted,
         AND: [
-          ...(person
-            ? [{ OR: [{ startedBy: person }, { stoppedBy: person }] }]
-            : []),
+          ...(person ? [{ OR: [{ startedBy: person }, { stoppedBy: person }] }] : []),
           ...(search
             ? [
                 {
@@ -245,9 +210,7 @@ export async function leadershipReport(
         ],
         startedAt: { lt: end },
         OR: [{ endedAt: null }, { endedAt: { gt: start } }],
-        ...(department
-          ? { equipmentSnapshot: { path: ["department"], equals: department } }
-          : {}),
+        ...(department ? { equipmentSnapshot: { path: ["department"], equals: department } } : {}),
       },
       select: {
         id: true,
@@ -259,7 +222,7 @@ export async function leadershipReport(
       orderBy: { id: "asc" },
       take: 100,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-    }),
+    })
   );
   for await (const d of events) {
     if (!d.endedAt) activeDowntime++;
@@ -303,28 +266,18 @@ export async function leadershipReport(
       downtimeEvents,
       activeDowntime,
       ideasCreated: ideas.reduce((s, i) => s + i.created, 0),
-      openIdeas: ideas
-        .filter((i) => i.status !== "Completed")
-        .reduce((s, i) => s + i.total, 0),
-      overdueIdeas: ideas
-        .filter((i) => i.status !== "Completed")
-        .reduce((s, i) => s + i.overdue, 0),
+      openIdeas: ideas.filter((i) => i.status !== "Completed").reduce((s, i) => s + i.total, 0),
+      overdueIdeas: ideas.filter((i) => i.status !== "Completed").reduce((s, i) => s + i.overdue, 0),
       completedIdeas: ideas.find((i) => i.status === "Completed")?.total ?? 0,
       training: libraryRows.find((r) => r.kind === "video")?.total ?? 0,
       guides: libraryRows.find((r) => r.kind === "guide")?.total ?? 0,
       activePeople: people,
-      openProblems: problemGroups
-        .filter((p) => p.status !== "Closed")
-        .reduce((n, p) => n + p._count, 0),
-      closedProblems: problemGroups
-        .filter((p) => p.status === "Closed")
-        .reduce((n, p) => n + p._count, 0),
+      openProblems: problemGroups.filter((p) => p.status !== "Closed").reduce((n, p) => n + p._count, 0),
+      closedProblems: problemGroups.filter((p) => p.status === "Closed").reduce((n, p) => n + p._count, 0),
       openProblemActions: problemActions,
     },
     shifts: [...shifts.values()].sort(
-      (a, b) =>
-        b.shiftDate.localeCompare(a.shiftDate) ||
-        a.shift.localeCompare(b.shift),
+      (a, b) => b.shiftDate.localeCompare(a.shiftDate) || a.shift.localeCompare(b.shift)
     ),
     reasons: [...reasons]
       .map(([reason, seconds]) => ({ reason, seconds }))
@@ -333,7 +286,7 @@ export async function leadershipReport(
       ["Open", "Piloting", "Validation", "Completed"].map((status) => [
         status,
         ideas.find((i) => i.status === status)?.total ?? 0,
-      ]),
+      ])
     ),
   };
 }

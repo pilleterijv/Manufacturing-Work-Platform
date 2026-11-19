@@ -35,18 +35,15 @@ async function run(file) {
   await new Promise((resolve, reject) => {
     const p = spawn(process.execPath, [file], { env, stdio: "inherit" });
     p.on("error", reject);
-    p.on("exit", (code) =>
-      code === 0 ? resolve() : reject(Error(file + " failed: " + code)),
-    );
+    p.on("exit", (code) => (code === 0 ? resolve() : reject(Error(file + " failed: " + code))));
   });
 }
 (async () => {
   await parent.query(`CREATE DATABASE "${name}"`);
-  const setup = spawnSync(
-    process.execPath,
-    ["node_modules/tsx/dist/cli.mjs", "scripts/setup.ts"],
-    { env, encoding: "utf8" },
-  );
+  const setup = spawnSync(process.execPath, ["node_modules/tsx/dist/cli.mjs", "scripts/setup.ts"], {
+    env,
+    encoding: "utf8",
+  });
   assert.equal(setup.status, 0, "Temporary setup failed: " + setup.stderr);
   server = spawn(process.execPath, [".floorwork/runtime/server.js"], {
     env,

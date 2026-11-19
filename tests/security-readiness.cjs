@@ -42,7 +42,7 @@ async function main() {
             equipmentIds: [eq.id],
           },
         },
-      }),
+      })
     );
   }
   browser = await chromium.launch({
@@ -80,11 +80,7 @@ async function main() {
     "/api/external-data",
     "/api/guide-media/" + randomUUID(),
   ])
-    assert.equal(
-      (await anonymous.request.get(origin + route)).status(),
-      401,
-      route,
-    );
+    assert.equal((await anonymous.request.get(origin + route)).status(), 401, route);
   const bytes = Buffer.alloc(2 * 1024 * 1024);
   bytes.write("ftyp", 4, "ascii");
   bytes.write("range-test", 500, "ascii");
@@ -105,8 +101,7 @@ async function main() {
   assert.equal(uploaded.status(), 200, await uploaded.text());
   const id = (await uploaded.json()).id;
   media.push(id);
-  const marker =
-    "Security " + suffix + ' <img src=x onerror="globalThis.pwned=1">';
+  const marker = "Security " + suffix + ' <img src=x onerror="globalThis.pwned=1">';
   const param = {
     id: randomUUID(),
     name: '<script>alert("setting")</script>',
@@ -159,10 +154,7 @@ async function main() {
     assert(r.headers()["cache-control"].includes("no-store"));
     const start = range === "bytes=-10" ? bytes.length - 10 : 500;
     const end = range === "bytes=500-509" ? 509 : bytes.length - 1;
-    assert.equal(
-      r.headers()["content-range"],
-      `bytes ${start}-${end}/${bytes.length}`,
-    );
+    assert.equal(r.headers()["content-range"], `bytes ${start}-${end}/${bytes.length}`);
     assert.equal(r.headers()["accept-ranges"], "bytes");
     assert.deepEqual(await r.body(), bytes.subarray(start, end + 1));
     // Next.js 16.4.6 strips application Content-Length and lets the HTTP
@@ -177,18 +169,13 @@ async function main() {
         headers: { Range: "bytes=999999999999999999-" },
       })
     ).status(),
-    416,
+    416
   );
-  assert.equal(
-    (await other.request.get(origin + "/api/guide-media/" + id)).status(),
-    403,
-  );
+  assert.equal((await other.request.get(origin + "/api/guide-media/" + id)).status(), 403);
   const page = await manager.newPage();
   await page.goto(origin);
   await expandTools(page);
-  await page
-    .getByRole("button", { name: "≋ Centerlines", exact: true })
-    .click();
+  await page.getByRole("button", { name: "≋ Centerlines", exact: true }).click();
   const centerlineRow = page
     .getByRole("row")
     .filter({
@@ -198,22 +185,10 @@ async function main() {
   await centerlineRow.waitFor();
   assert.equal(await page.locator('img[src="x"]').count(), 0);
   assert.equal(await page.evaluate(() => globalThis.pwned), undefined);
-  await page
-    .getByRole("button", { name: "Audit centerline", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Audit centerline", exact: true }).click();
   await page.getByRole("group", { name: param.name, exact: true }).waitFor();
-  assert.equal(
-    await page
-      .locator("script")
-      .filter({ hasText: 'alert("setting")' })
-      .count(),
-    0,
-  );
-  assert(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  );
+  assert.equal(await page.locator("script").filter({ hasText: 'alert("setting")' }).count(), 0);
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await fs.mkdir("docs/screenshots/security-readiness", { recursive: true });
   await page.screenshot({
     path: "docs/screenshots/security-readiness/tablet-safe-content.png",
@@ -235,10 +210,9 @@ async function main() {
   assert.equal(manifest.status(), 200);
   const m = await manifest.json();
   assert.equal(m.display, "standalone");
-  for (const icon of m.icons)
-    assert.equal((await manager.request.get(origin + icon.src)).status(), 200);
+  for (const icon of m.icons) assert.equal((await manager.request.get(origin + icon.src)).status(), 200);
   console.log(
-    "PASS: protected API reads, raw video upload CSRF checks, bounded range playback and media scope, text-context XSS encoding, tablet layout, password-change throttling, safe errors and PWA manifest/icons.",
+    "PASS: protected API reads, raw video upload CSRF checks, bounded range playback and media scope, text-context XSS encoding, tablet layout, password-change throttling, safe errors and PWA manifest/icons."
   );
 }
 main()
@@ -252,9 +226,10 @@ main()
     await db.record.deleteMany({ where: { userId: { in: ids } } });
     await db.centerline.deleteMany({ where: { createdBy: { in: ids } } });
     await db.guideMedia.deleteMany({ where: { id: { in: media } } });
-    for (const id of media)
-      await fs.rm("uploads/" + id + ".video", { force: true });
+    for (const id of media) await fs.rm("uploads/" + id + ".video", { force: true });
     await db.session.deleteMany({ where: { userId: { in: ids } } });
+    await db.notification.deleteMany({ where: { userId: { in: ids }, kind: "assignment" } });
+    await db.assignmentDelivery.deleteMany({ where: { userId: { in: ids } } });
     await db.user.deleteMany({ where: { id: { in: ids } } });
     await db.equipment.deleteMany({
       where: { id: { in: equipment.map((x) => x.id) } },

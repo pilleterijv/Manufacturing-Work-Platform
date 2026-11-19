@@ -18,15 +18,9 @@ export async function GET(req: Request) {
         .parse(p.get("q") || ""),
       settings = searchSettings(section),
       g = await grants(u);
-    if (
-      !canOpenSection(
-        { role: u.role, grants: g, adminPrivileges: await adminPrivileges(u) },
-        section,
-      )
-    )
+    if (!canOpenSection({ role: u.role, grants: g, adminPrivileges: await adminPrivileges(u) }, section))
       throw new HttpError(403, "This section is not permitted");
-    if (!settings)
-      throw new HttpError(400, "This section has no record search");
+    if (!settings) throw new HttpError(400, "This section has no record search");
     const ids = await equipmentIds(u),
       text = { contains: query, mode: "insensitive" as const },
       like = "%" + query.replace(/[\\%_]/g, "\\$&") + "%";
@@ -39,9 +33,7 @@ export async function GET(req: Request) {
                 ...(query
                   ? [
                       {
-                        OR: ["name", "plant", "department", "area", "line"].map(
-                          (k) => ({ [k]: text }),
-                        ),
+                        OR: ["name", "plant", "department", "area", "line"].map((k) => ({ [k]: text })),
                       },
                     ]
                   : []),
@@ -82,11 +74,7 @@ export async function GET(req: Request) {
             section === "Time studies"
               ? "study"
               : {
-                  in: [
-                    "run",
-                    "study",
-                    ...(g.includes("audits") ? ["audit"] : []),
-                  ],
+                  in: ["run", "study", ...(g.includes("audits") ? ["audit"] : [])],
                 },
           AND: [
             recordScope(ids),
@@ -119,10 +107,7 @@ export async function GET(req: Request) {
         const d = r.data as any;
         add(d.title || d.snapshot?.title || "");
       }
-    } else if (
-      section === "Preventive maintenance" ||
-      section === "TPM / CIL"
-    ) {
+    } else if (section === "Preventive maintenance" || section === "TPM / CIL") {
       const plans = await db.maintenancePlan.findMany({
         where: {
           equipmentId: { in: ids },
@@ -145,12 +130,8 @@ export async function GET(req: Request) {
         orderBy: { title: "asc" },
       });
       for (const r of rows) {
-        if (!query || r.title.toLowerCase().includes(query.toLowerCase()))
-          add(r.title);
-        if (
-          r.setup &&
-          (!query || r.setup.toLowerCase().includes(query.toLowerCase()))
-        )
+        if (!query || r.title.toLowerCase().includes(query.toLowerCase())) add(r.title);
+        if (r.setup && (!query || r.setup.toLowerCase().includes(query.toLowerCase())))
           add(r.setup, `${r.setup} · ${r.title}`, "Product / setup");
       }
     } else if (section === "5S audits") {
@@ -171,22 +152,12 @@ export async function GET(req: Request) {
         take: 35,
         orderBy: { updatedAt: "desc" },
       });
-      for (const r of rows)
-        add(
-          r.reference,
-          `${r.reference} · ${r.title}`,
-          `${r.method} investigation`,
-        );
+      for (const r of rows) add(r.reference, `${r.reference} · ${r.title}`, `${r.method} investigation`);
     } else if (section === "Defect reporting") {
       const rows = await db.defect.findMany({
         where: {
           equipmentId: { in: ids },
-          OR: [
-            { title: text },
-            { description: text },
-            { maintainxId: text },
-            { id: text },
-          ],
+          OR: [{ title: text }, { description: text }, { maintainxId: text }, { id: text }],
         },
         select: { id: true, title: true, maintainxId: true },
         take: 35,
@@ -195,11 +166,7 @@ export async function GET(req: Request) {
       for (const r of rows) {
         add(r.title);
         if (r.maintainxId && (!query || r.maintainxId.includes(query)))
-          add(
-            r.maintainxId,
-            `${r.maintainxId} · ${r.title}`,
-            "MaintainX work order",
-          );
+          add(r.maintainxId, `${r.maintainxId} · ${r.title}`, "MaintainX work order");
       }
     } else if (section === "Improvement ideas") {
       const rows = await db.idea.findMany({
@@ -220,10 +187,7 @@ export async function GET(req: Request) {
           OR: [{ equipmentId: null }, { equipmentId: { in: ids } }],
           AND: [
             {
-              OR: [
-                { title: text },
-                ...(section === "Troubleshooting" ? [{ body: text }] : []),
-              ],
+              OR: [{ title: text }, ...(section === "Troubleshooting" ? [{ body: text }] : [])],
             },
           ],
         },
@@ -249,9 +213,7 @@ export async function GET(req: Request) {
           where: { active: true },
           select: { id: true },
         });
-      const feedIds = feeds
-        .filter((f) => sources.some((s) => s.id === f.sourceId))
-        .map((f) => f.id);
+      const feedIds = feeds.filter((f) => sources.some((s) => s.id === f.sourceId)).map((f) => f.id);
       const rows = await db.externalRow.findMany({
         where: {
           feedId: { in: feedIds },
@@ -266,25 +228,14 @@ export async function GET(req: Request) {
     }
     // Suggestions describe fields this tab actually searches, rather than unrelated recent records.
     for (const e of equipment) {
-      add(
-        e.name,
-        [e.name, e.department, e.area, e.line].filter(Boolean).join(" · "),
-        "Machine",
-      );
+      add(e.name, [e.name, e.department, e.area, e.line].filter(Boolean).join(" · "), "Machine");
       for (const [kind, value] of [
         ["Department", e.department],
         ["Area", e.area],
         ["Line", e.line],
       ] as const)
-        if (
-          value &&
-          (!query || value.toLowerCase().includes(query.toLowerCase()))
-        )
-          add(
-            value,
-            [value, e.department, e.plant].filter(Boolean).join(" · "),
-            kind,
-          );
+        if (value && (!query || value.toLowerCase().includes(query.toLowerCase())))
+          add(value, [value, e.department, e.plant].filter(Boolean).join(" · "), kind);
     }
     for (const a of areas)
       for (const [kind, value] of [
@@ -292,19 +243,10 @@ export async function GET(req: Request) {
         ["Area", a.area],
         ["Line", a.line],
       ] as const)
-        if (
-          value &&
-          (!query || value.toLowerCase().includes(query.toLowerCase()))
-        )
-          add(
-            value,
-            [value, a.department, a.plant].filter(Boolean).join(" · "),
-            kind,
-          );
+        if (value && (!query || value.toLowerCase().includes(query.toLowerCase())))
+          add(value, [value, a.department, a.plant].filter(Boolean).join(" · "), kind);
     return Response.json({
-      options: [
-        ...new Map(candidates.map((c) => [c.kind + ":" + c.label, c])).values(),
-      ].slice(0, 100),
+      options: [...new Map(candidates.map((c) => [c.kind + ":" + c.label, c])).values()].slice(0, 100),
     });
   } catch (e) {
     return failure(e);

@@ -1,9 +1,6 @@
 "use client";
 import { sectionLabel } from "@/lib/navigation";
-import {
-  PublicAccessForms,
-  ResetPasswordForm,
-} from "./components/access-forms";
+import { PublicAccessForms, ResetPasswordForm } from "./components/access-forms";
 import { canOpenSection } from "@/lib/navigation";
 import { dashboardPreferences } from "@/lib/dashboard-preferences";
 import CompanyBrand from "./components/company-brand";
@@ -11,9 +8,7 @@ import FloorContext from "./components/floor-context";
 import ShiftHome from "./components/shift-home";
 import { useFloorSafety } from "./components/floor-safety";
 import { roleHome, type WorkflowTarget } from "@/lib/floor-navigation";
-import RefreshControl, {
-  SectionRefreshContext,
-} from "./components/refresh-control";
+import RefreshControl, { SectionRefreshContext } from "./components/refresh-control";
 import SectionDashboard from "./components/section-dashboard";
 import { hasSectionViews, hasSectionSearch } from "@/lib/section-views";
 import SectionFiltersBar from "./components/section-filters";
@@ -21,30 +16,16 @@ import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import type { User, Data } from "@/lib/workspace-types";
 import type { Capability } from "@/lib/rules";
-import {
-  api,
-  filterUrl,
-  getSectionFilters,
-  setSectionFilters,
-  type SectionFilters,
-} from "@/lib/client-api";
+import { api, filterUrl, getSectionFilters, setSectionFilters, type SectionFilters } from "@/lib/client-api";
 import { Field, Submit, HistoryPagingContext } from "./components/shared";
 import { emptyOperations, type OperationsData } from "@/lib/operations-types";
 const Assistant = dynamic(() => import("./components/sections/assistant"));
 const WorkQueue = dynamic(() => import("./components/sections/work-queue"));
 const Machines = dynamic(() => import("./components/sections/machines"));
-const DashboardSettings = dynamic(
-  () => import("./components/sections/dashboard-settings"),
-);
-const DepartmentAccounts = dynamic(
-  () => import("./components/sections/department-accounts"),
-);
-const LocationsEditor = dynamic(() =>
-  import("./components/location-picker").then((m) => m.LocationsEditor),
-);
-const PersonalDashboard = dynamic(
-  () => import("./components/sections/personal-dashboard"),
-);
+const DashboardSettings = dynamic(() => import("./components/sections/dashboard-settings"));
+const DepartmentAccounts = dynamic(() => import("./components/sections/department-accounts"));
+const LocationsEditor = dynamic(() => import("./components/location-picker").then((m) => m.LocationsEditor));
+const PersonalDashboard = dynamic(() => import("./components/sections/personal-dashboard"));
 const FiveS = dynamic(() => import("./components/sections/five-s"));
 const Defects = dynamic(() => import("./components/sections/defects"));
 const Centerlines = dynamic(() => import("./components/sections/centerlines"));
@@ -57,12 +38,8 @@ const Overview = dynamic(() => import("./components/sections/overview"), {
 const Problems = dynamic(() => import("./components/sections/problems"), {
   loading: () => <p className="muted">Loading problem solving…</p>,
 });
-const ShiftSchedules = dynamic(
-  () => import("./components/sections/shift-schedules"),
-);
-const Integrations = dynamic(
-  () => import("./components/sections/integrations"),
-);
+const ShiftSchedules = dynamic(() => import("./components/sections/shift-schedules"));
+const Integrations = dynamic(() => import("./components/sections/integrations"));
 const Work = dynamic(() => import("./components/sections/work"), {
   loading: () => <p className="muted">Loading section…</p>,
 });
@@ -84,22 +61,18 @@ const Permissions = dynamic(() => import("./components/sections/permissions"), {
 const Accounts = dynamic(() => import("./components/sections/accounts"), {
   loading: () => <p className="muted">Loading section…</p>,
 });
-const Downtime = dynamic(
-  () => import("./components/operations").then((m) => m.Downtime),
-  { loading: () => <p className="muted">Loading section…</p> },
-);
-const ImprovementIdeas = dynamic(
-  () => import("./components/operations").then((m) => m.ImprovementIdeas),
-  { loading: () => <p className="muted">Loading section…</p> },
-);
-const Notifications = dynamic(
-  () => import("./components/operations").then((m) => m.Notifications),
-  { loading: () => <p className="muted">Loading section…</p> },
-);
-const Leadership = dynamic(
-  () => import("./components/operations").then((m) => m.Leadership),
-  { loading: () => <p className="muted">Loading section…</p> },
-);
+const Downtime = dynamic(() => import("./components/operations").then((m) => m.Downtime), {
+  loading: () => <p className="muted">Loading section…</p>,
+});
+const ImprovementIdeas = dynamic(() => import("./components/operations").then((m) => m.ImprovementIdeas), {
+  loading: () => <p className="muted">Loading section…</p>,
+});
+const Notifications = dynamic(() => import("./components/operations").then((m) => m.Notifications), {
+  loading: () => <p className="muted">Loading section…</p>,
+});
+const Leadership = dynamic(() => import("./components/operations").then((m) => m.Leadership), {
+  loading: () => <p className="muted">Loading section…</p>,
+});
 
 const Submissions = dynamic(() => import("./components/sections/submissions"), {
   loading: () => <p>Loading submission history…</p>,
@@ -119,14 +92,9 @@ const platformViews: Record<string, string> = {
   Permissions: "policies",
   Analytics: "analytics",
 };
-const platformUrl = (tab: string) =>
-  "/api/platform?view=" + (platformViews[tab] ?? "equipment");
+const platformUrl = (tab: string) => "/api/platform?view=" + (platformViews[tab] ?? "equipment");
 const operationsView = (tab: string) =>
-  tab === "Downtime"
-    ? "downtime"
-    : tab === "Improvement ideas"
-      ? "ideas"
-      : "summary";
+  tab === "Downtime" ? "downtime" : tab === "Improvement ideas" ? "ideas" : "summary";
 const empty: Data = {
   equipment: [],
   standards: [],
@@ -164,9 +132,7 @@ export default function Home() {
     [opsDepartment, setOpsDepartment] = useState(""),
     [opsLoading, setOpsLoading] = useState(false),
     [loadingMore, setLoadingMore] = useState(false);
-  const [sectionMode, setSectionMode] = useState<"dashboard" | "detail">(
-      "detail",
-    ),
+  const [sectionMode, setSectionMode] = useState<"dashboard" | "detail">("detail"),
     [expanded, setExpanded] = useState<Record<string, boolean>>({}),
     [refreshRevision, setRefreshRevision] = useState(0),
     [searchRevision, setSearchRevision] = useState(0);
@@ -178,8 +144,7 @@ export default function Home() {
     contextOwner.current = user?.id ?? null;
     contextEquipment.current = [];
   }
-  if (platformReady && !contextEquipment.current.length)
-    contextEquipment.current = data.equipment;
+  if (platformReady && !contextEquipment.current.length) contextEquipment.current = data.equipment;
   useEffect(() => {
     if (!user || user.mustChange) return;
     const c = new AbortController();
@@ -219,13 +184,7 @@ export default function Home() {
     if (currentView.current !== name) safety.clear();
     if (
       user &&
-      ![
-        "Overview",
-        "Work queue",
-        "Machines",
-        "Notifications",
-        ...roleHome(user).primary,
-      ].includes(name)
+      !["Overview", "Work queue", "Machines", "Notifications", ...roleHome(user).primary].includes(name)
     )
       setMoreTools(true);
     if (currentView.current !== name) {
@@ -292,12 +251,8 @@ export default function Home() {
     if (account.user && !account.user.mustChange) {
       if (initialHome.current !== account.user.id) {
         initialHome.current = account.user.id;
-        const preferred = dashboardPreferences(
-          account.user.dashboardPreferences,
-        ).home;
-        requestedTab = canOpenSection(account.user, preferred)
-          ? preferred
-          : "Overview";
+        const preferred = dashboardPreferences(account.user.dashboardPreferences).home;
+        requestedTab = canOpenSection(account.user, preferred) ? preferred : "Overview";
         currentView.current = requestedTab;
         setTab(requestedTab);
       }
@@ -308,7 +263,7 @@ export default function Home() {
             new URLSearchParams({
               view: operationsView(requestedTab),
               department: opsDepartment,
-            }),
+            })
         ),
       ]);
       if (
@@ -323,9 +278,7 @@ export default function Home() {
       setPlatformTab(requestedTab);
       setPlatformReady(true);
       setOperations({ ...emptyOperations, ...ops });
-      setOperationsReady(
-        ["Downtime", "Improvement ideas"].includes(requestedTab),
-      );
+      setOperationsReady(["Downtime", "Improvement ideas"].includes(requestedTab));
     } else {
       initialHome.current = null;
       setData(empty);
@@ -352,7 +305,7 @@ export default function Home() {
         await refresh();
       } catch {
         setNotice(
-          "Saved to the database. The list could not refresh; refresh it before making another entry.",
+          "Saved to the database. The list could not refresh; refresh it before making another entry."
         );
       }
       return true;
@@ -373,8 +326,7 @@ export default function Home() {
   }, [tab, opsDepartment, filters]);
   async function loadMoreOperations() {
     const generation = opsGeneration.current;
-    const page =
-      tab === "Downtime" ? operations.downtimePage : operations.ideasPage;
+    const page = tab === "Downtime" ? operations.downtimePage : operations.ideasPage;
     if (!page?.hasMore || opsLoading) return;
     setOpsLoading(true);
     try {
@@ -384,21 +336,13 @@ export default function Home() {
             view: operationsView(tab),
             department: opsDepartment,
             cursor: page.cursor ?? "",
-          }),
+          })
       );
       if (generation !== opsGeneration.current) return;
       setOperations((prev) => ({
         ...prev,
-        downtime: [
-          ...new Map(
-            [...prev.downtime, ...next.downtime].map((d) => [d.id, d]),
-          ).values(),
-        ],
-        ideas: [
-          ...new Map(
-            [...prev.ideas, ...next.ideas].map((i) => [i.id, i]),
-          ).values(),
-        ],
+        downtime: [...new Map([...prev.downtime, ...next.downtime].map((d) => [d.id, d])).values()],
+        ideas: [...new Map([...prev.ideas, ...next.ideas].map((i) => [i.id, i])).values()],
         downtimePage: next.downtimePage,
         ideasPage: next.ideasPage,
       }));
@@ -417,16 +361,12 @@ export default function Home() {
         "/api/platform?view=records&kind=" +
           encodeURIComponent(platformViews[tab] ?? "") +
           "&cursor=" +
-          encodeURIComponent(data.page.cursor ?? ""),
+          encodeURIComponent(data.page.cursor ?? "")
       );
       if (generation !== historyGeneration.current) return;
       setData((prev) => ({
         ...prev,
-        records: [
-          ...new Map(
-            [...prev.records, ...next.records].map((r) => [r.id, r]),
-          ).values(),
-        ],
+        records: [...new Map([...prev.records, ...next.records].map((r) => [r.id, r])).values()],
         page: next.page,
       }));
     } catch (e) {
@@ -468,7 +408,7 @@ export default function Home() {
                 department: opsDepartment,
               }),
             undefined,
-            controller.signal,
+            controller.signal
           );
         if (controller.signal.aborted) return;
         setOperations((prev) => ({
@@ -482,11 +422,7 @@ export default function Home() {
                 downtime: [
                   ...next.active,
                   ...prev.downtime.filter(
-                    (d) =>
-                      d.endedAt &&
-                      next.equipment.some(
-                        (e: { id: string }) => e.id === d.equipmentId,
-                      ),
+                    (d) => d.endedAt && next.equipment.some((e: { id: string }) => e.id === d.equipmentId)
                   ),
                 ],
               }
@@ -521,7 +457,7 @@ export default function Home() {
             department: opsDepartment,
           }),
         undefined,
-        controller.signal,
+        controller.signal
       )
         .then((next) => {
           if (!controller.signal.aborted) {
@@ -558,15 +494,7 @@ export default function Home() {
         if (!controller.signal.aborted) setError(e.message);
       });
     return () => controller.abort();
-  }, [
-    loaded,
-    tab,
-    user?.id,
-    user?.mustChange,
-    platformReady,
-    platformTab,
-    filters,
-  ]);
+  }, [loaded, tab, user?.id, user?.mustChange, platformReady, platformTab, filters]);
   const sectionReady = platformReady && platformTab === tab;
   if (resetMode) return <ResetPasswordForm />;
   if (!loaded) return <main className="loading">Opening Floorwork…</main>;
@@ -624,7 +552,7 @@ export default function Home() {
                       username: f.get("username"),
                       password: f.get("password"),
                       remember: f.get("remember") === "on",
-                    },
+                    }
               );
             }}
           >
@@ -650,9 +578,7 @@ export default function Home() {
                 />
               </Field>
             )}
-            <Field
-              label={user ? "New password · 12–128 characters" : "Password"}
-            >
+            <Field label={user ? "New password · 12–128 characters" : "Password"}>
               <input
                 id={user ? "temporary-password-new" : "sign-in-password"}
                 name="password"
@@ -718,35 +644,24 @@ export default function Home() {
   ];
   if (user.role === "Admin") nav.push(["Integrations", null, "⇄"]);
   const descriptions: Record<string, string> = {
-    Centerlines:
-      "Define machine settings and audit readings against approved limits.",
-    "5S audits":
-      "Audit area organization, cleanliness and sustained standards.",
-    "TPM / CIL":
-      "Machine cleaning, inspection and lubrication checks with evidence.",
-    "Defect reporting":
-      "Capture abnormalities and submit mapped work orders to MaintainX.",
-    "Problem solving":
-      "Structured 2D, 4D and 8D investigations, actions and effectiveness checks.",
-    Downtime:
-      "Track stoppages, understand shift losses, and keep the floor moving.",
-    "Leadership dashboard":
-      "One view across operations, with a department-level lens.",
-    "Improvement ideas":
-      "Turn floor-level observations into owned, validated improvements.",
+    Centerlines: "Define machine settings and audit readings against approved limits.",
+    "5S audits": "Audit area organization, cleanliness and sustained standards.",
+    "TPM / CIL": "Machine cleaning, inspection and lubrication checks with evidence.",
+    "Defect reporting": "Capture abnormalities and submit mapped work orders to MaintainX.",
+    "Problem solving": "Structured 2D, 4D and 8D investigations, actions and effectiveness checks.",
+    Downtime: "Track stoppages, understand shift losses, and keep the floor moving.",
+    "Leadership dashboard": "One view across operations, with a department-level lens.",
+    "Improvement ideas": "Turn floor-level observations into owned, validated improvements.",
     Notifications: "Your assignments and messages, in one place.",
     Overview: "A clear view of the work that moves your floor forward.",
-    "Standard work":
-      "Follow each step. Verify the result. Capture the evidence.",
+    "Standard work": "Follow each step. Verify the result. Capture the evidence.",
     "Time studies": "Observe the process and turn raw timing into insight.",
-    "DL/TL Standard Work":
-      "Complete assigned leader shift tasks, room checks and pass-down notes.",
+    "DL/TL Standard Work": "Complete assigned leader shift tasks, room checks and pass-down notes.",
     Training: "Practical know-how, ready when your team needs it.",
     Troubleshooting: "Find the guidance to get your process back on track.",
     Analytics: "Understand variation, spot failures, and track performance.",
     Manage: "Build equipment, standards, and guides for your team.",
-    "Shift requirements":
-      "Schedule standard work and switch manager alert channels on or off.",
+    "Shift requirements": "Schedule standard work and switch manager alert channels on or off.",
     Integrations: "Map factory systems and monitor automated machine events.",
     Accounts: "Individual access, with accountability built in.",
     Permissions: "Choose what each role can do across the platform.",
@@ -795,9 +710,7 @@ export default function Home() {
                     className="nav-group"
                     hidden={
                       navSearch
-                        ? !`${sectionLabel(name)} ${name}`
-                            .toLowerCase()
-                            .includes(navSearch.toLowerCase())
+                        ? !`${sectionLabel(name)} ${name}`.toLowerCase().includes(navSearch.toLowerCase())
                         : !moreTools &&
                           name !== tab &&
                           ![
@@ -811,9 +724,7 @@ export default function Home() {
                     }
                   >
                     <button
-                      aria-expanded={
-                        hasSectionViews(name) ? !!expanded[name] : undefined
-                      }
+                      aria-expanded={hasSectionViews(name) ? !!expanded[name] : undefined}
                       className={tab === name ? "nav-item active" : "nav-item"}
                       onClick={() => {
                         if (!setTab(name)) return;
@@ -830,15 +741,11 @@ export default function Home() {
                     >
                       <span>{icon}</span>
                       {sectionLabel(name)}
-                      {name === "Notifications" &&
-                        operations.notifications.some((n) => !n.readAt) && (
-                          <span className="notification-count">
-                            {
-                              operations.notifications.filter((n) => !n.readAt)
-                                .length
-                            }
-                          </span>
-                        )}
+                      {name === "Notifications" && operations.notifications.some((n) => !n.readAt) && (
+                        <span className="notification-count">
+                          {operations.notifications.filter((n) => !n.readAt).length}
+                        </span>
+                      )}
                       {hasSectionViews(name) ? (
                         <b aria-hidden="true">{expanded[name] ? "⌃" : "⌄"}</b>
                       ) : (
@@ -846,16 +753,9 @@ export default function Home() {
                       )}
                     </button>
                     {hasSectionViews(name) && expanded[name] && (
-                      <div
-                        className="nav-submenu"
-                        aria-label={`${sectionLabel(name)} views`}
-                      >
+                      <div className="nav-submenu" aria-label={`${sectionLabel(name)} views`}>
                         <button
-                          className={
-                            tab === name && sectionMode === "dashboard"
-                              ? "active"
-                              : ""
-                          }
+                          className={tab === name && sectionMode === "dashboard" ? "active" : ""}
                           aria-label={`${sectionLabel(name)} dashboard`}
                           onClick={() => {
                             if (!setTab(name)) return;
@@ -866,11 +766,7 @@ export default function Home() {
                           ▥ Dashboard
                         </button>
                         <button
-                          className={
-                            tab === name && sectionMode === "detail"
-                              ? "active"
-                              : ""
-                          }
+                          className={tab === name && sectionMode === "detail" ? "active" : ""}
                           aria-label={`${sectionLabel(name)} in detail`}
                           onClick={() => {
                             if (!setTab(name)) return;
@@ -897,17 +793,12 @@ export default function Home() {
               </button>
             </nav>
             <div className="sidebar-bottom">
-              <div className="avatar">
-                {user.name.slice(0, 2).toUpperCase()}
-              </div>
+              <div className="avatar">{user.name.slice(0, 2).toUpperCase()}</div>
               <div>
                 <strong>{user.name}</strong>
                 <small>{user.customRole || user.role}</small>
               </div>
-              <button
-                aria-label="Sign out"
-                onClick={() => void account({ action: "logout" })}
-              >
+              <button aria-label="Sign out" onClick={() => void account({ action: "logout" })}>
                 Sign out / Change operator
               </button>
             </div>
@@ -918,8 +809,7 @@ export default function Home() {
                 Workspace <span className="muted"> / {sectionLabel(tab)}</span>
               </span>
               <span className="status">
-                <i /> Signed in{" "}
-                <span className="role-tag">{user.customRole || user.role}</span>
+                <i /> Signed in <span className="role-tag">{user.customRole || user.role}</span>
               </span>
             </header>
             <FloorContext
@@ -937,31 +827,19 @@ export default function Home() {
               }
             />
             <div className="save-state" role="status" aria-live="polite">
-              {safety.status ||
-                "Changes are saved only after the server confirms them."}
+              {safety.status || "Changes are saved only after the server confirms them."}
             </div>
             <div
               className="page"
-              key={
-                tab === "Problem solving"
-                  ? "problem-search"
-                  : JSON.stringify(filters)
-              }
+              key={tab === "Problem solving" ? "problem-search" : JSON.stringify(filters)}
             >
               <div className="page-heading">
                 <div>
                   <span className="eyebrow">MANUFACTURING / OPERATIONS</span>
-                  <h1>
-                    {tab === "Overview"
-                      ? `Welcome, ${user.name.split(" ")[0]}.`
-                      : sectionLabel(tab)}
-                  </h1>
+                  <h1>{tab === "Overview" ? `Welcome, ${user.name.split(" ")[0]}.` : sectionLabel(tab)}</h1>
                   <p className="muted">{descriptions[tab]}</p>
                 </div>
-                <RefreshControl
-                  onRefresh={refreshSection}
-                  label="Refresh section"
-                />
+                <RefreshControl onRefresh={refreshSection} label="Refresh section" />
                 {g.includes("export") &&
                   [
                     "Overview",
@@ -1011,7 +889,7 @@ export default function Home() {
                                                   ? "/api/export?section=downtime"
                                                   : tab === "Improvement ideas"
                                                     ? "/api/export?section=ideas"
-                                                    : "/api/export",
+                                                    : "/api/export"
                       )}
                     >
                       {tab === "Overview" || tab === "Analytics"
@@ -1051,15 +929,8 @@ export default function Home() {
                       : filters.focus === "department-open"
                         ? "open work for the selected department"
                         : filters.focus || "selected machine"}
-                  {filters.focusDepartment
-                    ? " · " + filters.focusDepartment
-                    : ""}
-                  .{" "}
-                  <button
-                    type="button"
-                    className="outline"
-                    onClick={() => openTarget({ tab })}
-                  >
+                  {filters.focusDepartment ? " · " + filters.focusDepartment : ""}.{" "}
+                  <button type="button" className="outline" onClick={() => openTarget({ tab })}>
                     Clear dashboard filter
                   </button>
                 </div>
@@ -1074,8 +945,7 @@ export default function Home() {
                   ✓ {notice}
                 </div>
               )}
-              {((["Downtime", "Improvement ideas"].includes(tab) &&
-                !operationsReady) ||
+              {((["Downtime", "Improvement ideas"].includes(tab) && !operationsReady) ||
                 (![
                   "Overview",
                   "Notifications",
@@ -1096,9 +966,7 @@ export default function Home() {
                   aria-label={`${sectionLabel(tab)} view mode`}
                 >
                   <button
-                    className={
-                      sectionMode === "dashboard" ? "primary" : "outline"
-                    }
+                    className={sectionMode === "dashboard" ? "primary" : "outline"}
                     aria-pressed={sectionMode === "dashboard"}
                     onClick={() => setSectionMode("dashboard")}
                   >
@@ -1121,11 +989,9 @@ export default function Home() {
                 />
               )}
               <div hidden={hasSectionViews(tab) && sectionMode === "dashboard"}>
-                {tab === "Overview" &&
-                  user.role !== "Admin" &&
-                  preferences.showQueue !== false && (
-                    <WorkQueue user={user} compact />
-                  )}
+                {tab === "Overview" && user.role !== "Admin" && preferences.showQueue !== false && (
+                  <WorkQueue user={user} compact />
+                )}
                 {tab === "Overview" && preferences.showLaunchpad !== false && (
                   <ShiftHome user={user} go={setTab} />
                 )}
@@ -1133,15 +999,8 @@ export default function Home() {
                 {tab === "Submission history" && <Submissions user={user} />}
                 {tab === "Machines" && <Machines user={user} />}
                 {tab === "Overview" && (
-                  <details
-                    className="panel"
-                    open={
-                      preferences.showQueue === false || user.role === "Admin"
-                    }
-                  >
-                    <summary>
-                      Assignment panels and saved dashboard layout
-                    </summary>
+                  <details className="panel" open={preferences.showQueue === false || user.role === "Admin"}>
+                    <summary>Assignment panels and saved dashboard layout</summary>
                     <PersonalDashboard
                       canGo={(name) => canOpenSection(user, name)}
                       key={JSON.stringify(preferences)}
@@ -1173,11 +1032,7 @@ export default function Home() {
                 )}
                 {tab === "Dashboard settings" && (
                   <DashboardSettings
-                    saved={(value) =>
-                      setUser((u) =>
-                        u ? { ...u, dashboardPreferences: value } : u,
-                      )
-                    }
+                    saved={(value) => setUser((u) => (u ? { ...u, dashboardPreferences: value } : u))}
                   />
                 )}
                 {tab === "Assistant" && (
@@ -1195,9 +1050,7 @@ export default function Home() {
                     canInstall={user.role === "Admin" && !user.customRole}
                   />
                 )}
-                {tab === "Accounts" && user.role !== "Admin" && (
-                  <DepartmentAccounts />
-                )}
+                {tab === "Accounts" && user.role !== "Admin" && <DepartmentAccounts />}
                 {tab === "Problem solving" && (
                   <Problems
                     userId={user.id}
@@ -1241,34 +1094,17 @@ export default function Home() {
                   />
                 )}
                 {tab === "Standard work audits" && sectionReady && (
-                  <Work
-                    data={data}
-                    save={save}
-                    busy={busy}
-                    audit
-                    initialStandardId={filters.standard}
-                  />
+                  <Work data={data} save={save} busy={busy} audit initialStandardId={filters.standard} />
                 )}
-                {tab === "Time studies" && sectionReady && (
-                  <Studies data={data} save={save} busy={busy} />
-                )}
+                {tab === "Time studies" && sectionReady && <Studies data={data} save={save} busy={busy} />}
                 {tab === "Training" && sectionReady && (
-                  <Content
-                    data={data}
-                    kind="video"
-                    manage={g.includes("training")}
-                    save={save}
-                    busy={busy}
-                  />
+                  <Content data={data} kind="video" manage={g.includes("training")} save={save} busy={busy} />
                 )}
                 {tab === "Troubleshooting" && sectionReady && (
                   <Content
                     data={data}
                     kind="guide"
-                    manage={
-                      g.includes("manage") ||
-                      privileges.includes("resources.manage")
-                    }
+                    manage={g.includes("manage") || privileges.includes("resources.manage")}
                     save={save}
                     busy={busy}
                   />
@@ -1301,30 +1137,15 @@ export default function Home() {
                   />
                 )}
                 {tab === "Centerlines" && <Centerlines />}
-                {tab === "5S audits" && (
-                  <FiveS userId={user.id} admin={user.role === "Admin"} />
-                )}
-                {tab === "Defect reporting" && (
-                  <Defects userId={user.id} admin={user.role === "Admin"} />
-                )}
+                {tab === "5S audits" && <FiveS userId={user.id} admin={user.role === "Admin"} />}
+                {tab === "Defect reporting" && <Defects userId={user.id} admin={user.role === "Admin"} />}
                 {tab === "TPM / CIL" && (
-                  <Maintenance
-                    key="cil"
-                    kind="cil"
-                    userId={user.id}
-                    admin={user.role === "Admin"}
-                  />
+                  <Maintenance key="cil" kind="cil" userId={user.id} admin={user.role === "Admin"} />
                 )}
                 {tab === "Preventive maintenance" && (
-                  <Maintenance
-                    key="pm"
-                    userId={user.id}
-                    admin={user.role === "Admin"}
-                  />
+                  <Maintenance key="pm" userId={user.id} admin={user.role === "Admin"} />
                 )}
-                {tab === "Notifications" && (
-                  <Reminders admin={user.role === "Admin"} />
-                )}
+                {tab === "Notifications" && <Reminders admin={user.role === "Admin"} />}
                 {tab === "Notifications" && (
                   <Notifications
                     data={operations}
@@ -1346,13 +1167,10 @@ export default function Home() {
                     canExport={g.includes("export")}
                   />
                 )}
-                {tab === "Shift requirements" &&
-                  canOpenSection(user, "Shift requirements") && (
-                    <ShiftSchedules />
-                  )}
-                {tab === "Integrations" && user.role === "Admin" && (
-                  <Integrations />
+                {tab === "Shift requirements" && canOpenSection(user, "Shift requirements") && (
+                  <ShiftSchedules />
                 )}
+                {tab === "Integrations" && user.role === "Admin" && <Integrations />}
                 {tab === "Manage" &&
                   !g.includes("manage") &&
                   !privileges.includes("standards.manage") &&
@@ -1360,14 +1178,8 @@ export default function Home() {
                   privileges.includes("resources.manage") && (
                     <section className="panel">
                       <h2>Guide management</h2>
-                      <p>
-                        Your delegated guide editor is available in
-                        Troubleshooting.
-                      </p>
-                      <button
-                        className="primary"
-                        onClick={() => setTab("Troubleshooting")}
-                      >
+                      <p>Your delegated guide editor is available in Troubleshooting.</p>
+                      <button className="primary" onClick={() => setTab("Troubleshooting")}>
                         Open troubleshooting editor
                       </button>
                     </section>
@@ -1377,33 +1189,21 @@ export default function Home() {
                     data={data}
                     save={save}
                     busy={busy}
-                    canStandards={
-                      g.includes("manage") ||
-                      privileges.includes("standards.manage")
-                    }
-                    canEquipment={
-                      g.includes("manage") ||
-                      privileges.includes("equipment.manage")
-                    }
+                    canStandards={g.includes("manage") || privileges.includes("standards.manage")}
+                    canEquipment={g.includes("manage") || privileges.includes("equipment.manage")}
                   />
                 )}
-                {tab === "Analytics" && sectionReady && (
-                  <Analytics data={data} />
+                {tab === "Analytics" && sectionReady && <Analytics data={data} />}
+                {tab === "Permissions" && sectionReady && <Permissions data={data} save={save} busy={busy} />}
+                {tab === "Accounts" && user.role === "Admin" && sectionReady && (
+                  <Accounts
+                    reload={() => void refresh()}
+                    data={data}
+                    save={save}
+                    busy={busy}
+                    admin={user.role === "Admin"}
+                  />
                 )}
-                {tab === "Permissions" && sectionReady && (
-                  <Permissions data={data} save={save} busy={busy} />
-                )}
-                {tab === "Accounts" &&
-                  user.role === "Admin" &&
-                  sectionReady && (
-                    <Accounts
-                      reload={() => void refresh()}
-                      data={data}
-                      save={save}
-                      busy={busy}
-                      admin={user.role === "Admin"}
-                    />
-                  )}
                 {[
                   "Overview",
                   "Standard work",
@@ -1423,9 +1223,7 @@ export default function Home() {
                   <ExternalData
                     key={tab}
                     section={tab}
-                    hideEmpty={
-                      user.role !== "Admin" && tab !== "Production results"
-                    }
+                    hideEmpty={user.role !== "Admin" && tab !== "Production results"}
                     admin={user.role === "Admin"}
                     canImport={g.includes("manage")}
                     canExport={g.includes("export")}
@@ -1434,9 +1232,7 @@ export default function Home() {
                 {tab === "My account" && (
                   <section className="panel narrow">
                     <h2>Change password</h2>
-                    <p className="muted">
-                      Changing your password signs out every device.
-                    </p>
+                    <p className="muted">Changing your password signs out every device.</p>
                     <form
                       onSubmit={(e) => {
                         e.preventDefault();
@@ -1449,12 +1245,7 @@ export default function Home() {
                       }}
                     >
                       <Field label="Current password">
-                        <input
-                          name="current"
-                          type="password"
-                          autoComplete="current-password"
-                          required
-                        />
+                        <input name="current" type="password" autoComplete="current-password" required />
                       </Field>
                       <Field label="New password">
                         <input
@@ -1469,18 +1260,14 @@ export default function Home() {
                       <Submit busy={busy}>Change password</Submit>
                     </form>
                     <hr />
-                    <button
-                      className="outline"
-                      onClick={() => void account({ action: "logoutAll" })}
-                    >
+                    <button className="outline" onClick={() => void account({ action: "logoutAll" })}>
                       Sign out all devices
                     </button>
                   </section>
                 )}
               </div>
               <footer>
-                MANUFACTURING WORK PLATFORM{" "}
-                <span>Built for the people behind the process.</span>
+                MANUFACTURING WORK PLATFORM <span>Built for the people behind the process.</span>
               </footer>
             </div>
           </main>

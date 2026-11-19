@@ -1,14 +1,7 @@
 import { accountIdentity } from "@/lib/account-identity";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import {
-  requireUser,
-  jsonBody,
-  failure,
-  HttpError,
-  hashPassword,
-  limit,
-} from "@/lib/security";
+import { requireUser, jsonBody, failure, HttpError, hashPassword, limit } from "@/lib/security";
 import { adminPrivileges } from "@/lib/capabilities";
 import {
   coversWorkspace,
@@ -19,18 +12,13 @@ import {
   additionalCapabilities,
   type AdminPrivilege,
 } from "@/lib/delegation-rules";
-import {
-  downtimeAccessSchema,
-  allowedDowntimeEquipment,
-} from "@/lib/downtime-access-rules";
+import { downtimeAccessSchema, allowedDowntimeEquipment } from "@/lib/downtime-access-rules";
 import { sendRecovery } from "@/lib/account-recovery";
 import { roleAuthority } from "@/lib/role-rules";
 import { resolveRole } from "@/lib/role-assignment";
 const profile = z.object({
   name: z.string().trim().min(1).max(150),
-  email: z
-    .union([z.email().max(254), z.literal("")])
-    .transform((v) => v || null),
+  email: z.union([z.email().max(254), z.literal("")]).transform((v) => v || null),
   role: z.string().min(1).max(60),
 });
 const names = {
@@ -50,10 +38,7 @@ export async function GET(req: Request) {
       !(u.role === "Manager" && !u.customRole) &&
       !privileges.some((p) => p.startsWith("accounts."))
     )
-      throw new HttpError(
-        403,
-        "Department account management is not assigned to you",
-      );
+      throw new HttpError(403, "Department account management is not assigned to you");
     const [people, equipment, locations, policies] = await Promise.all([
         db.user.findMany({ orderBy: { name: "asc" } }),
         db.equipment.findMany(),
@@ -68,19 +53,13 @@ export async function GET(req: Request) {
       }) =>
         roleAuthority(
           p,
-          policies.find((q) => q.role === (p.customRole || p.role)),
+          policies.find((q) => q.role === (p.customRole || p.role))
         ),
       actorCaps = authorityFor(u).grants,
-      q =
-        new URL(req.url).searchParams
-          .get("search")
-          ?.slice(0, 150)
-          .toLowerCase() ?? "";
+      q = new URL(req.url).searchParams.get("search")?.slice(0, 150).toLowerCase() ?? "";
     const accounts = people
       .filter(
-        (p) =>
-          sharesWorkspace(u, p, equipment) &&
-          (!q || `${p.name} ${p.username}`.toLowerCase().includes(q)),
+        (p) => sharesWorkspace(u, p, equipment) && (!q || `${p.name} ${p.username}`.toLowerCase().includes(q))
       )
       .map((p) => {
         const caps = authorityFor(p).grants,
@@ -108,21 +87,15 @@ export async function GET(req: Request) {
                             locations: [l],
                             equipmentIds: [],
                           },
-                          equipment,
-                        ),
+                          equipment
+                        )
                       )
                     : [],
                   equipmentIds: access.success
                     ? access.data.equipmentIds.filter((id) =>
                         equipment.some(
-                          (e) =>
-                            e.id === id &&
-                            allowedDowntimeEquipment(
-                              u.role,
-                              u.workspaceAccess,
-                              e,
-                            ),
-                        ),
+                          (e) => e.id === id && allowedDowntimeEquipment(u.role, u.workspaceAccess, e)
+                        )
                       )
                     : [],
                 };
@@ -150,19 +123,15 @@ export async function GET(req: Request) {
                   })
                 ? "Protected role or individually privileged account; Admin manages this account"
                 : "Account has assignments or permissions beyond your authority",
-          ...(u.role === "Admin"
-            ? { extraGrants: p.extraGrants, adminPrivileges: p.adminPrivileges }
-            : {}),
+          ...(u.role === "Admin" ? { extraGrants: p.extraGrants, adminPrivileges: p.adminPrivileges } : {}),
         };
       });
     return Response.json({
       accounts,
       privileges,
-      equipment: equipment.filter((e) =>
-        allowedDowntimeEquipment(u.role, u.workspaceAccess, e),
-      ),
+      equipment: equipment.filter((e) => allowedDowntimeEquipment(u.role, u.workspaceAccess, e)),
       locations: locations.filter((l) =>
-        allowedDowntimeEquipment(u.role, u.workspaceAccess, { ...l, id: "" }),
+        allowedDowntimeEquipment(u.role, u.workspaceAccess, { ...l, id: "" })
       ),
       privilegeDefinitions: u.role === "Admin" ? privilegeDefinitions : {},
       additionalCapabilities: u.role === "Admin" ? additionalCapabilities : [],
@@ -178,14 +147,10 @@ export async function GET(req: Request) {
                 roleAuthority(
                   {
                     role: p.baseRole,
-                    customRole: ["Operator", "DL/TL", "Manager"].includes(
-                      p.role,
-                    )
-                      ? null
-                      : p.role,
+                    customRole: ["Operator", "DL/TL", "Manager"].includes(p.role) ? null : p.role,
                   },
-                  p,
-                ).grants.every((c) => actorCaps.includes(c)))),
+                  p
+                ).grants.every((c) => actorCaps.includes(c))))
         )
         .map((p) => ({ name: p.role, baseRole: p.baseRole })),
     });
@@ -198,30 +163,16 @@ export async function POST(req: Request) {
     const u = await requireUser(),
       b = await jsonBody(req),
       action = z
-        .enum([
-          "create",
-          "profile",
-          "active",
-          "password",
-          "email",
-          "access",
-          "delegation",
-        ])
+        .enum(["create", "profile", "active", "password", "email", "access", "delegation"])
         .parse(b.action),
-      id =
-        action === "create"
-          ? crypto.randomUUID()
-          : z.string().uuid().parse(b.id);
+      id = action === "create" ? crypto.randomUUID() : z.string().uuid().parse(b.id);
     const initialPrivileges = await adminPrivileges(u);
     if (
       action === "delegation"
         ? u.role !== "Admin"
         : !initialPrivileges.includes(names[action] as AdminPrivilege)
     )
-      throw new HttpError(
-        403,
-        "This account action has not been delegated to you",
-      );
+      throw new HttpError(403, "This account action has not been delegated to you");
     await limit(`account-admin:${u.id}`, 100, 3600);
     const password =
       action === "password" || action === "create"
@@ -231,31 +182,19 @@ export async function POST(req: Request) {
       const locks = [u.id, id].sort();
       await tx.$queryRaw`SELECT id FROM "User" WHERE id=ANY(${locks}::text[]) ORDER BY id FOR UPDATE`;
       const actor = await tx.user.findUniqueOrThrow({ where: { id: u.id } }),
-        target =
-          action === "create"
-            ? null
-            : await tx.user.findUnique({ where: { id } });
+        target = action === "create" ? null : await tx.user.findUnique({ where: { id } });
       if (!actor.active || actor.version !== u.version)
-        throw new HttpError(
-          403,
-          "Your account permissions changed; sign in again",
-        );
+        throw new HttpError(403, "Your account permissions changed; sign in again");
       const actorPolicy = await tx.policy.findUnique({
         where: { role: actor.customRole || actor.role },
       });
-      const privileges = roleAuthority(
-        actor,
-        actorPolicy ?? undefined,
-      ).privileges;
+      const privileges = roleAuthority(actor, actorPolicy ?? undefined).privileges;
       if (
         action === "delegation"
           ? actor.role !== "Admin"
           : !privileges.includes(names[action] as AdminPrivilege)
       )
-        throw new HttpError(
-          403,
-          "This account action has not been delegated to you",
-        );
+        throw new HttpError(403, "This account action has not been delegated to you");
       const eq = await tx.equipment.findMany(),
         policies = await tx.policy.findMany(),
         caps = (p: {
@@ -266,7 +205,7 @@ export async function POST(req: Request) {
         }) =>
           roleAuthority(
             p,
-            policies.find((q) => q.role === (p.customRole || p.role)),
+            policies.find((q) => q.role === (p.customRole || p.role))
           ).grants,
         actorCaps = caps(actor);
       if (action !== "create") {
@@ -278,9 +217,7 @@ export async function POST(req: Request) {
               ...target,
               adminPrivileges: roleAuthority(
                 target,
-                policies.find(
-                  (q) => q.role === (target.customRole || target.role),
-                ),
+                policies.find((q) => q.role === (target.customRole || target.role))
               ).privileges,
             }) ||
             !sharesWorkspace(actor, target, eq) ||
@@ -289,7 +226,7 @@ export async function POST(req: Request) {
         )
           throw new HttpError(
             403,
-            "Admin must manage this protected, broader-permission or cross-department account",
+            "Admin must manage this protected, broader-permission or cross-department account"
           );
         if (z.number().int().positive().parse(b.version) !== target.version)
           throw new HttpError(409, "Account changed; reload before saving");
@@ -299,7 +236,7 @@ export async function POST(req: Request) {
         if (!coversWorkspace(actor, access, eq))
           throw new HttpError(
             403,
-            "Assignments must stay within your current department/area/machine authority",
+            "Assignments must stay within your current department/area/machine authority"
           );
         const loc = await tx.location.findMany({ where: { active: true } });
         if (
@@ -310,22 +247,15 @@ export async function POST(req: Request) {
                 (x) =>
                   x.plant === l.plant &&
                   x.department === l.department &&
-                  (l.area === null || x.area === l.area),
-              ),
+                  (l.area === null || x.area === l.area)
+              )
           )
         )
+          throw new HttpError(400, "Choose existing active locations and equipment");
+        if (actor.role !== "Admin" && !access.locations.length && !access.equipmentIds.length)
           throw new HttpError(
             400,
-            "Choose existing active locations and equipment",
-          );
-        if (
-          actor.role !== "Admin" &&
-          !access.locations.length &&
-          !access.equipmentIds.length
-        )
-          throw new HttpError(
-            400,
-            "Keep a department, area or machine assignment; disable the account to remove access",
+            "Keep a department, area or machine assignment; disable the account to remove access"
           );
         return access;
       };
@@ -344,23 +274,14 @@ export async function POST(req: Request) {
             .regex(/^[a-z0-9._-]{3,80}$/)
             .parse(b.username),
           access = await checkAccess(b.workspaceAccess);
-        if (assignment.role === "Admin")
-          throw new HttpError(400, "Use the protected Admin account editor");
+        if (assignment.role === "Admin") throw new HttpError(400, "Use the protected Admin account editor");
         if (
           actor.role !== "Admin" &&
           (assignment.role === "Manager" ||
-            (
-              (policies.find((p) => p.role === v.role)
-                ?.adminPrivileges as unknown[]) || []
-            ).length > 0 ||
-            !caps({ ...v, ...assignment, extraGrants: [] }).every((c) =>
-              actorCaps.includes(c),
-            ))
+            ((policies.find((p) => p.role === v.role)?.adminPrivileges as unknown[]) || []).length > 0 ||
+            !caps({ ...v, ...assignment, extraGrants: [] }).every((c) => actorCaps.includes(c)))
         )
-          throw new HttpError(
-            403,
-            "You cannot create accounts with more authority than your own",
-          );
+          throw new HttpError(403, "You cannot create accounts with more authority than your own");
         if (await tx.user.findUnique({ where: { username } }))
           throw new HttpError(409, "Username is already in use");
         await tx.user.create({
@@ -377,10 +298,7 @@ export async function POST(req: Request) {
         audit = { ...v, username, workspaceAccess: access };
       } else if (action === "delegation") {
         if (target!.role === "Admin")
-          throw new HttpError(
-            400,
-            "Admin retains full authority; delegate to a non-Admin account",
-          );
+          throw new HttpError(400, "Admin retains full authority; delegate to a non-Admin account");
         const v = delegationSchema.parse({
           extraGrants: b.extraGrants,
           adminPrivileges: b.adminPrivileges,
@@ -400,20 +318,13 @@ export async function POST(req: Request) {
             ...accountIdentity(b),
           },
           assignment = await resolveRole(v.role, tx);
-        if (assignment.role === "Admin")
-          throw new HttpError(400, "Use the protected Admin account editor");
+        if (assignment.role === "Admin") throw new HttpError(400, "Use the protected Admin account editor");
         if (target!.role === "Admin")
-          throw new HttpError(
-            400,
-            "Use the Admin account editor for administrator roles",
-          );
+          throw new HttpError(400, "Use the Admin account editor for administrator roles");
         if (
           actor.role !== "Admin" &&
           (assignment.role === "Manager" ||
-            (
-              (policies.find((p) => p.role === v.role)
-                ?.adminPrivileges as unknown[]) || []
-            ).length > 0 ||
+            ((policies.find((p) => p.role === v.role)?.adminPrivileges as unknown[]) || []).length > 0 ||
             !caps({
               ...v,
               ...assignment,
@@ -428,8 +339,7 @@ export async function POST(req: Request) {
         audit = v;
       } else if (action === "active") {
         const active = z.boolean().parse(b.active);
-        if (id === actor.id)
-          throw new HttpError(400, "You cannot disable your own account");
+        if (id === actor.id) throw new HttpError(400, "You cannot disable your own account");
         if (
           target!.role === "Admin" &&
           !active &&
@@ -442,8 +352,7 @@ export async function POST(req: Request) {
         });
         audit = { active };
       } else if (action === "access") {
-        if (target!.role === "Admin")
-          throw new HttpError(400, "Admin retains full workspace access");
+        if (target!.role === "Admin") throw new HttpError(400, "Admin retains full workspace access");
         const workspaceAccess = await checkAccess(b.workspaceAccess);
         await tx.user.update({
           where: { id },
@@ -461,8 +370,7 @@ export async function POST(req: Request) {
         });
         audit = { temporaryPasswordSet: true };
       } else audit = { passwordEmailRequested: true };
-      if (action !== "email")
-        await tx.session.deleteMany({ where: { userId: id } });
+      if (action !== "email") await tx.session.deleteMany({ where: { userId: id } });
       await tx.accountAudit.create({
         data: {
           actorId: actor.id,

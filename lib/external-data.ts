@@ -8,10 +8,9 @@ export async function ingestExternalRows(
   rows: unknown[],
   sourceHash?: string,
   allowedIds?: string[],
-  sequence?: string,
+  sequence?: string
 ) {
-  if (rows.length > 1000)
-    throw new HttpError(400, "Import at most 1000 rows per batch");
+  if (rows.length > 1000) throw new HttpError(400, "Import at most 1000 rows per batch");
   const allowed = allowedIds ? new Set(allowedIds) : undefined;
   const parsed = rows.map((r) => externalRowSchema.parse(r));
   if (new Set(parsed.map((r) => r.externalId)).size !== parsed.length)
@@ -22,10 +21,7 @@ export async function ingestExternalRows(
       const feed = await tx.externalFeed.findUnique({ where: { id: feedId } });
       if (!feed?.active) throw new HttpError(403, "Feed is disabled");
       if (sequence) {
-        if (
-          !/^[1-9][0-9]{0,18}$/.test(sequence) ||
-          BigInt(sequence) > 9223372036854775807n
-        )
+        if (!/^[1-9][0-9]{0,18}$/.test(sequence) || BigInt(sequence) > 9223372036854775807n)
           throw new HttpError(400, "Invalid committed event sequence");
       }
       await tx.$queryRaw`SELECT id FROM "IntegrationSource" WHERE id=${feed.sourceId} FOR SHARE`;
@@ -34,35 +30,19 @@ export async function ingestExternalRows(
       });
       if (!source?.active || (sourceHash && source.tokenHash !== sourceHash))
         throw new HttpError(401, "Source disabled or key changed");
-      if (sequence && BigInt(sequence) <= BigInt(feed.cursor))
-        return { imported: 0 };
+      if (sequence && BigInt(sequence) <= BigInt(feed.cursor)) return { imported: 0 };
       for (const r of parsed) {
         if (allowed && !allowed.has(r.equipmentId))
-          throw new HttpError(
-            403,
-            "Workbook contains equipment outside your assigned locations",
-          );
+          throw new HttpError(403, "Workbook contains equipment outside your assigned locations");
         if (!(await tx.equipment.findUnique({ where: { id: r.equipmentId } })))
-          throw new HttpError(
-            400,
-            "Map external equipment IDs to the app equipment catalog first",
-          );
-        if (
-          r.personId &&
-          !(await tx.user.findUnique({ where: { id: r.personId } }))
-        )
-          throw new HttpError(
-            400,
-            "Map external people IDs to app accounts first",
-          );
+          throw new HttpError(400, "Map external equipment IDs to the app equipment catalog first");
+        if (r.personId && !(await tx.user.findUnique({ where: { id: r.personId } })))
+          throw new HttpError(400, "Map external people IDs to app accounts first");
         const old = await tx.externalRow.findUnique({
           where: { feedId_externalId: { feedId, externalId: r.externalId } },
         });
         if (old && allowed && !allowed.has(old.equipmentId))
-          throw new HttpError(
-            403,
-            "This external ID belongs to equipment outside your assignments",
-          );
+          throw new HttpError(403, "This external ID belongs to equipment outside your assignments");
         const snapshot = {
           ...r,
           occurredAt: new Date(r.occurredAt).toISOString(),
@@ -79,7 +59,7 @@ export async function ingestExternalRows(
               occurredAt: old.occurredAt.toISOString(),
               values: old.values,
             },
-            snapshot,
+            snapshot
           )
         )
           continue;
@@ -111,6 +91,6 @@ export async function ingestExternalRows(
       });
       return { imported: parsed.length };
     },
-    { timeout: 30000 },
+    { timeout: 30000 }
   );
 }

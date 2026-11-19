@@ -5,13 +5,7 @@ import { z } from "zod";
 import { focusedEquipmentIds } from "@/lib/equipment-label";
 import { workflowFocus } from "@/lib/workflow-focus";
 import { db } from "@/lib/db";
-import {
-  requireUser,
-  grants,
-  jsonBody,
-  HttpError,
-  failure,
-} from "@/lib/security";
+import { requireUser, grants, jsonBody, HttpError, failure } from "@/lib/security";
 import {
   equipmentIds,
   assertEquipmentAccess,
@@ -20,10 +14,7 @@ import {
   recordScope,
 } from "@/lib/location-access";
 import { readFilters, recordFilters } from "@/lib/filters";
-import {
-  maintenanceSchema,
-  nextMaintenanceDate,
-} from "@/lib/maintenance-rules";
+import { maintenanceSchema, nextMaintenanceDate } from "@/lib/maintenance-rules";
 import { evidenceSchema, ownEvidence } from "@/lib/evidence";
 import { localToday, type ShiftConfig } from "@/lib/operations-rules";
 import { streamWorkbook, paged } from "@/lib/excel-stream";
@@ -51,10 +42,7 @@ export async function GET(req: Request) {
                 equipmentId: {
                   in: eq
                     .filter((e) =>
-                      [e.name, e.department, e.area]
-                        .join(" ")
-                        .toLowerCase()
-                        .includes(search.toLowerCase()),
+                      [e.name, e.department, e.area].join(" ").toLowerCase().includes(search.toLowerCase())
                     )
                     .map((e) => e.id),
                 },
@@ -68,12 +56,8 @@ export async function GET(req: Request) {
       return await streamWorkbook(
         kind === "cil" ? "floorwork-cil.xlsx" : "floorwork-maintenance.xlsx",
         async (book) => {
-          const sheet = book.addWorksheet(
-              kind === "cil" ? "CIL plans" : "PM plans",
-            ),
-            history = book.addWorksheet(
-              kind === "cil" ? "CIL completions" : "PM completions",
-            );
+          const sheet = book.addWorksheet(kind === "cil" ? "CIL plans" : "PM plans"),
+            history = book.addWorksheet(kind === "cil" ? "CIL completions" : "PM completions");
           await sheet.addRow([
             "ID",
             "Task",
@@ -89,7 +73,7 @@ export async function GET(req: Request) {
               orderBy: { id: "asc" },
               take: 100,
               ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-            }),
+            })
           ))
             await sheet.addRow([
               p.id,
@@ -123,10 +107,10 @@ export async function GET(req: Request) {
                             [e.name, e.plant, e.department, e.area, e.line]
                               .join(" ")
                               .toLowerCase()
-                              .includes(search.toLowerCase()),
+                              .includes(search.toLowerCase())
                           )
                           .map((e) => e.id)
-                      : [],
+                      : []
                   ),
                 ],
               },
@@ -134,7 +118,7 @@ export async function GET(req: Request) {
               take: 100,
               orderBy: { id: "asc" },
               ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-            }),
+            })
           ))
             await history.addRow([
               r.id,
@@ -145,7 +129,7 @@ export async function GET(req: Request) {
               JSON.stringify((r.data as any).responses),
             ]);
         },
-        req.signal,
+        req.signal
       );
     }
     const cursor = z
@@ -160,8 +144,7 @@ export async function GET(req: Request) {
           where: { ...where, id: cursor },
           select: { id: true, nextDue: true, active: true },
         });
-        if (!after)
-          throw new HttpError(400, "Refresh the plan list before loading more");
+        if (!after) throw new HttpError(400, "Refresh the plan list before loading more");
       } else {
         try {
           after = z
@@ -217,10 +200,10 @@ export async function GET(req: Request) {
                       [e.name, e.plant, e.department, e.area, e.line]
                         .join(" ")
                         .toLowerCase()
-                        .includes(search.toLowerCase()),
+                        .includes(search.toLowerCase())
                     )
                     .map((e) => e.id)
-                : [],
+                : []
             ),
           ],
         },
@@ -240,16 +223,14 @@ export async function GET(req: Request) {
               id: plans[99].id,
               nextDue: plans[99].nextDue,
               active: plans[99].active,
-            }),
+            })
           ).toString("base64url")
         : null,
       records,
       people,
       equipment: eq,
       today: localToday((setting.value as ShiftConfig).timezone),
-      canManage:
-        (await grants(u)).includes("manage") ||
-        (await canAdminister(u, "maintenance.manage")),
+      canManage: (await grants(u)).includes("manage") || (await canAdminister(u, "maintenance.manage")),
     });
   } catch (e) {
     return failure(e);
@@ -273,14 +254,10 @@ export async function POST(req: Request) {
           data: {
             active: false,
             version: { increment: 1 },
-            history: [
-              ...(plan.history as any[]),
-              { ...entry, action: "retired" },
-            ],
+            history: [...(plan.history as any[]), { ...entry, action: "retired" }],
           },
         });
-        if (!updated.count)
-          throw new HttpError(409, "Task changed; refresh before retiring");
+        if (!updated.count) throw new HttpError(409, "Task changed; refresh before retiring");
       });
       return Response.json({ ok: true });
     }
@@ -303,10 +280,7 @@ export async function POST(req: Request) {
             data: {
               ...v,
               version: { increment: 1 },
-              history: [
-                ...(old.history as any[]),
-                { ...entry, event: "Plan updated", values: v },
-              ],
+              history: [...(old.history as any[]), { ...entry, event: "Plan updated", values: v }],
             },
           });
           if (v.active)
@@ -350,7 +324,7 @@ export async function POST(req: Request) {
                 answer: z.boolean(),
                 comment: z.string().max(1000),
                 media: evidenceSchema,
-              }),
+              })
             )
             .max(100),
         })
@@ -362,25 +336,14 @@ export async function POST(req: Request) {
           throw new HttpError(409, "PM changed or already completed; reload");
         const equipment = await assertEquipmentAccess(u, p.equipmentId, tx);
         if (u.role !== "Admin" && p.assigneeId !== u.id)
-          throw new HttpError(
-            403,
-            "Only the assigned person or Admin can complete this PM",
-          );
+          throw new HttpError(403, "Only the assigned person or Admin can complete this PM");
         const steps = p.steps as { id: string; photo: boolean }[];
         if (
           v.responses.length !== steps.length ||
           new Set(v.responses.map((r) => r.stepId)).size !== steps.length ||
-          steps.some(
-            (s) =>
-              !v.responses.some(
-                (r) => r.stepId === s.id && (!s.photo || r.media.length),
-              ),
-          )
+          steps.some((s) => !v.responses.some((r) => r.stepId === s.id && (!s.photo || r.media.length)))
         )
-          throw new HttpError(
-            400,
-            "Complete every PM step and required photo/video evidence",
-          );
+          throw new HttpError(400, "Complete every PM step and required photo/video evidence");
         const media = v.responses.flatMap((r) => r.media);
         await ownEvidence(u.id, media, [], tx);
         const setting = await tx.setting.findUniqueOrThrow({
@@ -389,10 +352,7 @@ export async function POST(req: Request) {
           today = localToday((setting.value as ShiftConfig).timezone),
           nextDue = nextMaintenanceDate(p.nextDue, today, p.intervalDays);
         if (p.nextDue > today)
-          throw new HttpError(
-            409,
-            "This PM is not due yet. A manager can reschedule it for early service",
-          );
+          throw new HttpError(409, "This PM is not due yet. A manager can reschedule it for early service");
         const { history: priorHistory, ...planSnapshot } = p;
         const record = await tx.record.create({
           data: {

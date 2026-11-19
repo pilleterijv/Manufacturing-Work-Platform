@@ -1,13 +1,6 @@
 "use client";
 import { useId, useState } from "react";
-const colors = [
-  "#c54900",
-  "#e88225",
-  "#236976",
-  "#577c35",
-  "#845b88",
-  "#946b25",
-];
+const colors = ["#c54900", "#e88225", "#236976", "#577c35", "#845b88", "#946b25"];
 export default function DashboardChart({
   title,
   items,
@@ -46,18 +39,9 @@ export default function DashboardChart({
           {rows.map((r, i) => (
             <div className="chart-bar-row" key={r.label}>
               <span>{r.label}</span>
-              <svg
-                viewBox="0 0 300 24"
-                role="img"
-                aria-label={`${r.label}: ${r.count}`}
-              >
+              <svg viewBox="0 0 300 24" role="img" aria-label={`${r.label}: ${r.count}`}>
                 <rect width={300} height={24} rx={4} fill="#f4ece5" />
-                <rect
-                  width={(300 * r.count) / max}
-                  height={24}
-                  rx={4}
-                  fill={colors[i % colors.length]}
-                />
+                <rect width={(300 * r.count) / max} height={24} rx={4} fill={colors[i % colors.length]} />
               </svg>
               <strong>{r.count}</strong>
             </div>
@@ -70,14 +54,7 @@ export default function DashboardChart({
             role="img"
             aria-label={rows.map((r) => `${r.label}: ${r.count}`).join(", ")}
           >
-            <circle
-              cx="60"
-              cy="60"
-              r="44"
-              fill="none"
-              stroke="#f4ece5"
-              strokeWidth="18"
-            />
+            <circle cx="60" cy="60" r="44" fill="none" stroke="#f4ece5" strokeWidth="18" />
             {rows
               .filter((r) => r.count > 0)
               .map((r, i) => {
@@ -100,21 +77,15 @@ export default function DashboardChart({
                   />
                 );
               })}
-            <text
-              x="60"
-              y="64"
-              textAnchor="middle"
-              fontSize="14"
-              fill="currentColor"
-            >
+            <text x="60" y="64" textAnchor="middle" fontSize="14" fill="currentColor">
               {total}
             </text>
           </svg>
           <ul>
             {rows.map((r, i) => (
               <li key={r.label}>
-                <span style={{ color: colors[i % colors.length] }}>●</span>{" "}
-                {r.label}: <strong>{r.count}</strong>
+                <span style={{ color: colors[i % colors.length] }}>●</span> {r.label}:{" "}
+                <strong>{r.count}</strong>
               </li>
             ))}
           </ul>

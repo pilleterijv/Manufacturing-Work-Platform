@@ -1,8 +1,4 @@
-const {
-  expandTools,
-  assignmentPanels,
-  planningTools,
-} = require("./ui-workspace.cjs");
+const { expandTools, assignmentPanels, planningTools } = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const assert = require("node:assert/strict"),
@@ -14,10 +10,7 @@ const assert = require("node:assert/strict"),
 const { db } = require("../lib/db.ts"),
   { hashPassword } = require("../lib/security.ts"),
   { createIntegrationToken } = require("../lib/integrations.ts"),
-  {
-    queueOverdueReminders,
-    deliverReminderEmails,
-  } = require("../lib/reminders.ts"),
+  { queueOverdueReminders, deliverReminderEmails } = require("../lib/reminders.ts"),
   { localToday } = require("../lib/operations-rules.ts"),
   { Temporal } = require("@js-temporal/polyfill");
 const origin = process.env.APP_URL || "http://localhost:3000",
@@ -35,8 +28,7 @@ const read = async (r, status = 200) => {
   assert.equal(r.status(), status, text);
   return JSON.parse(text);
 };
-const post = (c, path, data) =>
-  c.request.post(origin + path, { headers: { Origin: origin }, data });
+const post = (c, path, data) => c.request.post(origin + path, { headers: { Origin: origin }, data });
 const get = (c, path) => c.request.get(origin + path);
 async function main() {
   assert(["localhost", "127.0.0.1"].includes(new URL(origin).hostname));
@@ -77,7 +69,7 @@ async function main() {
             equipmentIds: [],
           },
         },
-      }),
+      })
     );
   for (const department of ["A", "B"]) {
     equipment.push(
@@ -89,7 +81,7 @@ async function main() {
           area: "Packing",
           line: "Line 1",
         },
-      }),
+      })
     );
     await db.location.create({
       data: { plant: prefix, department, area: "Packing", line: "Line 1" },
@@ -112,13 +104,14 @@ async function main() {
         username: u.username,
         password,
         remember: false,
-      }),
+      })
     );
     contexts.push(c);
     return c;
   }
-  const [admin, manager, otherManager, leader, operator, peer] =
-    await Promise.all(users.slice(0, 6).map(login));
+  const [admin, manager, otherManager, leader, operator, peer] = await Promise.all(
+    users.slice(0, 6).map(login)
+  );
   // Upload videos as an operator, then use them in standard work and PMs.
   const file = "/tmp/" + prefix + ".mp4";
   assert.equal(
@@ -138,14 +131,14 @@ async function main() {
       "+faststart",
       file,
     ]).status,
-    0,
+    0
   );
   const bytes = await fs.readFile(file);
   await fs.unlink(file);
   const video = await read(
     await post(operator, "/api/guide-media", {
       video: "data:video/mp4;base64," + bytes.toString("base64"),
-    }),
+    })
   );
   videoIds.push(video.id);
   const family = randomUUID();
@@ -158,7 +151,7 @@ async function main() {
       target: 10,
       tolerance: 10,
       steps: [{ id: "guard", text: "Guard inspection", photo: true }],
-    }),
+    })
   );
   const standard = await db.standard.findFirstOrThrow({ where: { family } });
   const run = {
@@ -179,20 +172,13 @@ async function main() {
   assert.equal(
     (await get(peer, "/api/guide-media/" + video.id)).status(),
     403,
-    "PM privileges must not grant access to another operator standard-work evidence",
+    "PM privileges must not grant access to another operator standard-work evidence"
   );
-  assert.equal(
-    (await get(manager, "/api/guide-media/" + video.id)).status(),
-    200,
-  );
-  assert.equal(
-    (await get(otherManager, "/api/guide-media/" + video.id)).status(),
-    403,
-  );
-  const badRange = await operator.request.get(
-    origin + "/api/guide-media/" + video.id,
-    { headers: { Range: "bytes=-0" } },
-  );
+  assert.equal((await get(manager, "/api/guide-media/" + video.id)).status(), 200);
+  assert.equal((await get(otherManager, "/api/guide-media/" + video.id)).status(), 403);
+  const badRange = await operator.request.get(origin + "/api/guide-media/" + video.id, {
+    headers: { Range: "bytes=-0" },
+  });
   assert.equal(badRange.status(), 416);
   // Required PM evidence, current assignment, due gating, replay protection and immutable snapshots.
   await read(
@@ -204,10 +190,8 @@ async function main() {
       intervalDays: 7,
       nextDue: yesterday,
       active: true,
-      steps: [
-        { id: "lubricate", text: "Check lubrication and guard", photo: true },
-      ],
-    }),
+      steps: [{ id: "lubricate", text: "Check lubrication and guard", photo: true }],
+    })
   );
   let plan = await db.maintenancePlan.findFirstOrThrow({
     where: { createdBy: users[1].id },
@@ -216,18 +200,14 @@ async function main() {
     action: "complete",
     id: plan.id,
     version: plan.version,
-    responses: [
-      { stepId: "lubricate", answer: true, comment: "Inspected", media: [] },
-    ],
+    responses: [{ stepId: "lubricate", answer: true, comment: "Inspected", media: [] }],
   };
   await read(await post(operator, "/api/maintenance", complete), 400);
   await read(await post(peer, "/api/maintenance", complete), 403);
   await read(await post(otherManager, "/api/maintenance", complete), 403);
   const before = await queueOverdueReminders(users[1]);
   assert(before.queued > 0);
-  complete.responses[0].media = [
-    { id: video.id, kind: "video", caption: "Inspection" },
-  ];
+  complete.responses[0].media = [{ id: video.id, kind: "video", caption: "Inspection" }];
   await read(await post(operator, "/api/maintenance", complete));
   await read(await post(operator, "/api/maintenance", complete), 409);
   plan = await db.maintenancePlan.findUniqueOrThrow({ where: { id: plan.id } });
@@ -237,7 +217,7 @@ async function main() {
       ...complete,
       version: plan.version,
     }),
-    409,
+    409
   );
   const pmRecord = await db.record.findFirstOrThrow({
     where: { kind: "pm", userId: users[4].id },
@@ -249,12 +229,11 @@ async function main() {
       action: "save",
       ...plan,
       title: prefix + " revised PM",
-    }),
+    })
   );
   assert.equal(
-    (await db.record.findUniqueOrThrow({ where: { id: pmRecord.id } })).data
-      .planSnapshot.title,
-    prefix + " lubrication",
+    (await db.record.findUniqueOrThrow({ where: { id: pmRecord.id } })).data.planSnapshot.title,
+    prefix + " lubrication"
   );
   // Text/people filters span server-side history and full exports; no widening department scope.
   let filtered = await read(
@@ -263,13 +242,11 @@ async function main() {
       "/api/platform?view=records&person=" +
         users[4].id +
         "&search=" +
-        encodeURIComponent(prefix.toUpperCase()),
-    ),
+        encodeURIComponent(prefix.toUpperCase())
+    )
   );
   assert.equal(filtered.records.length, 1);
-  filtered = await read(
-    await get(manager, "/api/platform?view=records&person=" + users[5].id),
-  );
+  filtered = await read(await get(manager, "/api/platform?view=records&person=" + users[5].id));
   assert.equal(filtered.records.length, 0);
   const exported = await get(manager, "/api/export?person=" + users[5].id);
   assert.equal(exported.status(), 200);
@@ -277,18 +254,14 @@ async function main() {
   await exportBook.xlsx.load(await exported.body());
   assert.equal(exportBook.getWorksheet("Standard work").rowCount, 1);
   assert.equal(
-    (
-      await read(
-        await get(otherManager, "/api/maintenance?person=" + users[4].id),
-      )
-    ).plans.length,
-    0,
+    (await read(await get(otherManager, "/api/maintenance?person=" + users[4].id))).plans.length,
+    0
   );
   // Uploaded training videos play privately and remain equipment scoped.
   const trainingVideo = await read(
     await post(manager, "/api/guide-media", {
       video: "data:video/mp4;base64," + bytes.toString("base64"),
-    }),
+    })
   );
   videoIds.push(trainingVideo.id);
   await read(
@@ -297,19 +270,11 @@ async function main() {
       title: prefix + " training",
       body: "",
       equipmentId: equipment[0].id,
-      media: [
-        { id: trainingVideo.id, kind: "video", caption: "Setup demonstration" },
-      ],
-    }),
+      media: [{ id: trainingVideo.id, kind: "video", caption: "Setup demonstration" }],
+    })
   );
-  assert.equal(
-    (await get(operator, "/api/guide-media/" + trainingVideo.id)).status(),
-    200,
-  );
-  assert.equal(
-    (await get(otherManager, "/api/guide-media/" + trainingVideo.id)).status(),
-    403,
-  );
+  assert.equal((await get(operator, "/api/guide-media/" + trainingVideo.id)).status(), 200);
+  assert.equal((await get(otherManager, "/api/guide-media/" + trainingVideo.id)).status(), 403);
   // Excel imports are normalized, atomic, replay-safe, versioned and scoped.
   const sourceId = randomUUID(),
     token = createIntegrationToken(sourceId);
@@ -329,21 +294,13 @@ async function main() {
       sourceId,
       section: "Production results",
       mode: "excel",
-    }),
+    })
   );
   feedIds.push(feed.id);
   async function workbook(rows) {
     const b = new ExcelJS.Workbook(),
       s = b.addWorksheet("Production Results");
-    s.addRow([
-      "ExternalID",
-      "EquipmentID",
-      "Date",
-      "Produced",
-      "Good",
-      "Rejects",
-      "PersonID",
-    ]);
+    s.addRow(["ExternalID", "EquipmentID", "Date", "Produced", "Good", "Rejects", "PersonID"]);
     for (const row of rows) s.addRow(row);
     return (
       "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," +
@@ -356,13 +313,13 @@ async function main() {
     await post(manager, "/api/external-data/import", {
       feedId: feed.id,
       workbook: validFile,
-    }),
+    })
   );
   await read(
     await post(manager, "/api/external-data/import", {
       feedId: feed.id,
       workbook: validFile,
-    }),
+    })
   );
   let row = await db.externalRow.findFirstOrThrow({
     where: { feedId: feed.id },
@@ -370,7 +327,7 @@ async function main() {
   assert.equal(
     await db.externalRevision.count({ where: { rowId: row.id } }),
     1,
-    "Identical imports must not create false revisions",
+    "Identical imports must not create false revisions"
   );
   assert.equal(row.values.produced, 100);
   await read(
@@ -381,101 +338,59 @@ async function main() {
         ["wrong-dept", equipment[1].id, today, 1, 1, 0, ""],
       ]),
     }),
-    403,
+    403
   );
   assert.equal(
     await db.externalRow.count({ where: { feedId: feed.id } }),
     1,
-    "Whole batch rolls back when any machine is forbidden",
+    "Whole batch rolls back when any machine is forbidden"
   );
   await read(
     await post(manager, "/api/external-data/import", {
       feedId: feed.id,
       workbook: await workbook([
-        [
-          "formula",
-          equipment[0].id,
-          today,
-          { formula: "1+1", result: 2 },
-          2,
-          0,
-          "",
-        ],
+        ["formula", equipment[0].id, today, { formula: "1+1", result: 2 }, 2, 0, ""],
       ]),
     }),
-    400,
+    400
   );
   await read(
     await post(manager, "/api/external-data/import", {
       feedId: feed.id,
-      workbook: await workbook([
-        ["invalid-total", equipment[0].id, today, 3, 1, 1, ""],
-      ]),
+      workbook: await workbook([["invalid-total", equipment[0].id, today, 3, 1, 1, ""]]),
     }),
-    400,
+    400
   );
   await read(
     await post(manager, "/api/external-data/import", {
       feedId: feed.id,
-      workbook: await workbook([
-        ["lot-001", equipment[0].id, today, 110, 107, 3, users[4].id],
-      ]),
-    }),
+      workbook: await workbook([["lot-001", equipment[0].id, today, 110, 107, 3, users[4].id]]),
+    })
   );
+  assert.equal(await db.externalRevision.count({ where: { rowId: row.id } }), 2);
   assert.equal(
-    await db.externalRevision.count({ where: { rowId: row.id } }),
-    2,
+    (await read(await get(otherManager, "/api/external-data?section=Production%20results"))).items.length,
+    0
   );
+  await read(await get(operator, "/api/external-data?section=Production%20results"), 403);
   assert.equal(
-    (
-      await read(
-        await get(
-          otherManager,
-          "/api/external-data?section=Production%20results",
-        ),
-      )
-    ).items.length,
-    0,
+    (await read(await get(manager, "/api/external-data?section=Production%20results&person=" + users[4].id)))
+      .items.length,
+    1
   );
-  await read(
-    await get(operator, "/api/external-data?section=Production%20results"),
-    403,
-  );
-  assert.equal(
-    (
-      await read(
-        await get(
-          manager,
-          "/api/external-data?section=Production%20results&person=" +
-            users[4].id,
-        ),
-      )
-    ).items.length,
-    1,
-  );
-  const otherRow = [
-    "other-department",
-    equipment[1].id,
-    today,
-    20,
-    20,
-    0,
-    users[6].id,
-  ];
+  const otherRow = ["other-department", equipment[1].id, today, 20, 20, 0, users[6].id];
   await read(
     await post(otherManager, "/api/external-data/import", {
       feedId: feed.id,
       workbook: await workbook([otherRow]),
-    }),
+    })
   );
   await read(
     await post(manager, "/api/external-data/import", {
       feedId: feed.id,
-      workbook: await workbook([
-        ["other-department", equipment[0].id, today, 30, 30, 0, users[4].id],
-      ]),
+      workbook: await workbook([["other-department", equipment[0].id, today, 30, 30, 0, users[4].id]]),
     }),
-    403,
+    403
   );
   assert.equal(
     (
@@ -483,12 +398,9 @@ async function main() {
         where: { feedId: feed.id, externalId: "other-department" },
       })
     ).equipmentId,
-    equipment[1].id,
+    equipment[1].id
   );
-  const sourceExport = await get(
-    manager,
-    "/api/external-data?section=Production%20results&format=xlsx",
-  );
+  const sourceExport = await get(manager, "/api/external-data?section=Production%20results&format=xlsx");
   assert.equal(sourceExport.status(), 200);
   const sourceBook = new ExcelJS.Workbook();
   await sourceBook.xlsx.load(await sourceExport.body());
@@ -501,7 +413,7 @@ async function main() {
       sourceId,
       section: "Analytics",
       mode: "api",
-    }),
+    })
   );
   feedIds.push(apiFeed.id);
   const payload = {
@@ -520,19 +432,12 @@ async function main() {
     });
   }
   await read(await push("9007199254740993", [payload]));
-  await read(
-    await push("9007199254740994", [{ ...payload, values: { count: 6 } }]),
-  );
+  await read(await push("9007199254740994", [{ ...payload, values: { count: 6 } }]));
   await read(await push("9007199254740993", [payload]));
+  assert.equal((await db.externalRow.findFirstOrThrow({ where: { feedId: apiFeed.id } })).values.count, 6);
   assert.equal(
-    (await db.externalRow.findFirstOrThrow({ where: { feedId: apiFeed.id } }))
-      .values.count,
-    6,
-  );
-  assert.equal(
-    (await db.externalFeed.findUniqueOrThrow({ where: { id: apiFeed.id } }))
-      .cursor,
-    "9007199254740994",
+    (await db.externalFeed.findUniqueOrThrow({ where: { id: apiFeed.id } })).cursor,
+    "9007199254740994"
   );
   // Daily overdue alerts: personal plus department managers; closed/disabled/reassigned work cancels queued mail.
   const idea = await db.idea.create({
@@ -584,11 +489,9 @@ async function main() {
     await db.reminder.count({
       where: { equipmentId: equipment[0].id, userId: users[2].id },
     }),
-    0,
+    0
   );
-  const notices = await read(
-    await get(operator, "/api/operations?view=summary"),
-  );
+  const notices = await read(await get(operator, "/api/operations?view=summary"));
   assert(notices.notifications.some((n) => n.kind === "overdue"));
   await db.idea.update({
     where: { id: idea.id },
@@ -611,33 +514,33 @@ async function main() {
     await db.reminder.count({
       where: { entityId: idea.id, status: "Pending" },
     }),
-    0,
+    0
   );
   assert.equal(
     await db.reminder.count({
       where: { entityType: "pm", entityId: plan.id, status: "Pending" },
     }),
-    0,
+    0
   );
   await read(
     await post(operator, "/api/reminders", {
       action: "preferences",
       inApp: false,
       email: false,
-    }),
+    })
   );
   await read(await post(operator, "/api/reminders", { action: "send" }), 403);
   await read(
     await post(otherManager, "/api/reminders", {
       action: "send",
       person: users[4].id,
-    }),
+    })
   );
   assert.equal(
     await db.reminder.count({
       where: { equipmentId: equipment[1].id, userId: users[4].id },
     }),
-    0,
+    0
   );
   // Actual UI: filters, PM editor/execution history, uploaded training, Excel panel and reminder preferences.
   await read(
@@ -650,98 +553,63 @@ async function main() {
       nextDue: today,
       active: true,
       steps: [{ id: "visual", text: "Verify inspection", photo: false }],
-    }),
+    })
   );
   const page = await manager.newPage(),
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(origin);
   await expandTools(page);
-  await page
-    .getByRole("button", { name: "⚒ Preventive maintenance", exact: true })
-    .click();
-  await page
-    .getByRole("heading", { name: prefix + " UI PM", exact: false })
-    .waitFor();
+  await page.getByRole("button", { name: "⚒ Preventive maintenance", exact: true }).click();
+  await page.getByRole("heading", { name: prefix + " UI PM", exact: false }).waitFor();
   const task = page.locator("article.problem-action").filter({
     has: page.getByRole("heading", { name: prefix + " UI PM", exact: false }),
   });
   await task.getByRole("button", { name: "Perform PM", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Yes · complete", exact: true })
-    .click();
-  await page
-    .getByLabel("PM photo or video · optional", { exact: true })
-    .setInputFiles({
-      name: "inspection.mp4",
-      mimeType: "application/octet-stream",
-      buffer: bytes,
-    });
-  await page
-    .getByRole("button", { name: "Complete PM and save evidence", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Yes · complete", exact: true }).click();
+  await page.getByLabel("PM photo or video · optional", { exact: true }).setInputFiles({
+    name: "inspection.mp4",
+    mimeType: "application/octet-stream",
+    buffer: bytes,
+  });
+  await page.getByRole("button", { name: "Complete PM and save evidence", exact: true }).click();
   await page.getByText("PM saved.", { exact: true }).waitFor();
   await fs.mkdir("docs/screenshots/maintenance-data", { recursive: true });
   await page.screenshot({
     path: "docs/screenshots/maintenance-data/pm-plans-history.png",
     fullPage: true,
   });
-  await page
-    .getByLabel("PM assignee / recorder", { exact: true })
-    .fill("Operator Alpha");
+  await page.getByLabel("PM assignee / recorder", { exact: true }).fill("Operator Alpha");
   await page
     .getByRole("listbox", { name: "PM assignee / recorder suggestions" })
     .getByRole("option")
     .filter({ hasText: users[4].username })
     .click();
-  await page
-    .getByRole("button", { name: "Apply filters", exact: true })
-    .click();
-  await page
-    .getByRole("heading", { name: "PM task list", exact: true })
-    .waitFor();
+  await page.getByRole("button", { name: "Apply filters", exact: true }).click();
+  await page.getByRole("heading", { name: "PM task list", exact: true }).waitFor();
   await page.screenshot({
     path: "docs/screenshots/maintenance-data/person-filter.png",
     fullPage: true,
   });
-  await page
-    .getByRole("button", { name: "Clear filters", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "▥ Production results", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Clear filters", exact: true }).click();
+  await page.getByRole("button", { name: "▥ Production results", exact: true }).click();
   await page
     .getByRole("heading", {
       name: "Connected data · Production results",
       exact: true,
     })
     .waitFor();
-  await page
-    .getByText("lot-001", { exact: false })
-    .first()
-    .waitFor({ state: "attached" });
-  await page
-    .locator("details")
-    .filter({ hasText: "lot-001" })
-    .locator("summary")
-    .click();
+  await page.getByText("lot-001", { exact: false }).first().waitFor({ state: "attached" });
+  await page.locator("details").filter({ hasText: "lot-001" }).locator("summary").click();
   assert(
-    (
-      await page
-        .locator("details")
-        .filter({ hasText: "lot-001" })
-        .locator("summary")
-        .textContent()
-    ).includes(equipment[0].name),
+    (await page.locator("details").filter({ hasText: "lot-001" }).locator("summary").textContent()).includes(
+      equipment[0].name
+    )
   );
   assert.equal(
-    await page
-      .locator("details")
-      .filter({ hasText: "lot-001" })
-      .locator("time")
-      .textContent(),
+    await page.locator("details").filter({ hasText: "lot-001" }).locator("time").textContent(),
     today,
-    "Excel calendar dates must not shift backward in US timezones",
+    "Excel calendar dates must not shift backward in US timezones"
   );
   await page.screenshot({
     path: "docs/screenshots/maintenance-data/excel-results.png",
@@ -751,50 +619,32 @@ async function main() {
     await new Promise((r) => setTimeout(r, 400));
     await route.continue();
   });
-  const delayed = page.waitForResponse((r) =>
-    r.url().includes("/api/external-data?section=Analytics"),
-  );
+  const delayed = page.waitForResponse((r) => r.url().includes("/api/external-data?section=Analytics"));
   await Promise.all([
-    page.waitForRequest((r) =>
-      r.url().includes("/api/external-data?section=Analytics"),
-    ),
-    page
-      .locator("nav")
-      .getByRole("button", { name: "▥ Analytics", exact: true })
-      .click(),
+    page.waitForRequest((r) => r.url().includes("/api/external-data?section=Analytics")),
+    page.locator("nav").getByRole("button", { name: "▥ Analytics", exact: true }).click(),
   ]);
-  await page
-    .locator("nav")
-    .getByRole("button", { name: "▥ Production results", exact: true })
-    .click();
-  await page
-    .locator("details")
-    .filter({ hasText: "lot-001" })
-    .waitFor({ state: "attached" });
+  await page.locator("nav").getByRole("button", { name: "▥ Production results", exact: true }).click();
+  await page.locator("details").filter({ hasText: "lot-001" }).waitFor({ state: "attached" });
   await (await delayed).finished();
   await page.waitForTimeout(100);
   assert.equal(
-    await page
-      .locator("details")
-      .filter({ hasText: "Database result" })
-      .count(),
+    await page.locator("details").filter({ hasText: "Database result" }).count(),
     0,
-    "Late source response must not replace the newly selected section",
+    "Late source response must not replace the newly selected section"
   );
   await page
     .getByRole("button", { name: /Notifications/ })
     .first()
     .click();
-  await page
-    .getByRole("heading", { name: "Overdue work reminders", exact: true })
-    .waitFor();
+  await page.getByRole("heading", { name: "Overdue work reminders", exact: true }).waitFor();
   await page.screenshot({
     path: "docs/screenshots/maintenance-data/overdue-reminders.png",
     fullPage: true,
   });
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: PM required photo/video, due/replay guards and immutable snapshots; scoped people/search/export; protected operator videos and training; Excel validation, atomic rollback, idempotent revisions; bigint ordered API feeds; overdue personal/department messages, dedupe/cancellation and UI.",
+    "PASS: PM required photo/video, due/replay guards and immutable snapshots; scoped people/search/export; protected operator videos and training; Excel validation, atomic rollback, idempotent revisions; bigint ordered API feeds; overdue personal/department messages, dedupe/cancellation and UI."
   );
 }
 async function cleanup() {
@@ -827,10 +677,7 @@ async function cleanup() {
   });
   await db.notification.deleteMany({
     where: {
-      OR: [
-        { userId: { in: ids } },
-        { ideaId: { in: fixtureIdeas.map((x) => x.id) } },
-      ],
+      OR: [{ userId: { in: ids } }, { ideaId: { in: fixtureIdeas.map((x) => x.id) } }],
     },
   });
   await db.reminder.deleteMany({
@@ -854,6 +701,8 @@ async function cleanup() {
   await db.location.deleteMany({ where: { plant: prefix } });
   await db.photo.deleteMany({ where: { userId: { in: ids } } });
   await db.guideMedia.deleteMany({ where: { userId: { in: ids } } });
+  await db.notification.deleteMany({ where: { userId: { in: ids }, kind: "assignment" } });
+  await db.assignmentDelivery.deleteMany({ where: { userId: { in: ids } } });
   await db.user.deleteMany({ where: { id: { in: ids } } });
   if (settingsBefore)
     await db.setting.upsert({
@@ -862,10 +711,8 @@ async function cleanup() {
       update: { value: settingsBefore.value },
     });
   else await db.setting.deleteMany({ where: { key: "overdue-channels" } });
-  for (const id of photoIds)
-    await fs.unlink("uploads/" + id + ".webp").catch(() => {});
-  for (const id of videoIds)
-    await fs.unlink("uploads/" + id + ".video").catch(() => {});
+  for (const id of photoIds) await fs.unlink("uploads/" + id + ".webp").catch(() => {});
+  for (const id of videoIds) await fs.unlink("uploads/" + id + ".video").catch(() => {});
   await db.$disconnect();
 }
 main()

@@ -3,20 +3,10 @@ import { requireDelegated } from "@/lib/security";
 import { z } from "zod";
 import { workflowFocus } from "@/lib/workflow-focus";
 import { db } from "@/lib/db";
-import {
-  requireUser,
-  grants,
-  jsonBody,
-  failure,
-  HttpError,
-} from "@/lib/security";
+import { requireUser, grants, jsonBody, failure, HttpError } from "@/lib/security";
 import { visibleAreas, assertAreaAccess, allowedArea } from "@/lib/area-access";
 import { ownEvidence } from "@/lib/evidence";
-import {
-  fiveSPlanSchema,
-  fiveSResponse,
-  validateFiveS,
-} from "@/lib/floor-rules";
+import { fiveSPlanSchema, fiveSResponse, validateFiveS } from "@/lib/floor-rules";
 import { readFilters } from "@/lib/filters";
 import { paged, streamWorkbook } from "@/lib/excel-stream";
 export async function GET(req: Request) {
@@ -42,7 +32,7 @@ export async function GET(req: Request) {
                         [a.plant, a.department, a.area, a.line]
                           .join(" ")
                           .toLowerCase()
-                          .includes(search.toLowerCase()),
+                          .includes(search.toLowerCase())
                       )
                       .map((a) => a.id),
                   },
@@ -80,7 +70,7 @@ export async function GET(req: Request) {
                       [a.plant, a.department, a.area, a.line]
                         .join(" ")
                         .toLowerCase()
-                        .includes(search.toLowerCase()),
+                        .includes(search.toLowerCase())
                     )
                     .map((a) => a.id),
                 },
@@ -111,7 +101,7 @@ export async function GET(req: Request) {
               orderBy: { id: "asc" },
               take: 100,
               ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-            }),
+            })
           ))
             await sheet.addRow([
               r.id,
@@ -124,7 +114,7 @@ export async function GET(req: Request) {
               JSON.stringify(r.responses),
             ]);
         },
-        req.signal,
+        req.signal
       );
     }
     const people = (
@@ -153,9 +143,7 @@ export async function GET(req: Request) {
       records,
       areas,
       people,
-      canManage:
-        (await grants(u)).includes("manage") ||
-        (await canAdminister(u, "fiveS.manage")),
+      canManage: (await grants(u)).includes("manage") || (await canAdminister(u, "fiveS.manage")),
     });
   } catch (e) {
     return failure(e);
@@ -181,21 +169,17 @@ export async function POST(req: Request) {
         if (links.length)
           throw new HttpError(
             409,
-            "Remove this 5S link from active standard-work checklists before retiring the plan.",
+            "Remove this 5S link from active standard-work checklists before retiring the plan."
           );
         const updated = await tx.fiveSPlan.updateMany({
           where: { id, version },
           data: {
             active: false,
             version: { increment: 1 },
-            history: [
-              ...(plan.history as any[]),
-              { ...entry, action: "retired" },
-            ],
+            history: [...(plan.history as any[]), { ...entry, action: "retired" }],
           },
         });
-        if (!updated.count)
-          throw new HttpError(409, "Plan changed; refresh before retiring");
+        if (!updated.count) throw new HttpError(409, "Plan changed; refresh before retiring");
       });
       return Response.json({ ok: true });
     }
@@ -209,24 +193,14 @@ export async function POST(req: Request) {
         const people = await tx.user.findMany({
           where: { id: { in: [...new Set(v.assigneeIds)] }, active: true },
         });
-        if (
-          people.length !== new Set(v.assigneeIds).size ||
-          people.some((p) => !allowedArea(p, area))
-        )
-          throw new HttpError(
-            400,
-            "Assign active people with access to this area",
-          );
+        if (people.length !== new Set(v.assigneeIds).size || people.some((p) => !allowedArea(p, area)))
+          throw new HttpError(400, "Assign active people with access to this area");
         if (id) {
           await tx.$queryRaw`SELECT id FROM "FiveSPlan" WHERE id=${id} FOR UPDATE`;
           const old = await tx.fiveSPlan.findUnique({ where: { id } });
-          if (!old || old.version !== version)
-            throw new HttpError(409, "5S plan changed; reload");
+          if (!old || old.version !== version) throw new HttpError(409, "5S plan changed; reload");
           if (old.locationId !== v.locationId)
-            throw new HttpError(
-              400,
-              "Create a new 5S plan for another area; existing plans keep their area",
-            );
+            throw new HttpError(400, "Create a new 5S plan for another area; existing plans keep their area");
           await assertAreaAccess(u, old.locationId, tx);
           await tx.fiveSPlan.update({
             where: { id },
@@ -252,26 +226,19 @@ export async function POST(req: Request) {
       const result = await db.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT id FROM "FiveSPlan" WHERE id=${v.id} FOR SHARE`;
         const p = await tx.fiveSPlan.findUnique({ where: { id: v.id } });
-        if (!p?.active || p.version !== v.version)
-          throw new HttpError(409, "5S plan changed; reload");
+        if (!p?.active || p.version !== v.version) throw new HttpError(409, "5S plan changed; reload");
         const area = await assertAreaAccess(u, p.locationId, tx);
         if (
           u.role !== "Admin" &&
           (p.assigneeIds as string[]).length &&
           !(p.assigneeIds as string[]).includes(u.id)
         )
-          throw new HttpError(
-            403,
-            "This 5S audit is assigned to another person",
-          );
+          throw new HttpError(403, "This 5S audit is assigned to another person");
         let scores;
         try {
           scores = validateFiveS(p.questions as any, v.responses);
         } catch {
-          throw new HttpError(
-            400,
-            "Answer each question and attach required evidence",
-          );
+          throw new HttpError(400, "Answer each question and attach required evidence");
         }
         const media = v.responses.flatMap((r) => r.media);
         await ownEvidence(u.id, media, [], tx);

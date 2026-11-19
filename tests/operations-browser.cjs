@@ -1,8 +1,4 @@
-const {
-  expandTools,
-  assignmentPanels,
-  planningTools,
-} = require("./ui-workspace.cjs");
+const { expandTools, assignmentPanels, planningTools } = require("./ui-workspace.cjs");
 const { selectDowntimeMachine } = require("./helpers/downtime.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
@@ -51,10 +47,8 @@ async function login(user) {
 }
 async function main() {
   assert(["localhost", "127.0.0.1"].includes(new URL(origin).hostname));
-  originalConfig = (await db.setting.findUnique({ where: { key: "shifts" } }))
-    .value;
-  originalManager = (await db.policy.findUnique({ where: { role: "Manager" } }))
-    .grants;
+  originalConfig = (await db.setting.findUnique({ where: { key: "shifts" } })).value;
+  originalManager = (await db.policy.findUnique({ where: { role: "Manager" } })).grants;
   const hash = await hashPassword(password);
   for (const [role, name] of [
     ["Admin", "Avery Admin"],
@@ -72,7 +66,7 @@ async function main() {
           mustChange: false,
           workspaceAccess: { mode: "all", locations: [], equipmentIds: [] },
         },
-      }),
+      })
     );
   for (const [name, department] of [
     ["Packing station 02", "Assembly " + suffix],
@@ -88,16 +82,14 @@ async function main() {
           area: "Production",
           line: "Line B",
         },
-      }),
+      })
     );
   browser = await chromium.launch({
     executablePath: process.env.CHROMIUM_PATH || "/usr/bin/chromium",
     headless: true,
     args: ["--no-sandbox"],
   });
-  const [admin, manager, validator, operator] = await Promise.all(
-    users.map(login),
-  );
+  const [admin, manager, validator, operator] = await Promise.all(users.map(login));
   const anon = await browser.newContext();
   assert.equal((await get(anon)).status, 401);
   assert.equal((await get(operator, "/api/leadership")).status, 403);
@@ -106,16 +98,9 @@ async function main() {
   await ap.goto(origin);
   await expandTools(ap);
   await ap.getByRole("button", { name: /Downtime$/ }).click();
-  await ap
-    .getByLabel("Reason name", { exact: true })
-    .fill("Tool adjustment " + suffix);
-  await ap
-    .getByRole("button", { name: "Add downtime reason", exact: true })
-    .click();
-  await ap
-    .getByRole("status")
-    .filter({ hasText: "Saved to the database." })
-    .waitFor();
+  await ap.getByLabel("Reason name", { exact: true }).fill("Tool adjustment " + suffix);
+  await ap.getByRole("button", { name: "Add downtime reason", exact: true }).click();
+  await ap.getByRole("status").filter({ hasText: "Saved to the database." }).waitFor();
   const reason = await db.downtimeReason.findUnique({
     where: { name: "Tool adjustment " + suffix },
   });
@@ -133,7 +118,7 @@ async function main() {
         active: true,
       })
     ).status,
-    403,
+    403
   );
   assert.equal(
     (
@@ -144,13 +129,9 @@ async function main() {
         active: true,
       })
     ).status,
-    403,
+    403
   );
-  assert.equal(
-    (await post(validator, { action: "shifts", config: originalConfig }))
-      .status,
-    403,
-  );
+  assert.equal((await post(validator, { action: "shifts", config: originalConfig })).status, 403);
   assert.equal(
     (
       await post(admin, {
@@ -161,7 +142,7 @@ async function main() {
         },
       })
     ).status,
-    400,
+    400
   );
   const op = await operator.newPage(),
     errors = [];
@@ -169,20 +150,11 @@ async function main() {
   await op.goto(origin);
   await expandTools(op);
   await op.getByRole("button", { name: /Downtime$/ }).click();
-  assert.equal(
-    await op
-      .getByRole("heading", { name: "Reasons & timer availability" })
-      .count(),
-    0,
-  );
+  assert.equal(await op.getByRole("heading", { name: "Reasons & timer availability" }).count(), 0);
   await selectDowntimeMachine(op, equipment[0]);
-  await op
-    .getByLabel("Downtime reason", { exact: true })
-    .selectOption(reason.id);
+  await op.getByLabel("Downtime reason", { exact: true }).selectOption(reason.id);
   await op.getByRole("button", { name: "Start downtime", exact: true }).click();
-  await op
-    .getByRole("button", { name: "Stop downtime", exact: true })
-    .waitFor();
+  await op.getByRole("button", { name: "Stop downtime", exact: true }).waitFor();
   let event = await db.downtime.findFirst({
     where: { equipmentId: equipment[0].id, endedAt: null },
   });
@@ -196,16 +168,14 @@ async function main() {
         startedAt: "2001-01-01T00:00:00Z",
       })
     ).status,
-    409,
+    409
   );
   await op.waitForTimeout(1100);
   await op.reload();
   await expandTools(op);
   await op.getByRole("button", { name: /Downtime$/ }).click();
   await selectDowntimeMachine(op, equipment[0]);
-  await op
-    .getByRole("button", { name: "Stop downtime", exact: true })
-    .waitFor();
+  await op.getByRole("button", { name: "Stop downtime", exact: true }).waitFor();
   await op.screenshot({
     path: "docs/screenshots/downtime-operator.png",
     fullPage: true,
@@ -219,7 +189,7 @@ async function main() {
         active: false,
       })
     ).status,
-    200,
+    200
   );
   const changedConfig = {
     timezone: "UTC",
@@ -228,22 +198,14 @@ async function main() {
       { name: "Night", startMinute: 720 },
     ],
   };
-  assert.equal(
-    (await post(admin, { action: "shifts", config: changedConfig })).status,
-    200,
-  );
+  assert.equal((await post(admin, { action: "shifts", config: changedConfig })).status, 200);
   await op.getByRole("button", { name: "Stop downtime", exact: true }).click();
-  await op
-    .getByRole("button", { name: "Start downtime", exact: true })
-    .waitFor();
+  await op.getByRole("button", { name: "Start downtime", exact: true }).waitFor();
   event = await db.downtime.findUnique({ where: { id: event.id } });
   assert(event.endedAt > event.startedAt);
   assert.equal(event.reasonName, "Tool adjustment " + suffix);
   assert.deepEqual(event.shiftConfig, originalConfig);
-  assert.equal(
-    (await post(manager, { action: "stop", id: event.id })).status,
-    409,
-  );
+  assert.equal((await post(manager, { action: "stop", id: event.id })).status, 409);
   assert.equal(
     (
       await post(operator, {
@@ -252,7 +214,7 @@ async function main() {
         reasonId: reason.id,
       })
     ).status,
-    400,
+    400
   );
   await post(admin, { action: "shifts", config: originalConfig });
   await post(admin, {
@@ -277,17 +239,10 @@ async function main() {
   const racingEvent = await db.downtime.findFirst({
     where: { equipmentId: equipment[0].id, endedAt: null },
   });
-  assert.equal(
-    (await post(validator, { action: "stop", id: racingEvent.id })).status,
-    200,
-  );
+  assert.equal((await post(validator, { action: "stop", id: racingEvent.id })).status, 200);
   await op.getByRole("button", { name: /Improvement ideas$/ }).click();
-  await op
-    .getByLabel("Idea title", { exact: true })
-    .fill("Stage changeover tools before the shift");
-  await op
-    .getByLabel("Equipment", { exact: true })
-    .selectOption(equipment[0].id);
+  await op.getByLabel("Idea title", { exact: true }).fill("Stage changeover tools before the shift");
+  await op.getByLabel("Equipment", { exact: true }).selectOption(equipment[0].id);
   await op
     .getByLabel("Current state", { exact: true })
     .fill("Operators walk to the tool crib during every changeover.");
@@ -298,50 +253,28 @@ async function main() {
   await op.getByLabel("Validator", { exact: true }).selectOption(users[2].id);
   await op.getByLabel(`Participant ${users[0].name}`, { exact: true }).check();
   await op.getByLabel(`Participant ${users[3].name}`, { exact: true }).check();
-  await op
-    .getByLabel("Process / improvement location", { exact: true })
-    .fill("Packing changeover");
+  await op.getByLabel("Process / improvement location", { exact: true }).fill("Packing changeover");
   await op.getByLabel("Due date", { exact: true }).fill("2026-11-15");
   await op.screenshot({
     path: "docs/screenshots/improvement-idea-input.png",
     fullPage: true,
   });
-  await op
-    .getByRole("button", { name: "Submit idea & notify pilot", exact: true })
-    .click();
-  await op
-    .getByRole("status")
-    .filter({ hasText: "Saved to the database." })
-    .waitFor();
+  await op.getByRole("button", { name: "Submit idea & notify pilot", exact: true }).click();
+  await op.getByRole("status").filter({ hasText: "Saved to the database." }).waitFor();
   const idea = await db.idea.findFirst({ where: { createdBy: users[3].id } });
   assert(idea);
   assert.equal(idea.process, "Packing changeover");
   await op.getByText(idea.id, { exact: true }).waitFor();
   assert.equal(idea.submitterId, users[3].id);
-  assert.equal(
-    await db.ideaParticipant.count({ where: { ideaId: idea.id } }),
-    2,
-  );
+  assert.equal(await db.ideaParticipant.count({ where: { ideaId: idea.id } }), 2);
   const notification = await db.notification.findFirst({
     where: { ideaId: idea.id },
   });
   assert(notification);
   assert.equal(notification.userId, users[1].id);
-  assert(
-    (await get(manager)).body.notifications.some(
-      (n) => n.id === notification.id,
-    ),
-  );
-  assert(
-    !(await get(operator)).body.notifications.some(
-      (n) => n.id === notification.id,
-    ),
-  );
-  assert.equal(
-    (await post(operator, { action: "readNotification", id: notification.id }))
-      .status,
-    404,
-  );
+  assert((await get(manager)).body.notifications.some((n) => n.id === notification.id));
+  assert(!(await get(operator)).body.notifications.some((n) => n.id === notification.id));
+  assert.equal((await post(operator, { action: "readNotification", id: notification.id })).status, 404);
   const directory = (await get(operator)).body.people;
   assert(directory.length >= 4);
   assert(directory.every((p) => !("password" in p) && !("role" in p)));
@@ -358,24 +291,11 @@ async function main() {
     fullPage: true,
   });
   await mp.getByRole("button", { name: "Mark as read", exact: true }).click();
-  await mp
-    .getByRole("status")
-    .filter({ hasText: "Saved to the database." })
-    .waitFor();
-  assert(
-    (await db.notification.findUnique({ where: { id: notification.id } }))
-      .readAt,
-  );
-  await mp
-    .getByRole("button", { name: "Open improvement ideas", exact: true })
-    .click();
-  await mp
-    .getByLabel("Progress for " + idea.title, { exact: true })
-    .selectOption("Piloting");
-  await mp
-    .getByRole("status")
-    .filter({ hasText: "Saved to the database." })
-    .waitFor();
+  await mp.getByRole("status").filter({ hasText: "Saved to the database." }).waitFor();
+  assert((await db.notification.findUnique({ where: { id: notification.id } })).readAt);
+  await mp.getByRole("button", { name: "Open improvement ideas", exact: true }).click();
+  await mp.getByLabel("Progress for " + idea.title, { exact: true }).selectOption("Piloting");
+  await mp.getByRole("status").filter({ hasText: "Saved to the database." }).waitFor();
   let current = await db.idea.findUnique({ where: { id: idea.id } });
   assert.equal(current.status, "Piloting");
   assert.equal(
@@ -387,7 +307,7 @@ async function main() {
         status: "Validation",
       })
     ).status,
-    403,
+    403
   );
   assert.equal(
     (
@@ -398,7 +318,7 @@ async function main() {
         status: "Completed",
       })
     ).status,
-    403,
+    403
   );
   assert.equal(
     (
@@ -409,7 +329,7 @@ async function main() {
         status: "Validation",
       })
     ).status,
-    409,
+    409
   );
   assert.equal(
     (
@@ -420,7 +340,7 @@ async function main() {
         status: "Completed",
       })
     ).status,
-    200,
+    200
   );
   const baseIdea = {
     action: "idea",
@@ -434,10 +354,7 @@ async function main() {
     submitterId: users[3].id,
     participantIds: [users[0].id],
   };
-  assert.equal(
-    (await post(operator, { ...baseIdea, dueDate: "2026-02-30" })).status,
-    400,
-  );
+  assert.equal((await post(operator, { ...baseIdea, dueDate: "2026-02-30" })).status, 400);
   await db.user.update({ where: { id: users[2].id }, data: { active: false } });
   assert.equal((await post(operator, baseIdea)).status, 400);
   await db.user.update({ where: { id: users[2].id }, data: { active: true } });
@@ -471,9 +388,7 @@ async function main() {
                   title: "Machining study",
                   equipmentId: e.id,
                   equipmentSnapshot: e,
-                  cycles: [
-                    { element: "Cycle", seconds: 40, at: date.toISOString() },
-                  ],
+                  cycles: [{ element: "Cycle", seconds: 40, at: date.toISOString() }],
                 }
               : {
                   snapshot,
@@ -488,11 +403,9 @@ async function main() {
                   durationSeconds: 60,
                   followUp: true,
                   operator: "Operator 104",
-                  cycles: [
-                    { element: "Cycle", seconds: 50, at: date.toISOString() },
-                  ],
-                },
-          ),
+                  cycles: [{ element: "Cycle", seconds: 50, at: date.toISOString() }],
+                }
+          )
         ),
       },
     });
@@ -548,20 +461,16 @@ async function main() {
           department: equipment[2].department,
           from: "2026-10-31",
           to: "2026-10-31",
-        }),
+        })
     )
   ).body;
   assert.equal(clipped.summary.downtimeSeconds, 600);
   assert.equal(clipped.shifts[0].shiftDate, "2026-10-30");
   const query = (department) =>
-    "/api/leadership?" +
-    new URLSearchParams({ department, from: "2026-10-30", to: "2026-10-30" });
+    "/api/leadership?" + new URLSearchParams({ department, from: "2026-10-30", to: "2026-10-30" });
   const boundary = (await get(manager, query(equipment[2].department))).body;
   assert.equal(boundary.summary.downtimeSeconds, 1800);
-  assert.deepEqual(
-    boundary.shifts.map((s) => s.seconds).sort(),
-    [600, 600, 600],
-  );
+  assert.deepEqual(boundary.shifts.map((s) => s.seconds).sort(), [600, 600, 600]);
   const scoped = (await get(manager, query(equipment[1].department))).body;
   assert.equal(scoped.summary.downtimeSeconds, 1800);
   assert.equal(scoped.summary.runs, 1);
@@ -574,31 +483,21 @@ async function main() {
   const overall = (await get(manager, query(""))).body;
   assert(overall.summary.downtimeSeconds >= 3000);
   assert(overall.summary.runs >= 1);
-  assert.equal(
-    (await get(manager, "/api/leadership?from=2026-11-01&to=2026-10-01"))
-      .status,
-    400,
-  );
+  assert.equal((await get(manager, "/api/leadership?from=2026-11-01&to=2026-10-01")).status, 400);
   await mp.getByRole("button", { name: /Leadership dashboard$/ }).click();
-  await mp
-    .getByRole("heading", { name: "Whole-floor performance", exact: true })
-    .waitFor();
+  await mp.getByRole("heading", { name: "Whole-floor performance", exact: true }).waitFor();
   await mp.getByLabel("From date", { exact: true }).fill("2026-10-30");
   await mp.getByLabel("To date", { exact: true }).fill("2026-10-30");
   await mp
     .locator("form.leadership-filters")
     .getByRole("button", { name: "Apply filters", exact: true })
     .click();
-  await mp
-    .getByText("2026-10-30 through 2026-10-30", { exact: false })
-    .waitFor();
+  await mp.getByText("2026-10-30 through 2026-10-30", { exact: false }).waitFor();
   await mp.screenshot({
     path: "docs/screenshots/leadership-overall.png",
     fullPage: true,
   });
-  await mp
-    .getByLabel("Leadership department", { exact: true })
-    .selectOption(equipment[1].department);
+  await mp.getByLabel("Leadership department", { exact: true }).selectOption(equipment[1].department);
   await mp
     .locator("form.leadership-filters")
     .getByRole("button", { name: "Apply filters", exact: true })
@@ -613,19 +512,12 @@ async function main() {
     path: "docs/screenshots/leadership-department.png",
     fullPage: true,
   });
-  const xlsx = await manager.request.get(
-    origin + query(equipment[1].department) + "&format=xlsx",
-  );
+  const xlsx = await manager.request.get(origin + query(equipment[1].department) + "&format=xlsx");
   assert.equal(xlsx.status(), 200);
   let book = new Excel.Workbook();
   await book.xlsx.load(await xlsx.body());
   assert.equal(book.worksheets.length, 4);
-  assert(
-    book
-      .getWorksheet("Leadership summary")
-      .getRow(1)
-      .values.includes(equipment[1].department),
-  );
+  assert(book.getWorksheet("Leadership summary").getRow(1).values.includes(equipment[1].department));
   const allExport = await admin.request.get(origin + "/api/export");
   book = new Excel.Workbook();
   await book.xlsx.load(await allExport.body());
@@ -657,20 +549,12 @@ async function main() {
     path: "docs/screenshots/mobile-downtime.png",
     fullPage: true,
   });
-  assert(
-    await mobilePage.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  );
+  assert(await mobilePage.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await mobilePage.getByRole("button", { name: /Improvement ideas$/ }).click();
-  assert(
-    await mobilePage.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  );
+  assert(await mobilePage.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   assert.equal(errors.length, 0, errors.join("\n"));
   console.log(
-    "PASS: admin reasons/shifts, operator timer persistence, disabled reasons, concurrent starts, stop conflicts, historical snapshots, shift allocation, improvement assignments, private pilot notifications, progress permissions, department leadership totals, all-section reports, nine-sheet exports, leadership policy revocation, and mobile layout.",
+    "PASS: admin reasons/shifts, operator timer persistence, disabled reasons, concurrent starts, stop conflicts, historical snapshots, shift allocation, improvement assignments, private pilot notifications, progress permissions, department leadership totals, all-section reports, nine-sheet exports, leadership policy revocation, and mobile layout."
   );
 }
 main()
@@ -713,15 +597,14 @@ main()
     ).map((r) => r.id);
     await db.notification.deleteMany({
       where: {
-        OR: [
-          { userId: { in: ids } },
-          { kind: "overdue", sourceId: { in: reminderIds } },
-        ],
+        OR: [{ userId: { in: ids } }, { kind: "overdue", sourceId: { in: reminderIds } }],
       },
     });
     await db.reminder.deleteMany({ where: { equipmentId: { in: eq } } });
     await db.equipment.deleteMany({ where: { id: { in: eq } } });
     await db.session.deleteMany({ where: { userId: { in: ids } } });
+    await db.notification.deleteMany({ where: { userId: { in: ids }, kind: "assignment" } });
+    await db.assignmentDelivery.deleteMany({ where: { userId: { in: ids } } });
     await db.user.deleteMany({ where: { id: { in: ids } } });
     await db.rate.deleteMany({
       where: { OR: ids.map((id) => ({ key: { contains: id } })) },

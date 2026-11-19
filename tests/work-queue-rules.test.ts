@@ -1,10 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import {
-  scheduledQueue,
-  nearbyShifts,
-  queueOrder,
-} from "../lib/work-queue-rules";
+import { scheduledQueue, nearbyShifts, queueOrder } from "../lib/work-queue-rules";
 import { equipmentLabel, focusedEquipmentIds } from "../lib/equipment-label";
 import { roleHome } from "../lib/floor-navigation";
 const config = {
@@ -53,22 +49,18 @@ const options = {
   now,
 };
 test("current and overnight shift windows use configured timezone and DST", () => {
-  const w = nearbyShifts(config, now).find(
-    (w) => +w.start <= +now && +w.end > +now,
-  )!;
+  const w = nearbyShifts(config, now).find((w) => +w.start <= +now && +w.end > +now)!;
   assert.equal(w.name, "Day");
   assert.equal(w.start.toISOString(), "2026-11-17T12:00:00.000Z");
   assert.equal(w.end.toISOString(), "2026-11-18T00:00:00.000Z");
   const dst = nearbyShifts(config, new Date("2026-11-01T09:00Z")).find(
-    (w) => w.name === "Night" && w.date === "2026-10-31",
+    (w) => w.name === "Night" && w.date === "2026-10-31"
   )!;
   assert.equal((+dst.end - +dst.start) / 3600000, 13);
 });
 test("shift queue differentiates due, completed and missed without erasing a past miss", () => {
   const initial = scheduledQueue(options);
-  assert(
-    initial.rows.some((r) => r.status === "Due this shift" && r.canPerform),
-  );
+  assert(initial.rows.some((r) => r.status === "Due this shift" && r.canPerform));
   assert(initial.rows.some((r) => r.status === "Missed" && !r.canPerform));
   const record = {
     kind: "run",
@@ -87,7 +79,7 @@ test("personal scope and station requirements use the actual assignee and requir
       ...options,
       schedules: [{ ...schedule, assigneeIds: [other] }],
     }).rows.length,
-    0,
+    0
   );
   const team = scheduledQueue({
     ...options,
@@ -153,19 +145,10 @@ test("labels disambiguate lines and IDs; focused asset IDs only narrow existing 
     area: "Compressing",
     line: "Line 1",
   };
-  assert.notEqual(
-    equipmentLabel(eq),
-    equipmentLabel({ ...eq, id: other, line: "Line 2" }),
-  );
+  assert.notEqual(equipmentLabel(eq), equipmentLabel({ ...eq, id: other, line: "Line 2" }));
   assert(equipmentLabel(eq).includes(userId));
-  assert.deepEqual(
-    focusedEquipmentIds("https://example.test/?equipment=" + other, [userId]),
-    [],
-  );
-  assert.deepEqual(
-    focusedEquipmentIds("https://example.test/?equipment=" + userId, [userId]),
-    [userId],
-  );
+  assert.deepEqual(focusedEquipmentIds("https://example.test/?equipment=" + other, [userId]), []);
+  assert.deepEqual(focusedEquipmentIds("https://example.test/?equipment=" + userId, [userId]), [userId]);
 });
 test("maintenance and supervisor home profiles change presentation without granting permissions", () => {
   const u = {
@@ -178,8 +161,5 @@ test("maintenance and supervisor home profiles change presentation without grant
   assert.equal(roleHome(u).title, "My maintenance work");
   assert(!roleHome(u).primary.includes("Standard work"));
   assert(!roleHome(u).primary.includes("Accounts"));
-  assert.equal(
-    roleHome({ ...u, role: "DL/TL", homeProfile: "supervisor" }).title,
-    "Area supervision",
-  );
+  assert.equal(roleHome({ ...u, role: "DL/TL", homeProfile: "supervisor" }).title, "Area supervision");
 });

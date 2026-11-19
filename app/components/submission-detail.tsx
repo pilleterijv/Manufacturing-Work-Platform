@@ -37,11 +37,7 @@ function ArrayValue({ value }: { value: any[] }) {
         </div>
       ))}
       {value.length > count && (
-        <button
-          type="button"
-          className="outline"
-          onClick={() => setCount((n) => n + 50)}
-        >
+        <button type="button" className="outline" onClick={() => setCount((n) => n + 50)}>
           Show next 50 items ({value.length - count} remaining)
         </button>
       )}
@@ -51,22 +47,11 @@ function ArrayValue({ value }: { value: any[] }) {
 function media(raw: any): Evidence[] {
   return Array.isArray(raw)
     ? raw
-        .filter(
-          (m) =>
-            m &&
-            typeof m.id === "string" &&
-            ["photo", "video"].includes(m.kind),
-        )
+        .filter((m) => m && typeof m.id === "string" && ["photo", "video"].includes(m.kind))
         .map((m) => ({ ...m, caption: m.caption || "" }))
     : [];
 }
-export default function SubmissionDetail({
-  data,
-  onClose,
-}: {
-  data: any;
-  onClose: () => void;
-}) {
+export default function SubmissionDetail({ data, onClose }: { data: any; onClose: () => void }) {
   const r = data.record,
     d = data.source === "record" ? r.data : r,
     snapshot = d.snapshot || d.planSnapshot || d.centerlineSnapshot || {},
@@ -75,8 +60,8 @@ export default function SubmissionDetail({
   const originalEquipment = snapshot.equipment || d.equipmentSnapshot;
   const attachedIds = new Set(
     (d.responses || []).flatMap((a: any) =>
-      [...media(a.media).map((m) => m.id), a.photo, a.video].filter(Boolean),
-    ),
+      [...media(a.media).map((m) => m.id), a.photo, a.video].filter(Boolean)
+    )
   );
   return (
     <section className="panel" aria-label="Submission details">
@@ -88,18 +73,12 @@ export default function SubmissionDetail({
       </div>
       <p className="badge">Read-only saved submission</p>
       <p>
-        Reference: <code>{r.id}</code> ·{" "}
-        {new Date(r.created || r.createdAt).toLocaleString()} ·{" "}
+        Reference: <code>{r.id}</code> · {new Date(r.created || r.createdAt).toLocaleString()} ·{" "}
         {r.user?.name || data.authorName || "Recorded account"}
       </p>
       {data.areas?.[0] && (
         <p>
-          {[
-            data.areas[0].plant,
-            data.areas[0].department,
-            data.areas[0].area,
-            data.areas[0].line,
-          ]
+          {[data.areas[0].plant, data.areas[0].department, data.areas[0].area, data.areas[0].line]
             .filter(Boolean)
             .join(" / ")}
           {!data.areas[0].active ? " · Retired location — history only" : ""}
@@ -125,7 +104,7 @@ export default function SubmissionDetail({
                 "centerlineSnapshot",
                 "userId",
                 "createdAt",
-              ].includes(k),
+              ].includes(k)
           )
           .map(([k, v]) => (
             <div key={k}>
@@ -136,9 +115,7 @@ export default function SubmissionDetail({
             </div>
           ))}
       </dl>
-      {snapshot.revision && (
-        <p>Original checklist revision: {snapshot.revision}</p>
-      )}
+      {snapshot.revision && <p>Original checklist revision: {snapshot.revision}</p>}
       {originalEquipment && (
         <p>
           {[
@@ -152,9 +129,7 @@ export default function SubmissionDetail({
             .join(" / ")}
         </p>
       )}
-      {!snapshot.revision && snapshot.version && (
-        <p>Original plan version: {snapshot.version}</p>
-      )}
+      {!snapshot.revision && snapshot.version && <p>Original plan version: {snapshot.version}</p>}
       {d.handoff && (
         <section>
           <h3>Shift handoff</h3>
@@ -165,9 +140,7 @@ export default function SubmissionDetail({
         <section>
           <h3>Submitted answers</h3>
           {d.responses.map((a: any, i: number) => {
-            const s = steps.find(
-              (s: any) => s.id === (a.stepId || a.questionId || a.parameterId),
-            );
+            const s = steps.find((s: any) => s.id === (a.stepId || a.questionId || a.parameterId));
             const evidence = [
               ...media(a.media),
               ...(a.photo
@@ -190,10 +163,7 @@ export default function SubmissionDetail({
                 : []),
             ];
             return (
-              <article
-                className="record-step"
-                key={a.stepId || a.questionId || a.parameterId || i}
-              >
+              <article className="record-step" key={a.stepId || a.questionId || a.parameterId || i}>
                 <h4>{s?.text || s?.name || `Response ${i + 1}`}</h4>
                 {s?.group && (
                   <p>
@@ -204,22 +174,13 @@ export default function SubmissionDetail({
                 <FieldValue
                   value={Object.fromEntries(
                     Object.entries(a).filter(
-                      ([k]) =>
-                        ![
-                          "photo",
-                          "video",
-                          "media",
-                          "stepId",
-                          "parameterId",
-                          "questionId",
-                        ].includes(k),
-                    ),
+                      ([k]) => !["photo", "video", "media", "stepId", "parameterId", "questionId"].includes(k)
+                    )
                   )}
                 />
                 {s?.unit && (
                   <p>
-                    Unit: {s.unit} · Original target:{" "}
-                    {s.target ?? s.expected ?? "Not recorded"} · Limits:{" "}
+                    Unit: {s.unit} · Original target: {s.target ?? s.expected ?? "Not recorded"} · Limits:{" "}
                     {s.lower ?? "—"} to {s.upper ?? "—"}
                   </p>
                 )}
@@ -235,12 +196,10 @@ export default function SubmissionDetail({
           <FieldValue value={d.cycles} />
         </section>
       )}
-      <EvidenceView
-        media={media(d.media).filter((m) => !attachedIds.has(m.id))}
-      />
+      <EvidenceView media={media(d.media).filter((m) => !attachedIds.has(m.id))} />
       <p className="small muted">
-        Viewing this entry does not change it. Use the original section for a
-        new submission or an authorized status update.
+        Viewing this entry does not change it. Use the original section for a new submission or an authorized
+        status update.
       </p>
     </section>
   );

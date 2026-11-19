@@ -14,12 +14,8 @@ export default function AccountNameFields({
   initialFirstName?: string;
   initialLastName?: string;
 }) {
-  const [first, setFirst] = useState(
-      initialFirstName || name.split(" ")[0] || "",
-    ),
-    [last, setLast] = useState(
-      initialLastName || name.split(" ").slice(1).join(" "),
-    );
+  const [first, setFirst] = useState(initialFirstName || name.split(" ")[0] || ""),
+    [last, setLast] = useState(initialLastName || name.split(" ").slice(1).join(" "));
 
   return (
     <>

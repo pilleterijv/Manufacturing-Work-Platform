@@ -12,11 +12,7 @@ let browser;
 async function main() {
   const origin = process.env.APP_URL;
   assert(["localhost", "127.0.0.1"].includes(new URL(origin).hostname));
-  assert(
-    /^floorwork_roles_[a-f0-9]{32}$/.test(
-      new URL(process.env.DATABASE_URL).pathname.slice(1),
-    ),
-  );
+  assert(/^floorwork_roles_[a-f0-9]{32}$/.test(new URL(process.env.DATABASE_URL).pathname.slice(1)));
   const tag = randomUUID().slice(0, 8),
     plant = "History scope " + tag,
     password = "Fixture " + randomUUID() + "!",
@@ -33,7 +29,7 @@ async function main() {
           area,
           line: "",
         },
-      }),
+      })
     );
   for (const [role, area] of [
     ["Operator", "Compressing"],
@@ -55,7 +51,7 @@ async function main() {
             equipmentIds: [],
           },
         },
-      }),
+      })
     );
   const standards = [];
   for (const e of eq)
@@ -70,7 +66,7 @@ async function main() {
           tolerance: 0,
           steps: [{ id: "check", text: "Check", photo: false }],
         },
-      }),
+      })
     );
   const records = [];
   for (const [owner, si] of [
@@ -99,7 +95,7 @@ async function main() {
             followUp: false,
           },
         },
-      }),
+      })
     );
   for (const user of users.slice(0, 3)) {
     const ids = await equipmentIds(user);
@@ -112,13 +108,10 @@ async function main() {
       await db.record.findFirst({
         where: { AND: [recordScope(ids), { id: records[2].id }] },
       }),
-      null,
+      null
     );
   }
-  assert.equal(
-    (await db.record.findMany({ where: recordScope([]) })).length,
-    0,
-  );
+  assert.equal((await db.record.findMany({ where: recordScope([]) })).length, 0);
   const policy = await db.policy.create({
     data: {
       role: "Read history " + tag,
@@ -137,7 +130,7 @@ async function main() {
         mustChange: false,
         workspaceAccess: users[0].workspaceAccess,
       },
-    }),
+    })
   );
   browser = await chromium.launch({
     executablePath: "/usr/bin/chromium",
@@ -154,9 +147,7 @@ async function main() {
     },
   });
   assert.equal(login.status(), 200);
-  const current = await (
-    await c.request.get(origin + "/api/platform?view=work")
-  ).json();
+  const current = await (await c.request.get(origin + "/api/platform?view=work")).json();
   assert(current.records.some((r) => r.id === records[0].id));
   assert(!current.records.some((r) => r.id === records[2].id));
   const denied = await c.request.post(origin + "/api/platform", {
@@ -216,30 +207,15 @@ async function main() {
     d.responses[0].photo = photoId;
     await db.record.update({ where: { id: r.id }, data: { data: d } });
   }
-  assert.equal(
-    (await c.request.get(origin + "/api/photos/" + foreignPhoto)).status(),
-    403,
-  );
-  assert.equal(
-    (await c.request.get(origin + "/api/photos/" + privateDraft)).status(),
-    403,
-  );
+  assert.equal((await c.request.get(origin + "/api/photos/" + foreignPhoto)).status(), 403);
+  assert.equal((await c.request.get(origin + "/api/photos/" + privateDraft)).status(), 403);
   const anon = await browser.newContext();
-  assert.equal(
-    (await anon.request.get(origin + "/api/photos/" + peerPhoto)).status(),
-    401,
-  );
+  assert.equal((await anon.request.get(origin + "/api/photos/" + peerPhoto)).status(), 401);
   // Candidate area policy: only an attached file in an authorized record is shareable.
-  const {
-    readableSubmissionWhere,
-  } = require("../lib/submission-history-policy.ts");
+  const { readableSubmissionWhere } = require("../lib/submission-history-policy.ts");
   const { grants } = require("../lib/capabilities.ts");
   const g = await grants(users[4]);
-  const authorized = readableSubmissionWhere(
-    await equipmentIds(users[4]),
-    g,
-    users[4].id,
-  );
+  const authorized = readableSubmissionWhere(await equipmentIds(users[4]), g, users[4].id);
   assert(
     await db.record.findFirst({
       where: {
@@ -253,7 +229,7 @@ async function main() {
           },
         ],
       },
-    }),
+    })
   );
   assert.equal(
     await db.record.findFirst({
@@ -269,7 +245,7 @@ async function main() {
         ],
       },
     }),
-    null,
+    null
   );
   assert.equal(
     await db.record.findFirst({
@@ -285,51 +261,29 @@ async function main() {
         ],
       },
     }),
-    null,
+    null
   );
   // The new read-only endpoint reuses the verified equipment predicate.
-  const shared = await (
-    await readerContext.request.get(origin + "/api/submissions")
-  ).json();
+  const shared = await (await readerContext.request.get(origin + "/api/submissions")).json();
   assert(shared.items.some((r) => r.id === records[1].id));
   assert(!shared.items.some((r) => r.id === records[2].id));
   const directPeer = await readerContext.request.get(
-    origin + "/api/submissions?source=record&id=" + records[1].id,
+    origin + "/api/submissions?source=record&id=" + records[1].id
   );
   assert.equal(directPeer.status(), 200);
   const directOther = await readerContext.request.get(
-    origin + "/api/submissions?source=record&id=" + records[2].id,
+    origin + "/api/submissions?source=record&id=" + records[2].id
   );
   assert.equal(directOther.status(), 404);
-  const mine = await (
-    await readerContext.request.get(origin + "/api/submissions?scope=mine")
-  ).json();
+  const mine = await (await readerContext.request.get(origin + "/api/submissions?scope=mine")).json();
   assert.equal(mine.items.length, 0);
-  assert.equal(
-    (
-      await readerContext.request.get(origin + "/api/photos/" + peerPhoto)
-    ).status(),
-    200,
-  );
-  assert.equal(
-    (
-      await readerContext.request.get(origin + "/api/photos/" + foreignPhoto)
-    ).status(),
-    403,
-  );
-  assert.equal(
-    (
-      await readerContext.request.get(origin + "/api/photos/" + privateDraft)
-    ).status(),
-    403,
-  );
-  const forbiddenRun = await readerContext.request.post(
-    origin + "/api/platform",
-    {
-      headers: { Origin: origin },
-      data: { action: "run", standardId: standards[0].id },
-    },
-  );
+  assert.equal((await readerContext.request.get(origin + "/api/photos/" + peerPhoto)).status(), 200);
+  assert.equal((await readerContext.request.get(origin + "/api/photos/" + foreignPhoto)).status(), 403);
+  assert.equal((await readerContext.request.get(origin + "/api/photos/" + privateDraft)).status(), 403);
+  const forbiddenRun = await readerContext.request.post(origin + "/api/platform", {
+    headers: { Origin: origin },
+    data: { action: "run", standardId: standards[0].id },
+  });
   assert.equal(forbiddenRun.status(), 403);
   assert.equal(
     (
@@ -338,7 +292,7 @@ async function main() {
         data: { id: records[1].id },
       })
     ).status(),
-    405,
+    405
   );
   const locations = [];
   for (const e of eq)
@@ -350,7 +304,7 @@ async function main() {
           area: e.area,
           line: "",
         },
-      }),
+      })
     );
   const audits = [];
   for (const [si, userIndex] of [
@@ -382,36 +336,24 @@ async function main() {
           score: 2,
           maximum: 2,
         },
-      }),
+      })
     );
   }
   assert.equal(
-    (
-      await readerContext.request.get(
-        origin + "/api/submissions?source=fiveS&id=" + audits[0].id,
-      )
-    ).status(),
-    200,
+    (await readerContext.request.get(origin + "/api/submissions?source=fiveS&id=" + audits[0].id)).status(),
+    200
   );
   assert.equal(
-    (
-      await readerContext.request.get(
-        origin + "/api/submissions?source=fiveS&id=" + audits[1].id,
-      )
-    ).status(),
-    404,
+    (await readerContext.request.get(origin + "/api/submissions?source=fiveS&id=" + audits[1].id)).status(),
+    404
   );
   await db.location.update({
     where: { id: locations[0].id },
     data: { active: false },
   });
   assert.equal(
-    (
-      await readerContext.request.get(
-        origin + "/api/submissions?source=fiveS&id=" + audits[0].id,
-      )
-    ).status(),
-    200,
+    (await readerContext.request.get(origin + "/api/submissions?source=fiveS&id=" + audits[0].id)).status(),
+    200
   );
   for (const kind of ["pm", "cil", "centerline"]) {
     const saved = await db.record.create({
@@ -426,24 +368,16 @@ async function main() {
         },
       },
     });
-    const response = await readerContext.request.get(
-      origin + "/api/submissions?type=" + kind,
-    );
+    const response = await readerContext.request.get(origin + "/api/submissions?type=" + kind);
     assert.equal(response.status(), 200);
     assert((await response.json()).items.some((item) => item.id === saved.id));
     assert.equal(
-      (
-        await readerContext.request.get(
-          origin + "/api/submissions?source=record&id=" + saved.id,
-        )
-      ).status(),
-      200,
+      (await readerContext.request.get(origin + "/api/submissions?source=record&id=" + saved.id)).status(),
+      200
     );
   }
   const fiveSearch = await readerContext.request.get(
-    origin +
-      "/api/submissions?" +
-      new URLSearchParams({ type: "fiveS", search: users[1].name }),
+    origin + "/api/submissions?" + new URLSearchParams({ type: "fiveS", search: users[1].name })
   );
   assert.equal((await fiveSearch.json()).items.length, 1);
   // More than the old 100-entry cap, including identical timestamps.
@@ -465,7 +399,7 @@ async function main() {
   let cursor = "";
   do {
     const res = await readerContext.request.get(
-      origin + "/api/submissions?" + new URLSearchParams({ cursor }),
+      origin + "/api/submissions?" + new URLSearchParams({ cursor })
     );
     assert.equal(res.status(), 200);
     const page = await res.json();
@@ -481,25 +415,15 @@ async function main() {
   await page.goto(origin);
   await page.getByRole("button", { name: /Submission history/ }).click();
   await page.getByRole("heading", { name: "Find submitted work" }).waitFor();
-  await page
-    .getByRole("button", { name: "View submitted details" })
-    .first()
-    .click();
-  await page
-    .getByText("Read-only saved submission", { exact: true })
-    .first()
-    .waitFor();
+  await page.getByRole("button", { name: "View submitted details" }).first().click();
+  await page.getByText("Read-only saved submission", { exact: true }).first().waitFor();
   const fs = require("node:fs");
   fs.mkdirSync("docs/screenshots/submission-history", { recursive: true });
   await page.screenshot({
     path: "docs/screenshots/submission-history/tablet.png",
     fullPage: false,
   });
-  assert(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  );
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await db.user.update({
     where: { id: users[4].id },
     data: {
@@ -507,21 +431,12 @@ async function main() {
     },
   });
   assert.equal(
-    (
-      await readerContext.request.get(
-        origin + "/api/submissions?source=record&id=" + records[1].id,
-      )
-    ).status(),
-    404,
+    (await readerContext.request.get(origin + "/api/submissions?source=record&id=" + records[1].id)).status(),
+    404
   );
-  assert.equal(
-    (
-      await readerContext.request.get(origin + "/api/photos/" + peerPhoto)
-    ).status(),
-    403,
-  );
+  assert.equal((await readerContext.request.get(origin + "/api/photos/" + peerPhoto)).status(), 403);
   console.log(
-    "PASS scope evidence: existing equipment/record predicates return same-area submissions by both operators, deny direct cross-area IDs and empty assignments; existing API retains cross-area denial and Operator publishing is forbidden. Explicit read-only role shares attached same-area evidence, denies drafts, foreign scope and writes; pagination and tablet detail view pass.",
+    "PASS scope evidence: existing equipment/record predicates return same-area submissions by both operators, deny direct cross-area IDs and empty assignments; existing API retains cross-area denial and Operator publishing is forbidden. Explicit read-only role shares attached same-area evidence, denies drafts, foreign scope and writes; pagination and tablet detail view pass."
   );
 }
 main()

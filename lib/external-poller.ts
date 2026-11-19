@@ -13,12 +13,10 @@ const configSchema = z
       engine: z.enum(["mssql", "postgres"]),
       view: z.string(),
       connectionEnv: z.string().regex(/^[A-Z][A-Z0-9_]{0,80}$/),
-    }),
+    })
   )
   .max(20);
-type Connection =
-  | { engine: "postgres"; pool: Pool }
-  | { engine: "mssql"; pool: sql.ConnectionPool };
+type Connection = { engine: "postgres"; pool: Pool } | { engine: "mssql"; pool: sql.ConnectionPool };
 const connections = new ConnectionCache<Connection>(async (c) => {
   if (c.engine === "postgres") await c.pool.end();
   else await c.pool.close();
@@ -40,21 +38,13 @@ export async function closeExternalData() {
 }
 // Connections/views are IT-managed server configuration, never URLs or SQL from browser input.
 async function poll() {
-  const configs = configSchema.parse(
-    JSON.parse(process.env.EXTERNAL_DATA_FEEDS_JSON || "[]"),
-  );
+  const configs = configSchema.parse(JSON.parse(process.env.EXTERNAL_DATA_FEEDS_JSON || "[]"));
   await connections.retain(
     new Set(
       configs
         .filter((c) => process.env[c.connectionEnv])
-        .map((c) =>
-          connectionKey(
-            c.engine,
-            c.connectionEnv,
-            process.env[c.connectionEnv]!,
-          ),
-        ),
-    ),
+        .map((c) => connectionKey(c.engine, c.connectionEnv, process.env[c.connectionEnv]!))
+    )
   );
   const used = new Set<string>();
   let imported = 0;
@@ -76,13 +66,7 @@ async function poll() {
         const url = new URL(credential);
         if (!["postgres:", "postgresql:"].includes(url.protocol))
           throw Error("Use a PostgreSQL connection URL");
-        for (const key of [
-          "ssl",
-          "sslmode",
-          "sslcert",
-          "sslkey",
-          "sslrootcert",
-        ])
+        for (const key of ["ssl", "sslmode", "sslcert", "sslkey", "sslrootcert"])
           url.searchParams.delete(key);
         const connection = await connections.get(key, async () => {
           const pool = new Pool({
@@ -97,8 +81,7 @@ async function poll() {
           pool.on("error", () => {});
           return { engine: "postgres", pool };
         });
-        if (connection.engine !== "postgres")
-          throw Error("Connection engine mismatch");
+        if (connection.engine !== "postgres") throw Error("Connection engine mismatch");
         const [schema, name] = view.split("."),
           client = await connection.pool.connect();
         try {
@@ -106,7 +89,7 @@ async function poll() {
           rows = (
             await client.query(
               `SELECT "EventSequence"::text AS "EventSequence", left("Payload"::text,524289) AS "Payload" FROM "${schema}"."${name}" WHERE "EventSequence">$1::bigint ORDER BY "EventSequence" LIMIT 100`,
-              [feed.cursor],
+              [feed.cursor]
             )
           ).rows;
           await client.query("COMMIT");
@@ -132,37 +115,24 @@ async function poll() {
           await pool.connect();
           return { engine: "mssql", pool };
         });
-        if (connection.engine !== "mssql")
-          throw Error("Connection engine mismatch");
+        if (connection.engine !== "mssql") throw Error("Connection engine mismatch");
         const [schema, name] = view.split(".");
         rows = (
           await connection.pool
             .request()
             .input("cursor", sql.VarChar(30), feed.cursor)
             .query(
-              `SELECT TOP (100) CONVERT(varchar(30),EventSequence) AS EventSequence,LEFT(Payload,524289) AS Payload FROM [${schema}].[${name}] WHERE EventSequence>CONVERT(bigint,@cursor) ORDER BY EventSequence`,
+              `SELECT TOP (100) CONVERT(varchar(30),EventSequence) AS EventSequence,LEFT(Payload,524289) AS Payload FROM [${schema}].[${name}] WHERE EventSequence>CONVERT(bigint,@cursor) ORDER BY EventSequence`
             )
         ).recordset;
       }
       for (const row of rows) {
-        if (
-          !/^\d{1,19}$/.test(row.EventSequence) ||
-          BigInt(row.EventSequence) <= BigInt(feed.cursor)
-        )
+        if (!/^\d{1,19}$/.test(row.EventSequence) || BigInt(row.EventSequence) <= BigInt(feed.cursor))
           throw Error("Invalid event sequence");
-        if (
-          typeof row.Payload !== "string" ||
-          Buffer.byteLength(row.Payload) > 512 * 1024
-        )
+        if (typeof row.Payload !== "string" || Buffer.byteLength(row.Payload) > 512 * 1024)
           throw Error("Feed payload is too large");
         const payload = JSON.parse(row.Payload);
-        await ingestExternalRows(
-          feed.id,
-          [payload],
-          source.tokenHash,
-          undefined,
-          row.EventSequence,
-        );
+        await ingestExternalRows(feed.id, [payload], source.tokenHash, undefined, row.EventSequence);
         imported++;
       }
     } catch {

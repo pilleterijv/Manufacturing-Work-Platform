@@ -6,18 +6,11 @@ const assert = require("node:assert/strict"),
   { chromium } = require("playwright"),
   { db } = require("../lib/db.ts"),
   { hashPassword } = require("../lib/security.ts"),
-  {
-    deliverAssignmentEmails,
-    queueAssignments,
-  } = require("../lib/assignment-notifications.ts"),
+  { deliverAssignmentEmails, queueAssignments } = require("../lib/assignment-notifications.ts"),
   fs = require("node:fs");
 let browser;
 async function main() {
-  assert(
-    /^floorwork_roles_[a-f0-9]{32}$/.test(
-      new URL(process.env.DATABASE_URL).pathname.slice(1),
-    ),
-  );
+  assert(/^floorwork_roles_[a-f0-9]{32}$/.test(new URL(process.env.DATABASE_URL).pathname.slice(1)));
   const origin = process.env.APP_URL,
     tag = randomUUID().slice(0, 8),
     password = "Assignment fixture " + randomUUID() + "!",
@@ -98,7 +91,7 @@ async function main() {
       active: true,
       password,
     },
-    400,
+    400
   );
   await post("/api/access-requests", {
     action: "register",
@@ -115,9 +108,7 @@ async function main() {
   assert.equal(request.firstName, "Alex");
   assert.equal(request.lastName, "Garcia");
   const found = await (
-    await c.request.get(
-      origin + "/api/people?search=" + encodeURIComponent("van der Meer"),
-    )
+    await c.request.get(origin + "/api/people?search=" + encodeURIComponent("van der Meer"))
   ).json();
   assert(found.people.some((p) => p.id === people[0].id));
   assert(!("email" in found.people[0]));
@@ -136,10 +127,7 @@ async function main() {
   const pm = await db.maintenancePlan.findFirstOrThrow({
     where: { title: plan.title },
   });
-  assert.equal(
-    await db.assignmentDelivery.count({ where: { entityId: pm.id } }),
-    1,
-  );
+  assert.equal(await db.assignmentDelivery.count({ where: { entityId: pm.id } }), 1);
   await post("/api/maintenance", {
     ...plan,
     id: pm.id,
@@ -169,7 +157,7 @@ async function main() {
         where: { entityId: pm.id, userId: people[0].id },
       })
     ).status,
-    "Cancelled",
+    "Cancelled"
   );
   await deliverAssignmentEmails(transport);
   assert.equal(mails.length, 1);
@@ -190,10 +178,7 @@ async function main() {
   };
   const problem = await post("/api/problems", body);
   await post("/api/problems", body);
-  assert.equal(
-    await db.assignmentDelivery.count({ where: { entityId: problem.id } }),
-    2,
-  );
+  assert.equal(await db.assignmentDelivery.count({ where: { entityId: problem.id } }), 2);
   await post("/api/problems", {
     action: "addAction",
     id: problem.id,
@@ -207,10 +192,7 @@ async function main() {
   const action = await db.problemAction.findFirstOrThrow({
     where: { problemId: problem.id },
   });
-  assert.equal(
-    await db.assignmentDelivery.count({ where: { entityId: action.id } }),
-    1,
-  );
+  assert.equal(await db.assignmentDelivery.count({ where: { entityId: action.id } }), 1);
   // Disabled recipients cannot receive queued messages.
   await db.user.update({
     where: { id: people[0].id },
@@ -223,7 +205,7 @@ async function main() {
         where: { entityId: action.id },
       })
     ).status,
-    "Cancelled",
+    "Cancelled"
   );
   // A deliberately missing email never becomes a Sent delivery; restoring it allows a later retry.
   await db.user.update({
@@ -237,7 +219,7 @@ async function main() {
       equipmentId: e.id,
       assignees: [people[0].id],
       revision: 2,
-    }),
+    })
   );
   await deliverAssignmentEmails(transport);
   let retry = await db.assignmentDelivery.findFirstOrThrow({
@@ -254,11 +236,24 @@ async function main() {
     data: { nextAttemptAt: new Date(0) },
   });
   await deliverAssignmentEmails(transport);
-  assert.equal(
-    (await db.assignmentDelivery.findUniqueOrThrow({ where: { id: retry.id } }))
-      .status,
-    "Sent",
+  assert.equal((await db.assignmentDelivery.findUniqueOrThrow({ where: { id: retry.id } })).status, "Sent");
+  await db.$transaction((tx) =>
+    queueAssignments(tx, {
+      type: "action",
+      id: action.id,
+      equipmentId: e.id,
+      assignees: [people[0].id],
+      revision: 3,
+    })
   );
+  await db.user.update({
+    where: { id: people[0].id },
+    data: { workspaceAccess: { mode: "restricted", locations: [], equipmentIds: [] } },
+  });
+  const beforeRevocationDelivery = mails.length;
+  await deliverAssignmentEmails(transport);
+  assert.equal(mails.length, beforeRevocationDelivery);
+  assert.equal(await db.assignmentDelivery.count({ where: { entityId: action.id, status: "Pending" } }), 0);
   const page = await c.newPage(),
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -269,10 +264,7 @@ async function main() {
     .getByRole("button", { name: /TPM \/ CIL/ })
     .first()
     .click();
-  await page
-    .getByRole("button", { name: "Dashboard", exact: true })
-    .first()
-    .click();
+  await page.getByRole("button", { name: "Dashboard", exact: true }).first().click();
   const chart = page.getByRole("region", {
     name: "Status breakdown",
     exact: true,
@@ -293,18 +285,17 @@ async function main() {
     .first()
     .click();
   await page.getByLabel("First name", { exact: true }).waitFor();
+  await page.getByRole("combobox", { name: "Account", exact: true }).selectOption(people[0].id);
+  assert.equal(await page.getByLabel("First name", { exact: true }).inputValue(), "Mary Ann");
+  assert.equal(await page.getByLabel("Last name", { exact: true }).inputValue(), "van der Meer");
   await page.screenshot({
     path: "docs/screenshots/directory-assignment-charts/account.png",
     fullPage: false,
   });
-  assert(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  );
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: structured account/request identity, scoped name search, assignment queue, current-email lookup, reassignment cancellation, idempotency, disabled recipient, missing-email retry, charts/table and tablet layout. Synthetic transport only; no email sent externally.",
+    "PASS: structured account/request identity, scoped name search, assignment queue, current-email lookup, reassignment cancellation, idempotency, disabled recipient, missing-email retry, charts/table and tablet layout. Synthetic transport only; no email sent externally."
   );
 }
 main()

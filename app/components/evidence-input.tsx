@@ -10,11 +10,7 @@ export function EvidenceView({ media }: { media: Evidence[] }) {
       {media.map((m) => (
         <figure key={m.id}>
           {m.kind === "photo" ? (
-            <img
-              className="photo-preview"
-              src={`/api/photos/${m.id}`}
-              alt={m.caption || "Evidence"}
-            />
+            <img className="photo-preview" src={`/api/photos/${m.id}`} alt={m.caption || "Evidence"} />
           ) : (
             <video
               controls
@@ -62,19 +58,10 @@ export default function EvidenceInput({
             setError("");
             try {
               const video = mediaMime(f).startsWith("video/");
-              if (
-                singleKinds &&
-                value.some((m) => m.kind === (video ? "video" : "photo"))
-              )
-                throw Error(
-                  "Remove the existing attachment of this type before replacing it",
-                );
+              if (singleKinds && value.some((m) => m.kind === (video ? "video" : "photo")))
+                throw Error("Remove the existing attachment of this type before replacing it");
               if (f.size > (video ? 32 : 8) * 1024 * 1024)
-                throw Error(
-                  video
-                    ? "Video must be under 32 MB"
-                    : "Photo must be under 8 MB",
-                );
+                throw Error(video ? "Video must be under 32 MB" : "Photo must be under 8 MB");
               const r = video
                 ? await uploadVideo(f)
                 : await api("/api/photos", { image: await readMediaFile(f) });
@@ -104,19 +91,9 @@ export default function EvidenceInput({
             aria-label={`Evidence caption ${i + 1}`}
             maxLength={500}
             value={m.caption}
-            onChange={(e) =>
-              onChange(
-                value.map((x, j) =>
-                  i === j ? { ...x, caption: e.target.value } : x,
-                ),
-              )
-            }
+            onChange={(e) => onChange(value.map((x, j) => (i === j ? { ...x, caption: e.target.value } : x)))}
           />
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => onChange(value.filter((_, j) => i !== j))}
-          >
+          <button type="button" disabled={busy} onClick={() => onChange(value.filter((_, j) => i !== j))}>
             Remove attachment {i + 1}
           </button>
         </div>

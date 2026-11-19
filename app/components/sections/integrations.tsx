@@ -17,7 +17,7 @@ export default function Integrations() {
   }
   useSectionRefresh(
     () => load(),
-    (e) => setError(e.message),
+    (e) => setError(e.message)
   );
   useEffect(() => {
     void load();
@@ -43,9 +43,8 @@ export default function Integrations() {
         <span className="eyebrow">CONNECT YOUR FACTORY</span>
         <h2>Machine events, captured at their source.</h2>
         <p>
-          Map external machines to Floorwork equipment. Receive down/running
-          transitions from a TrakSYS adapter or import an approved Microsoft SQL
-          Server view.
+          Map external machines to Floorwork equipment. Receive down/running transitions from a TrakSYS
+          adapter or import an approved Microsoft SQL Server view.
         </p>
       </section>
       {error && (
@@ -57,8 +56,8 @@ export default function Integrations() {
         <section className="panel">
           <h2>Save this integration key privately</h2>
           <p>
-            This key is shown only now. Store it in the sending system’s secret
-            settings; it will not be returned by the source list.
+            This key is shown only now. Store it in the sending system’s secret settings; it will not be
+            returned by the source list.
           </p>
           <textarea aria-label="New integration key" readOnly value={token} />
           <button className="outline" onClick={() => setToken("")}>
@@ -78,14 +77,12 @@ export default function Integrations() {
                 : "Email is not configured. IT must set SMTP_HOST and SMTP_FROM plus the approved mail authentication settings. In-app assignments remain available."}
             </p>
             <p>
-              Pending: {data.assignmentEmail?.pending ?? 0} · Failed:{" "}
-              {data.assignmentEmail?.failed ?? 0} · Sent to mail service:{" "}
-              {data.assignmentEmail?.sent ?? 0}
+              Pending: {data.assignmentEmail?.pending ?? 0} · Failed: {data.assignmentEmail?.failed ?? 0} ·
+              Sent to mail service: {data.assignmentEmail?.sent ?? 0}
             </p>
             <p className="small muted">
-              Missing account emails retry, then appear as failed. Correct the
-              account email before retrying. Mail-service acceptance does not
-              guarantee inbox delivery.
+              Missing account emails retry, then appear as failed. Correct the account email before retrying.
+              Mail-service acceptance does not guarantee inbox delivery.
             </p>
             <button
               className="outline"
@@ -104,17 +101,14 @@ export default function Integrations() {
             </p>
             {data.sql.health && (
               <p>
-                Last poll:{" "}
-                {new Date(data.sql.health.checkedAt).toLocaleString()} ·{" "}
-                {data.sql.health.ok ? "Successful" : "Needs attention"} ·{" "}
-                {data.sql.health.processed} events.
+                Last poll: {new Date(data.sql.health.checkedAt).toLocaleString()} ·{" "}
+                {data.sql.health.ok ? "Successful" : "Needs attention"} · {data.sql.health.processed} events.
               </p>
             )}
             <p className="small muted">
-              SQL access uses an encrypted connection and a fixed SELECT against
-              an approved view. The app does not write into your company’s SQL
-              database. A webhook sender can instead POST transitions to
-              /api/integrations/events using its Bearer key.
+              SQL access uses an encrypted connection and a fixed SELECT against an approved view. The app
+              does not write into your company’s SQL database. A webhook sender can instead POST transitions
+              to /api/integrations/events using its Bearer key.
             </p>
           </section>
           <section className="panel">
@@ -133,12 +127,7 @@ export default function Integrations() {
               }}
             >
               <Field label="Source name">
-                <input
-                  required
-                  name="name"
-                  maxLength={100}
-                  placeholder="e.g. TrakSYS production site"
-                />
+                <input required name="name" maxLength={100} placeholder="e.g. TrakSYS production site" />
               </Field>
               <button className="primary" disabled={busy}>
                 Create source & key
@@ -153,10 +142,8 @@ export default function Integrations() {
                 <p className="idea-id">Source ID: {s.id}</p>
                 <p className="small">
                   {s.active ? "Enabled" : "Disabled"} · last received:{" "}
-                  {s.lastReceivedAt
-                    ? new Date(s.lastReceivedAt).toLocaleString()
-                    : "No events yet"}{" "}
-                  · SQL cursor: {s.sqlCursor}
+                  {s.lastReceivedAt ? new Date(s.lastReceivedAt).toLocaleString() : "No events yet"} · SQL
+                  cursor: {s.sqlCursor}
                 </p>
                 {s.lastError && <p className="error">{s.lastError}</p>}
                 <div className="button-row">
@@ -257,17 +244,10 @@ export default function Integrations() {
                       {data.sources.find((s: any) => s.id === b.sourceId)?.name}
                       <small>{b.externalId}</small>
                     </td>
-                    <td>
-                      {
-                        data.equipment.find((e: any) => e.id === b.equipmentId)
-                          ?.name
-                      }
-                    </td>
+                    <td>{data.equipment.find((e: any) => e.id === b.equipmentId)?.name}</td>
                     <td>
                       {b.lastState ?? "Awaiting first event"}
-                      <small>
-                        {b.lastAt ? new Date(b.lastAt).toLocaleString() : ""}
-                      </small>
+                      <small>{b.lastAt ? new Date(b.lastAt).toLocaleString() : ""}</small>
                     </td>
                     <td>
                       <button

@@ -1,8 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import {
-  downtimeAccessSchema,
-  allowedDowntimeEquipment,
-} from "./downtime-access-rules";
+import { downtimeAccessSchema, allowedDowntimeEquipment } from "./downtime-access-rules";
 import { HttpError } from "./http-error";
 export function downtimeEquipmentWhere(user: {
   role: string;
@@ -14,9 +11,7 @@ export function downtimeEquipmentWhere(user: {
   if (!parsed.success) return { id: { in: [] } };
   const a = parsed.data;
   const workspace =
-    user.workspaceAccess === undefined
-      ? null
-      : downtimeAccessSchema.safeParse(user.workspaceAccess);
+    user.workspaceAccess === undefined ? null : downtimeAccessSchema.safeParse(user.workspaceAccess);
   if (workspace && (!workspace.success || workspace.data.mode !== "all")) {
     const base = downtimeEquipmentWhere({
       role: user.role,
@@ -43,7 +38,7 @@ export function downtimeEquipmentWhere(user: {
 export async function authorizeDowntime(
   tx: Prisma.TransactionClient,
   user: { id: string; version: number },
-  equipment: { id: string; plant: string; department: string; area: string },
+  equipment: { id: string; plant: string; department: string; area: string }
 ) {
   // Share-lock the user's assignments while recording. Assignment updates acquire
   // an exclusive row lock, so revocation and start/stop have a definite order.
@@ -55,8 +50,5 @@ export async function authorizeDowntime(
     !allowedDowntimeEquipment(fresh.role, fresh.downtimeAccess, equipment) ||
     !allowedDowntimeEquipment(fresh.role, fresh.workspaceAccess, equipment)
   )
-    throw new HttpError(
-      403,
-      "You are not assigned to record downtime for this machine",
-    );
+    throw new HttpError(403, "You are not assigned to record downtime for this machine");
 }

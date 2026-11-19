@@ -12,7 +12,7 @@ test("structured account names preserve compound names and derive the searchable
       firstName: "Mary Ann",
       lastName: "van der Meer",
       name: "Mary Ann van der Meer",
-    },
+    }
   );
   assert.throws(() => accountIdentity({ firstName: "Mary", lastName: " " }));
   assert.throws(() => accountIdentity({ firstName: "Mary" }));
