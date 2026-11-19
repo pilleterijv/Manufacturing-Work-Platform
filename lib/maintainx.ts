@@ -7,7 +7,8 @@ export const maintainxMappingSchema = z.record(
   z.string().uuid(),
   z.number().int().positive().max(Number.MAX_SAFE_INTEGER)
 );
-export const maintainxReady = () => !!process.env.MAINTAINX_API_KEY;
+export const maintainxReady = () =>
+  process.env.FLOORWORK_DEMO_MODE !== "true" && !!process.env.MAINTAINX_API_KEY;
 export async function maintainxMapping() {
   const s = await db.setting.findUnique({ where: { key: "maintainx-assets" } });
   return maintainxMappingSchema.parse(s?.value ?? {});

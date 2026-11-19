@@ -27,6 +27,7 @@ const connectionKey = (engine: string, name: string, value: string) =>
     .digest("hex");
 let pending: Promise<{ imported: number }> | undefined;
 export function pollExternalData() {
+  if (process.env.FLOORWORK_DEMO_MODE === "true") return Promise.resolve({ imported: 0 });
   if (!pending)
     pending = poll().finally(() => {
       pending = undefined;

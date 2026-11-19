@@ -4,6 +4,7 @@ import { ingestMachineEvent } from "./integrations";
 import { sqlViewName, sqlSequence } from "./integration-rules";
 let pool: sql.ConnectionPool | undefined;
 export function companySqlConfigured() {
+  if (process.env.FLOORWORK_DEMO_MODE === "true") return false;
   return !!(
     process.env.COMPANY_SQL_SERVER &&
     process.env.COMPANY_SQL_DATABASE &&

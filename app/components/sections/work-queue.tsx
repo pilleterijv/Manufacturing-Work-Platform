@@ -12,9 +12,11 @@ export default function WorkQueue({ user, compact = false }: { user: User; compa
       (user.grants.includes("dashboard") ||
         user.grants.includes("leadership") ||
         user.grants.includes("analytics"));
-  const [scope, setScope] = useState(canTeam && ["manager", "supervisor"].includes(profile) ? "team" : "my"),
+  const [scope, setScope] = useState(
+      !compact && canTeam && ["manager", "supervisor"].includes(profile) ? "team" : "my"
+    ),
     [location, setLocation] = useState(""),
-    [filter, setFilter] = useState("action"),
+    [filter, setFilter] = useState(compact ? "assigned" : "action"),
     [search, setSearch] = useState(""),
     [data, setData] = useState<any>(null),
     [error, setError] = useState("");
@@ -63,15 +65,17 @@ export default function WorkQueue({ user, compact = false }: { user: User; compa
     ] as [string, any][];
   const rows = (data?.items || [])
     .filter((r: any) =>
-      filter === "all" || filter === "completed"
-        ? filter === "all" || r.status === "Completed"
-        : filter === "overdue"
-          ? ["Missed", "Overdue", "Urgent", "Needs setup"].includes(r.status)
-          : filter === "validation"
-            ? r.status === "Awaiting validation"
-            : filter === "upcoming"
-              ? r.status === "Upcoming"
-              : !["Completed", "Upcoming"].includes(r.status)
+      filter === "assigned"
+        ? r.status !== "Completed"
+        : filter === "all" || filter === "completed"
+          ? filter === "all" || r.status === "Completed"
+          : filter === "overdue"
+            ? ["Missed", "Overdue", "Urgent", "Needs setup"].includes(r.status)
+            : filter === "validation"
+              ? r.status === "Awaiting validation"
+              : filter === "upcoming"
+                ? r.status === "Upcoming"
+                : !["Completed", "Upcoming"].includes(r.status)
     )
     .filter(
       (r: any) =>
@@ -86,12 +90,20 @@ export default function WorkQueue({ user, compact = false }: { user: User; compa
       <div className="section-title">
         <div>
           <h2>
-            {scope === "team"
-              ? "Department work and exceptions"
-              : profile === "maintenance"
-                ? "My maintenance work queue"
-                : "My shift work queue"}
+            {compact && scope === "my"
+              ? "Assigned to me and my station"
+              : scope === "team"
+                ? "Department work and exceptions"
+                : profile === "maintenance"
+                  ? "My maintenance work queue"
+                  : "My shift work queue"}
           </h2>
+          {compact && (
+            <p>
+              Open and upcoming work assigned to your account, plus shared checks for your station. Select a
+              task to open the right section.
+            </p>
+          )}
           <p>
             {data?.currentShift} · {data?.timezone} · shift checks for the current shift and previous 24 hours
           </p>
@@ -137,6 +149,7 @@ export default function WorkQueue({ user, compact = false }: { user: User; compa
         </div>
         <div className="button-row" aria-label="Queue quick filters">
           {[
+            ["assigned", "All open assignments"],
             ["action", "Needs action"],
             ["overdue", "Urgent / overdue / missed"],
             ["validation", "Awaiting validation"],
@@ -194,12 +207,14 @@ export default function WorkQueue({ user, compact = false }: { user: User; compa
                 <p>{labels.get(r.equipmentId)}</p>
                 <p>
                   Owner: {r.assignee} ·{" "}
-                  {r.due.length === 10
-                    ? "Due " + r.due
-                    : (r.type === "Defect" ? "Reported " : "Shift ends ") +
-                      new Date(r.due).toLocaleString(undefined, {
-                        timeZone: r.timezone || data.timezone,
-                      })}{" "}
+                  {!r.due
+                    ? "No specific due time"
+                    : r.due.length === 10
+                      ? "Due " + r.due
+                      : (r.type === "Defect" ? "Reported " : "Shift ends ") +
+                        new Date(r.due).toLocaleString(undefined, {
+                          timeZone: r.timezone || data.timezone,
+                        })}{" "}
                   {r.detail ? " · " + r.detail : ""}
                 </p>
               </div>
@@ -233,6 +248,15 @@ export default function WorkQueue({ user, compact = false }: { user: User; compa
                           ? "Not due yet"
                           : "Review / assigned-person action"}
                   </span>
+                )}
+                {r.status === "Upcoming" && ["PM", "CIL"].includes(r.type) && (
+                  <button
+                    type="button"
+                    className="outline"
+                    onClick={() => openWorkflow({ tab: r.tab, filters: r.filters })}
+                  >
+                    View task
+                  </button>
                 )}
                 <button
                   type="button"

@@ -36,7 +36,10 @@
     "test:install": "node tests/install-help.cjs",
     "test:centerlines": "node tests/centerlines-browser.cjs",
     "test:security": "node tests/security-readiness.cjs",
-    "test:contextual-search": "node tests/contextual-search-browser.cjs"
+    "test:contextual-search": "node tests/contextual-search-browser.cjs",
+    "demo:setup": "node scripts/demo.cjs setup",
+    "demo:start": "node scripts/demo.cjs start",
+    "demo:reset": "node scripts/demo.cjs reset"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.29.1",

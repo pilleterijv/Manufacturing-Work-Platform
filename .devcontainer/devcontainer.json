@@ -4,11 +4,23 @@
   "service": "app",
   "workspaceFolder": "/workspaces/Manufacturing-Work-Platform",
   "remoteUser": "node",
-  "forwardPorts": [3000],
+  "forwardPorts": [
+    3000,
+    3001
+  ],
   "portsAttributes": {
-    "3000": { "label": "Floorwork", "onAutoForward": "notify" }
+    "3000": {
+      "label": "Floorwork",
+      "onAutoForward": "notify"
+    },
+    "3001": {
+      "label": "Floorwork DEMO",
+      "onAutoForward": "notify"
+    }
   },
-  "otherPortsAttributes": { "onAutoForward": "ignore" },
+  "otherPortsAttributes": {
+    "onAutoForward": "ignore"
+  },
   "postCreateCommand": "node scripts/codespaces.cjs setup",
   "shutdownAction": "stopCompose"
 }

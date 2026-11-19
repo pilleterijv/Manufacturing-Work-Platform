@@ -16,7 +16,14 @@ import { useEffect, useState, useRef } from "react";
 import dynamic from "next/dynamic";
 import type { User, Data } from "@/lib/workspace-types";
 import type { Capability } from "@/lib/rules";
-import { api, filterUrl, getSectionFilters, setSectionFilters, type SectionFilters } from "@/lib/client-api";
+import {
+  api,
+  ApiError,
+  filterUrl,
+  getSectionFilters,
+  setSectionFilters,
+  type SectionFilters,
+} from "@/lib/client-api";
 import { Field, Submit, HistoryPagingContext } from "./components/shared";
 import { emptyOperations, type OperationsData } from "@/lib/operations-types";
 const Assistant = dynamic(() => import("./components/sections/assistant"));
@@ -235,62 +242,85 @@ export default function Home() {
 
   async function refresh() {
     let requestedTab = tab;
-    const epoch = ++refreshEpoch.current,
-      filterKey = JSON.stringify(getSectionFilters());
-    const account = await api("/api/account");
-    if (epoch !== refreshEpoch.current) return;
-    if (initialHome.current && initialHome.current !== account.user?.id) {
-      contextEquipment.current = [];
-      setData(empty);
-      setPlatformReady(false);
-      setOperations(emptyOperations);
-      setOperationsReady(false);
-      safety.clear();
-    }
-    setUser(account.user);
-    if (account.user && !account.user.mustChange) {
-      if (initialHome.current !== account.user.id) {
-        initialHome.current = account.user.id;
-        const preferred = dashboardPreferences(account.user.dashboardPreferences).home;
-        requestedTab = canOpenSection(account.user, preferred) ? preferred : "Overview";
-        currentView.current = requestedTab;
-        setTab(requestedTab);
+    let epoch = ++refreshEpoch.current;
+    const filterKey = JSON.stringify(getSectionFilters());
+    try {
+      const account = await api("/api/account");
+      if (epoch !== refreshEpoch.current) return;
+      if (initialHome.current && initialHome.current !== account.user?.id) {
+        contextEquipment.current = [];
+        setData(empty);
+        setPlatformReady(false);
+        setOperations(emptyOperations);
+        setOperationsReady(false);
+        safety.clear();
       }
-      const [platform, ops] = await Promise.all([
-        api(platformUrl(requestedTab)),
-        api(
-          "/api/operations?" +
-            new URLSearchParams({
-              view: operationsView(requestedTab),
-              department: opsDepartment,
-            })
-        ),
-      ]);
-      if (
-        epoch !== refreshEpoch.current ||
-        requestedTab !== currentView.current ||
-        filterKey !== JSON.stringify(getSectionFilters())
-      ) {
-        setLoaded(true);
-        return;
+      setUser(account.user);
+      if (account.user && !account.user.mustChange) {
+        if (initialHome.current !== account.user.id) {
+          initialHome.current = account.user.id;
+          const preferred = dashboardPreferences(account.user.dashboardPreferences).home;
+          requestedTab = canOpenSection(account.user, preferred) ? preferred : "Overview";
+          currentView.current = requestedTab;
+          setTab(requestedTab);
+          epoch = refreshEpoch.current;
+        }
+        const [platform, ops] = await Promise.all([
+          api(platformUrl(requestedTab)),
+          api(
+            "/api/operations?" +
+              new URLSearchParams({
+                view: operationsView(requestedTab),
+                department: opsDepartment,
+              })
+          ),
+        ]);
+        if (
+          epoch !== refreshEpoch.current ||
+          requestedTab !== currentView.current ||
+          filterKey !== JSON.stringify(getSectionFilters())
+        ) {
+          setLoaded(true);
+          return;
+        }
+        setData(platform);
+        setPlatformTab(requestedTab);
+        setPlatformReady(true);
+        setOperations({ ...emptyOperations, ...ops });
+        setOperationsReady(["Downtime", "Improvement ideas"].includes(requestedTab));
+      } else {
+        initialHome.current = null;
+        setData(empty);
+        setOperations(emptyOperations);
+        setOperationsReady(false);
+        setPlatformReady(false);
       }
-      setData(platform);
-      setPlatformTab(requestedTab);
-      setPlatformReady(true);
-      setOperations({ ...emptyOperations, ...ops });
-      setOperationsReady(["Downtime", "Improvement ideas"].includes(requestedTab));
-    } else {
-      initialHome.current = null;
-      setData(empty);
-      setOperations(emptyOperations);
-      setOperationsReady(false);
-      setPlatformReady(false);
+      setError("");
+      setLoaded(true);
+    } catch (e) {
+      if (epoch !== refreshEpoch.current) return;
+      throw e;
     }
-    setLoaded(true);
+  }
+  async function handleReadError(error: Error) {
+    if (error.name === "AbortError") return;
+    if (error instanceof ApiError && error.status === 401) {
+      try {
+        await refresh();
+      } catch (e) {
+        setError(
+          e instanceof ApiError && e.status === 401
+            ? "Your session could not be verified. Refresh the page or sign out and sign in again."
+            : (e as Error).message
+        );
+      }
+      return;
+    }
+    setError(error.message);
   }
   useEffect(() => {
     refresh().catch((e) => {
-      setError(e.message);
+      void handleReadError(e);
       setLoaded(true);
     });
   }, []);
@@ -380,14 +410,18 @@ export default function Home() {
     if ((body as any)?.action === "logout") safety.clear();
     setBusy(true);
     setError("");
+    refreshEpoch.current++;
+    let authenticated = false;
     try {
       await api("/api/account", body);
+      authenticated = true;
       setSectionFilters({ person: "", search: "" });
       setFilters({ person: "", search: "" });
       await refresh();
       setNotice("");
     } catch (e) {
-      setError((e as Error).message);
+      if (authenticated) await handleReadError(e as Error);
+      else setError((e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -429,7 +463,7 @@ export default function Home() {
             : {}),
         }));
       } catch (e) {
-        if (!controller.signal.aborted) setError((e as Error).message);
+        if (!controller.signal.aborted) void handleReadError(e as Error);
       } finally {
         pending = false;
       }
@@ -466,7 +500,7 @@ export default function Home() {
           }
         })
         .catch((e) => {
-          if (!controller.signal.aborted) setError(e.message);
+          if (!controller.signal.aborted) void handleReadError(e);
         });
     }
     return () => controller.abort();
@@ -491,7 +525,7 @@ export default function Home() {
         }
       })
       .catch((e) => {
-        if (!controller.signal.aborted) setError(e.message);
+        if (!controller.signal.aborted) void handleReadError(e);
       });
     return () => controller.abort();
   }, [loaded, tab, user?.id, user?.mustChange, platformReady, platformTab, filters]);
@@ -989,9 +1023,7 @@ export default function Home() {
                 />
               )}
               <div hidden={hasSectionViews(tab) && sectionMode === "dashboard"}>
-                {tab === "Overview" && user.role !== "Admin" && preferences.showQueue !== false && (
-                  <WorkQueue user={user} compact />
-                )}
+                {tab === "Overview" && preferences.showQueue !== false && <WorkQueue user={user} compact />}
                 {tab === "Overview" && preferences.showLaunchpad !== false && (
                   <ShiftHome user={user} go={setTab} />
                 )}
@@ -999,7 +1031,7 @@ export default function Home() {
                 {tab === "Submission history" && <Submissions user={user} />}
                 {tab === "Machines" && <Machines user={user} />}
                 {tab === "Overview" && (
-                  <details className="panel" open={preferences.showQueue === false || user.role === "Admin"}>
+                  <details className="panel" open>
                     <summary>Assignment panels and saved dashboard layout</summary>
                     <PersonalDashboard
                       canGo={(name) => canOpenSection(user, name)}

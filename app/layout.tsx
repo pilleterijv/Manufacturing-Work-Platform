@@ -18,6 +18,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
+        {process.env.FLOORWORK_DEMO_MODE === "true" && (
+          <div role="note" className="demo-banner">
+            <strong>DEMO — FICTIONAL SAMPLE DATA</strong> · Separate practice database. Email, AI and company
+            integrations are disabled.
+          </div>
+        )}
         <InstallApp />
         {children}
       </body>

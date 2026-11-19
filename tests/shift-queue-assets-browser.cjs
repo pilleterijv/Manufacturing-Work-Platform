@@ -405,7 +405,7 @@ async function main() {
   await mp.goto(origin);
   await mp
     .getByRole("heading", {
-      name: "Department work and exceptions",
+      name: "Assigned to me and my station",
       exact: true,
     })
     .waitFor();
