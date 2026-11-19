@@ -7,7 +7,7 @@ const fs = require("node:fs"),
 const root = path.join(__dirname, ".."),
   envFile = path.join(root, ".env.demo"),
   folder = path.join(root, ".floorwork", "demo");
-const { validateDemoUrl, demoEnvironment, demoOrigin } = require("./demo-config.cjs");
+const { validateDemoUrl, demoEnvironment, demoOrigin, demoSourceFile, demoSetupError } = require("./demo-config.cjs");
 function run(file, env) {
   const r = spawnSync(process.execPath, [path.join(root, "node_modules/tsx/dist/cli.mjs"), file], {
     cwd: root,
@@ -47,8 +47,13 @@ async function main() {
     for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => child.kill(sig));
     return;
   }
-  const privateFile = process.env.FLOORWORK_ENV_FILE || path.join(root, ".env");
-  if (fs.existsSync(privateFile)) process.loadEnvFile(privateFile);
+  const privateFile = demoSourceFile(root, process.env);
+  if (fs.existsSync(privateFile)) {
+    process.loadEnvFile(privateFile);
+    console.log("Demo uses local database settings from " + path.basename(privateFile) + ".");
+  }
+  if (!(process.env.DATABASE_SETUP_URL || process.env.DATABASE_URL))
+    throw Error("Demo has no local PostgreSQL connection settings. Configure .env.codespaces in Codespaces or .env locally, then retry.");
   const source = new URL(process.env.DATABASE_SETUP_URL || process.env.DATABASE_URL || "");
   if (
     !["postgres:", "postgresql:"].includes(source.protocol) ||
@@ -128,10 +133,6 @@ async function main() {
   );
 }
 main().catch((e) => {
-  console.error(
-    e.message && /^(Demo|Use |Run |Refusing|Ask )/.test(e.message)
-      ? e.message
-      : "Demo setup could not finish. Check local PostgreSQL permissions/service availability; do not change the operational database to fix the demo."
-  );
+  console.error(demoSetupError(e));
   process.exitCode = 1;
 });
