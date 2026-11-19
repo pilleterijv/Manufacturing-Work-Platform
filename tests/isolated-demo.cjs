@@ -61,11 +61,26 @@ async function main() {
   assert(ready, "Demo server failed to start");
   browser = await chromium.launch({ executablePath: "/usr/bin/chromium", args: ["--no-sandbox"] });
   const c = await browser.newContext({ serviceWorkers: "block", viewport: { width: 1024, height: 768 } });
+  await c.addCookies([
+    {
+      name: "floorwork",
+      value: "existing-normal-app-session",
+      url: origin,
+      httpOnly: true,
+      sameSite: "Strict",
+    },
+  ]);
   let r = await c.request.post(origin + "/api/account", {
     headers: { Origin: origin },
     data: { action: "login", username: "demo-admin", password, remember: false },
   });
   assert.equal(r.status(), 200);
+  const jar = await c.cookies();
+  assert.equal(jar.find((x) => x.name === "floorwork")?.value, "existing-normal-app-session");
+  assert(
+    jar.some((x) => x.name === "floorwork-demo"),
+    "Demo login uses its own cookie namespace"
+  );
   const paths = [
     "/api/platform?view=work",
     "/api/platform?view=leaders",

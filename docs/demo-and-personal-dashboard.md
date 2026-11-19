@@ -1,6 +1,6 @@
 # A separate, fictional plant demo
 
-The demo uses the same application code with an independent local PostgreSQL database named `floorwork_demo_<workspace-hash>`, independent media under `.floorwork/demo/uploads`, its own private `.env.demo`, and port **3001**. The operational app remains on port **3000** using its existing private settings and data. The demo seed has no operational-database mode: it rejects other database names/remote hosts and refuses an unmarked database containing accounts.
+The demo uses the same application code with an independent local PostgreSQL database named `floorwork_demo_<workspace-hash>`, independent media under `.floorwork/demo/uploads`, its own private `.env.demo`, an independent login cookie, and port **3001**. The operational app remains on port **3000** using its existing private settings and data. The demo seed has no operational-database mode: it rejects other database names/remote hosts and refuses an unmarked database containing accounts.
 
 ## Run it in your existing Codespace
 
@@ -66,4 +66,4 @@ A protected dashboard read can fail after the account response succeeds. Previou
 
 The fix covers reproducible transient/stale-response cases. If a warning persists even after Refresh section, investigate the failing request, current host/session and server configuration rather than disabling security checks.
 
-Verification includes 88 unit checks, production build/type checking, simulated transient/stale authentication reads, actual expired-session behavior, Admin/personal assignment visibility, shift/crew and role regressions, isolated seeding/repeatability, 21 demo section APIs, browser navigation through eight populated sections, protected demo image/video access, and all five demo-role logins. The actual `demo:setup` / `demo:start` commands were also smoke-tested on port 3001. Credentials, `.env.demo` and demo media/data remain outside Git/source downloads.
+Verification includes 88 unit checks, production build/type checking, simulated transient/stale authentication reads, actual expired-session behavior, Admin/personal assignment visibility, shift/crew and role regressions, isolated seeding/repeatability, 21 demo section APIs, browser navigation through eight populated sections, protected demo image/video access, and all five demo-role logins. The actual `demo:setup` / `demo:start` commands were also smoke-tested on port 3001. Generated credentials, `.env.demo`, database files and `.floorwork/demo/uploads` remain outside Git/source downloads. The small fictional starter image/video in `scripts/demo-assets` are intentionally included.

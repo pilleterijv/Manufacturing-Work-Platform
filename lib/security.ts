@@ -20,7 +20,10 @@ export async function hashPassword(p: string) {
 }
 export const digest = (s: string) => createHash("sha256").update(s).digest("hex");
 export const secure = () => process.env.APP_ORIGIN?.startsWith("https://") ?? false;
-export const cookieName = () => (secure() ? "__Host-floorwork" : "floorwork");
+export const cookieName = () => {
+  const name = process.env.FLOORWORK_DEMO_MODE === "true" ? "floorwork-demo" : "floorwork";
+  return secure() ? `__Host-${name}` : name;
+};
 export async function currentUser() {
   const token = (await cookies()).get(cookieName())?.value;
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
