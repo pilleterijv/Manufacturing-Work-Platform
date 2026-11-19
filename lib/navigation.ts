@@ -9,6 +9,7 @@ export type NavigationUser = {
 };
 export const sectionRules: Record<string, Capability | null> = {
   "Work queue": null,
+  "Submission history": null,
   Machines: null,
   Overview: null,
   "Dashboard settings": null,

@@ -202,7 +202,9 @@ export async function sectionWorkbook(
             ],
             kind: choice.kind,
             created: { lte: asOf },
-            ...(g.includes("analytics") ? {} : { userId: u.id }),
+            ...(g.includes("analytics") || g.includes("history")
+              ? {}
+              : { userId: u.id }),
           },
           include: { user: { select: { name: true, username: true } } },
           orderBy: { id: "asc" },

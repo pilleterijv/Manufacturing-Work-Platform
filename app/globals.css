@@ -2256,3 +2256,5 @@ html {
     margin-top: 12px;
   }
 }
+
+.submission-fields {display:grid;gap:.5rem;overflow-wrap:anywhere}.submission-fields>div{display:grid;grid-template-columns:minmax(120px,1fr) minmax(0,3fr);gap:.75rem;border-bottom:1px solid var(--border,#e1d9d1);padding:.5rem 0}.submission-fields dt{font-weight:600}.submission-fields dd{margin:0;min-width:0}@media(max-width:650px){.submission-fields>div{grid-template-columns:1fr}}
