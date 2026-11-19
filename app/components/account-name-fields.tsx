@@ -5,13 +5,21 @@ export default function AccountNameFields({
   name,
   onChange,
   disabled = false,
+  initialFirstName,
+  initialLastName,
 }: {
   name: string;
   onChange: (name: string) => void;
   disabled?: boolean;
+  initialFirstName?: string;
+  initialLastName?: string;
 }) {
-  const [first, setFirst] = useState(name.split(" ")[0] || ""),
-    [last, setLast] = useState(name.split(" ").slice(1).join(" "));
+  const [first, setFirst] = useState(
+      initialFirstName || name.split(" ")[0] || "",
+    ),
+    [last, setLast] = useState(
+      initialLastName || name.split(" ").slice(1).join(" "),
+    );
 
   return (
     <>

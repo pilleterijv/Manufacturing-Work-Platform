@@ -207,6 +207,8 @@ export default function DepartmentAccounts() {
                 <AccountNameFields
                   key={selected?.id || "new"}
                   name={draft.name}
+                  initialFirstName={draft.firstName}
+                  initialLastName={draft.lastName}
                   onChange={(name) => setDraft({ ...draft, name })}
                   disabled={!!selected && !p.includes("accounts.edit")}
                 />

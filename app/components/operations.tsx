@@ -1,4 +1,5 @@
 "use client";
+import DashboardChart from "./dashboard-chart";
 import { openWorkflow } from "@/lib/floor-navigation";
 import RefreshControl, { useSectionRefresh } from "./refresh-control";
 import { HistoryPagingContext, Metric } from "./shared";
@@ -1262,6 +1263,23 @@ export function Leadership({
               s.overdueIdeas > 0,
             )}
           </div>
+          <DashboardChart
+            title="Completed work in reporting period"
+            items={[
+              { label: "Operator completions", count: s.runs },
+              { label: "DL/TL completions", count: s.leaderWork || 0 },
+              { label: "Time studies", count: s.studies },
+            ]}
+            note={`Matching completed work from ${report.from} through ${report.to}, restricted to the selected scope.`}
+          />
+          <DashboardChart
+            title="Current improvement pipeline"
+            items={[
+              { label: "Open ideas", count: s.openIdeas },
+              { label: "Open problem solvings", count: s.openProblems },
+            ]}
+            note="Current open work in the selected scope; these counts are not limited to the reporting date range."
+          />
           <div className="leadership-grid">
             <section className="panel">
               <div className="section-title">
