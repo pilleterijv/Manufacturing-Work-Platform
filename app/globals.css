@@ -2265,3 +2265,5 @@ html {
 .donut-layout svg { width:180px; height:180px; max-width:100%; }
 .dashboard-chart select { min-height:44px; }
 @media (max-width:600px) { .chart-bar-row {grid-template-columns:minmax(6rem,1fr) minmax(3rem,2fr) auto;} }
+
+.demo-banner {padding:12px 20px; background:#fff0c2; color:#603000; border-bottom:3px solid #c54900; text-align:center;}

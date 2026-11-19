@@ -193,7 +193,6 @@ export async function GET(req: Request) {
             where: {
               equipmentId: { in: ids },
               status: { not: "Closed" },
-              OR: [{ dueDate: { lte: today } }, { status: "Verification" }],
               ...(!team ? { AND: [{ OR: [{ ownerId: u.id }, { reviewerId: u.id }] }] } : {}),
             },
             orderBy: [{ dueDate: "asc" }, { id: "asc" }],
@@ -211,6 +210,25 @@ export async function GET(req: Request) {
           })
         : [],
     ]);
+    // Explicit standard assignments must remain discoverable even before a shift requirement is configured.
+    const assignedStandards = !team
+      ? await db.$queryRaw<any[]>`
+      SELECT * FROM (SELECT DISTINCT ON (family) id,family,title,kind,workflow,archived,"equipmentId","assigneeIds" FROM "Standard" WHERE "equipmentId"=ANY(${ids}::text[]) ORDER BY family,revision DESC) s
+      WHERE NOT archived AND "assigneeIds" @> ${JSON.stringify([u.id])}::jsonb AND kind=ANY(${[...(g.includes("work") ? ["run"] : []), ...(g.includes("audits") ? ["audit"] : [])]}::text[])
+      ORDER BY title,id LIMIT 501`
+      : [];
+    const completedStandards = assignedStandards.length
+      ? await db.record.findMany({
+          where: {
+            userId: u.id,
+            standardId: { in: assignedStandards.map((s) => s.id) },
+            kind: { in: ["run", "audit"] },
+          },
+          select: { standardId: true },
+          distinct: ["standardId"],
+        })
+      : [];
+    const completedIds = new Set(completedStandards.map((r) => r.standardId));
     const names = new Map(people.map((v) => [v.id, v.name])),
       scheduled = scheduledQueue({
         schedules: schedules.slice(0, 1000),
@@ -223,6 +241,38 @@ export async function GET(req: Request) {
         now,
       });
     const items: QueueItem[] = [...scheduled.rows];
+    for (const s of assignedStandards.slice(0, 500)) {
+      if (scheduled.rows.some((r) => r.filters.standard === s.id)) continue;
+      const recurring = schedules.some(
+        (plan) =>
+          plan.family === s.family &&
+          (!(plan.assigneeIds as string[]).length || (plan.assigneeIds as string[]).includes(u.id))
+      );
+      const completed = !recurring && completedIds.has(s.id);
+      items.push({
+        id: `assigned-standard:${s.id}`,
+        type: "Assigned checklist",
+        title: s.title,
+        equipmentId: s.equipmentId,
+        assignee: u.name,
+        due: "",
+        status: recurring ? "Upcoming" : completed ? "Completed" : "Assigned",
+        priority: recurring ? 5 : completed ? 6 : 4,
+        tab:
+          s.workflow === "leader"
+            ? "DL/TL Standard Work"
+            : s.workflow === "changeover"
+              ? "Changeover standards"
+              : s.kind === "audit"
+                ? "Standard work audits"
+                : "Standard work",
+        filters: { equipment: s.equipmentId, standard: s.id },
+        canPerform: !recurring && !completed,
+        detail: recurring
+          ? "Shift requirement configured; not due in the displayed shift windows."
+          : "Explicit assignment; add a shift requirement for recurring work.",
+      });
+    }
     for (const v of plans.slice(0, 500)) {
       const overdue = v.nextDue < today,
         due = v.nextDue <= today;
@@ -292,7 +342,13 @@ export async function GET(req: Request) {
         assignee: names.get(v.status === "Verification" ? v.reviewerId : v.ownerId) || "Reassignment needed",
         due: v.dueDate,
         status:
-          v.status === "Verification" ? "Awaiting validation" : v.dueDate < today ? "Overdue" : "Due today",
+          v.status === "Verification"
+            ? "Awaiting validation"
+            : v.dueDate < today
+              ? "Overdue"
+              : v.dueDate === today
+                ? "Due today"
+                : "Upcoming",
         priority: v.dueDate < today ? 2 : 3,
         tab: "Problem solving",
         filters: { equipment: v.equipmentId, item: v.id },
@@ -340,7 +396,7 @@ export async function GET(req: Request) {
         scheduled.truncated ||
         schedules.length > 1000 ||
         items.length > 500 ||
-        [plans, defects, actions, ideas, cases].some((v) => v.length > 500),
+        [plans, defects, actions, ideas, cases, assignedStandards].some((v) => v.length > 500),
       hasSchedules: schedules.length > 0,
       window: "Current shift and previous 24 hours; PM/CIL and actions use their displayed due dates",
       generatedAt: now.toISOString(),

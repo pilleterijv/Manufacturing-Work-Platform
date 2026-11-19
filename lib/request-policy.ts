@@ -14,10 +14,19 @@ export function configuredOrigin(value: string | undefined) {
   return url;
 }
 type TunnelEnvironment = {
+  PORT?: string;
   CODESPACES?: string;
   CODESPACE_NAME?: string;
   GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN?: string;
 };
+function tunnelPort(tunnel: TunnelEnvironment) {
+  const port = tunnel.PORT || "3000";
+  return /^\d{1,5}$/.test(port) && Number(port) > 0 && Number(port) <= 65535 ? port : null;
+}
+function tunnelHosts(tunnel: TunnelEnvironment) {
+  const port = tunnelPort(tunnel);
+  return port ? [`localhost:${port}`, `127.0.0.1:${port}`, `[::1]:${port}`] : [];
+}
 function codespacesPreview(origin: URL, tunnel: TunnelEnvironment) {
   const name = tunnel.CODESPACE_NAME;
   const domain = tunnel.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN;
@@ -25,10 +34,10 @@ function codespacesPreview(origin: URL, tunnel: TunnelEnvironment) {
     tunnel.CODESPACES === "true" &&
     /^[a-z0-9-]+$/.test(name || "") &&
     /^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(domain || "") &&
-    origin.origin === `https://${name}-3000.${domain}`
+    !!tunnelPort(tunnel) &&
+    origin.origin === `https://${name}-${tunnelPort(tunnel)}.${domain}`
   );
 }
-const tunnelHosts = ["localhost:3000", "127.0.0.1:3000", "[::1]:3000"];
 export function requestOriginAllowed(headers: Headers, origin: URL, tunnel: TunnelEnvironment = {}) {
   const received = headers.get("origin");
   if (received === origin.origin) return true;
@@ -39,7 +48,7 @@ export function requestOriginAllowed(headers: Headers, origin: URL, tunnel: Tunn
   const host = headers.get("host")?.toLowerCase();
   return (
     codespacesPreview(origin, tunnel) &&
-    tunnelHosts.includes(host || "") &&
+    tunnelHosts(tunnel).includes(host || "") &&
     ["http", "https"].some((scheme) => received === `${scheme}://${host}`) &&
     headers.get("sec-fetch-site") === "same-origin" &&
     headers.get("x-floorwork-origin") === origin.origin &&
@@ -56,7 +65,7 @@ export function requestAllowed(
   let hostAllowed = host === origin.host.toLowerCase();
   // Codespaces terminates HTTPS and may forward to the loopback HTTP listener.
   // Enable this only for this running Codespace's exact HTTPS preview address.
-  if (!hostAllowed && codespacesPreview(origin, tunnel) && tunnelHosts.includes(host || "")) {
+  if (!hostAllowed && codespacesPreview(origin, tunnel) && tunnelHosts(tunnel).includes(host || "")) {
     const forwarded = headers.get("x-forwarded-host");
     // Next.js fills X-Forwarded-Host from Host when the tunnel omits it.
     hostAllowed = !forwarded || forwarded.toLowerCase() === origin.host || forwarded.toLowerCase() === host;
