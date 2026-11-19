@@ -4,7 +4,7 @@ import { allowedDowntimeEquipment } from "./downtime-access-rules";
 import nodemailer from "nodemailer";
 import { db } from "./db";
 export function smtpReady() {
-  return !!(process.env.SMTP_HOST && process.env.SMTP_FROM);
+  return process.env.FLOORWORK_DEMO_MODE !== "true" && !!(process.env.SMTP_HOST && process.env.SMTP_FROM);
 }
 export async function deliverShiftEmails(
   transportOverride?: Pick<import("nodemailer").Transporter, "sendMail" | "close">

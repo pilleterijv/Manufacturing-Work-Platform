@@ -8,7 +8,10 @@ export const viewport = {
 };
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "Floorwork | Manufacturing work platform",
+  title:
+    process.env.FLOORWORK_DEMO_MODE === "true"
+      ? "DEMO | Floorwork — fictional sample data"
+      : "Floorwork | Manufacturing work platform",
   manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "Floorwork", statusBarStyle: "default" },
   icons: { apple: "/apple-touch-icon.png" },
@@ -18,6 +21,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
+        {process.env.FLOORWORK_DEMO_MODE === "true" && (
+          <div role="note" className="demo-banner">
+            <strong>DEMO — FICTIONAL SAMPLE DATA</strong> · Separate practice database. Email, AI and company
+            integrations are disabled.
+          </div>
+        )}
         <InstallApp />
         {children}
       </body>

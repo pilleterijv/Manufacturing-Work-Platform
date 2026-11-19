@@ -40,6 +40,15 @@ export function filterUrl(path: string) {
   for (const [k, v] of Object.entries(filters)) if (v && !p.get(k)) p.set(k, v);
   return base + (p.size ? "?" + p : "");
 }
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
 export async function api(path: string, body?: unknown, signal?: AbortSignal) {
   const event = (state: string) => {
     if (body) window.dispatchEvent(new CustomEvent("floorwork:mutation", { detail: { path, state } }));
@@ -60,7 +69,7 @@ export async function api(path: string, body?: unknown, signal?: AbortSignal) {
         : {}),
     });
     const data = await r.json();
-    if (!r.ok) throw Error(data.error ?? "Request failed");
+    if (!r.ok) throw new ApiError(data.error ?? "Request failed", r.status);
     event("saved");
     return data;
   } catch (e) {

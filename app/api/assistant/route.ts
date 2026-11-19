@@ -4,7 +4,9 @@ import { db } from "@/lib/db";
 import { requireUser, grants, jsonBody, failure, HttpError, limit } from "@/lib/security";
 import { adminPrivileges } from "@/lib/capabilities";
 import { permittedHelp, guideAnswer } from "@/lib/help-catalog";
-const configured = () => !!(process.env.OPENAI_API_KEY && process.env.OPENAI_ASSISTANT_MODEL);
+const configured = () =>
+  process.env.FLOORWORK_DEMO_MODE !== "true" &&
+  !!(process.env.OPENAI_API_KEY && process.env.OPENAI_ASSISTANT_MODEL);
 async function enabled() {
   const s = await db.setting.findUnique({ where: { key: "navigation-ai" } });
   return !!(
