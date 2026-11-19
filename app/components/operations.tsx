@@ -1001,28 +1001,32 @@ export function Notifications({
             <button
               className="primary"
               onClick={
-                n.kind === "registration"
-                  ? openAccounts
-                  : n.kind === "overdue"
-                    ? n.message.startsWith("Overdue pm: CIL ·")
-                      ? openCil
-                      : n.message.startsWith("Overdue pm:")
-                        ? openMaintenance
-                        : n.message.startsWith("Overdue idea:")
-                          ? openIdea
-                          : openProblem
-                    : n.kind === "missed-work"
-                      ? openWork
-                      : openIdea
+                n.kind === "assignment"
+                  ? () => openWorkflow({ tab: "Overview" })
+                  : n.kind === "registration"
+                    ? openAccounts
+                    : n.kind === "overdue"
+                      ? n.message.startsWith("Overdue pm: CIL ·")
+                        ? openCil
+                        : n.message.startsWith("Overdue pm:")
+                          ? openMaintenance
+                          : n.message.startsWith("Overdue idea:")
+                            ? openIdea
+                            : openProblem
+                      : n.kind === "missed-work"
+                        ? openWork
+                        : openIdea
               }
             >
-              {n.kind === "registration"
-                ? "Review registration requests"
-                : n.kind === "overdue"
-                  ? "Open overdue work"
-                  : n.kind === "missed-work"
-                    ? "Open standard work"
-                    : "Open improvement ideas"}
+              {n.kind === "assignment"
+                ? "Open my assignments"
+                : n.kind === "registration"
+                  ? "Review registration requests"
+                  : n.kind === "overdue"
+                    ? "Open overdue work"
+                    : n.kind === "missed-work"
+                      ? "Open standard work"
+                      : "Open improvement ideas"}
             </button>
             {!n.readAt && (
               <button

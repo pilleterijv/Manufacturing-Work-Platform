@@ -71,6 +71,31 @@ export default function Integrations() {
       ) : (
         <>
           <section className="panel">
+            <h2>Assignment email delivery</h2>
+            <p>
+              {data.assignmentEmail?.configured
+                ? "Mail settings are present. The background worker delivers assignments to the current email on each account."
+                : "Email is not configured. IT must set SMTP_HOST and SMTP_FROM plus the approved mail authentication settings. In-app assignments remain available."}
+            </p>
+            <p>
+              Pending: {data.assignmentEmail?.pending ?? 0} · Failed:{" "}
+              {data.assignmentEmail?.failed ?? 0} · Sent to mail service:{" "}
+              {data.assignmentEmail?.sent ?? 0}
+            </p>
+            <p className="small muted">
+              Missing account emails retry, then appear as failed. Correct the
+              account email before retrying. Mail-service acceptance does not
+              guarantee inbox delivery.
+            </p>
+            <button
+              className="outline"
+              disabled={busy || !data.assignmentEmail?.failed}
+              onClick={() => void save({ action: "retryAssignmentEmails" })}
+            >
+              Retry failed assignment emails
+            </button>
+          </section>
+          <section className="panel">
             <h2>Microsoft SQL / Azure SQL connection</h2>
             <p>
               {data.sql.configured

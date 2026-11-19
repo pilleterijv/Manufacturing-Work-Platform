@@ -1,4 +1,5 @@
 "use client";
+import DashboardChart from "../dashboard-chart";
 import { useSectionRefresh } from "../refresh-control";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client-api";
@@ -126,6 +127,29 @@ export default function PersonalDashboard({
       )}
       {data && (
         <>
+          <DashboardChart
+            title={
+              scope === "personal"
+                ? "My assigned work by section"
+                : "Department work by section"
+            }
+            items={[
+              { label: "Ideas", count: data.counts[0], key: "ideas" },
+              {
+                label: "Problem solvings",
+                count: data.counts[1],
+                key: "problems",
+              },
+              {
+                label: "PM / CIL plans",
+                count: data.counts[2],
+                key: "maintenance",
+              },
+              { label: "Open defects", count: data.counts[3], key: "defects" },
+              { label: "5S plans", count: data.counts[4], key: "fiveS" },
+            ].filter((x) => chosen.includes(x.key as any))}
+            note="Counts cover all matching items in the selected personal or department scope; these categories are not equivalent measures of overdue work."
+          />
           <div className="metrics assignment-metrics">
             {[
               "Ideas",

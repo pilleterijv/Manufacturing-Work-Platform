@@ -1,4 +1,5 @@
 "use client";
+import AccountNameFields from "../account-name-fields";
 import { confirmDraftChange } from "../floor-safety";
 import DelegationEditor from "../delegation-editor";
 import { AccessRequests } from "../access-forms";
@@ -31,6 +32,7 @@ export default function Accounts({
   reload: () => void;
 }) {
   const [accountSearch, setAccountSearch] = useState("");
+  const [identityKey, setIdentityKey] = useState(0);
   const [id, setId] = useState(""),
     [username, setUsername] = useState(""),
     [name, setName] = useState(""),
@@ -41,6 +43,7 @@ export default function Accounts({
   function select(id: string, check = true) {
     if (check && !confirmDraftChange()) return;
     setId(id);
+    setIdentityKey((k) => k + 1);
     const u = data.users.find((u) => u.id === id);
     setUsername(u?.username ?? "");
     setName(u?.name ?? "");
@@ -93,6 +96,8 @@ export default function Accounts({
                 ...(id ? { id } : {}),
                 username,
                 name,
+                firstName: new FormData(e.currentTarget).get("firstName"),
+                lastName: new FormData(e.currentTarget).get("lastName"),
                 email,
                 role,
                 active,
@@ -112,21 +117,19 @@ export default function Accounts({
                 autoComplete="off"
               />
             </Field>
-            <Field label="Display name">
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                maxLength={150}
-              />
-            </Field>
+            <AccountNameFields
+              key={identityKey}
+              name={name}
+              onChange={setName}
+            />
             <Field label="Email address">
               <input
                 type="email"
+                required={!id}
                 value={email}
                 maxLength={254}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="For shift notifications"
+                placeholder="Work email for assignment notifications"
               />
             </Field>
             <Field label="Role">

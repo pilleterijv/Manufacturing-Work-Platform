@@ -1,3 +1,4 @@
+import { queueAssignments } from "@/lib/assignment-notifications";
 import { canAdminister } from "@/lib/capabilities";
 import { requireDelegated } from "@/lib/security";
 import { z } from "zod";
@@ -308,16 +309,33 @@ export async function POST(req: Request) {
               ],
             },
           });
+          if (v.active)
+            await queueAssignments(tx, {
+              type: "maintenance",
+              id,
+              equipmentId: v.equipmentId,
+              assignees: [v.assigneeId],
+              previous: old.active ? [old.assigneeId] : [],
+              revision: old.version + 1,
+            });
         } else {
           await assertEquipmentAccess(u, v.equipmentId, tx);
           await eligiblePeople(v.equipmentId, [v.assigneeId], tx);
-          await tx.maintenancePlan.create({
+          const assignedPlan = await tx.maintenancePlan.create({
             data: {
               ...v,
               createdBy: u.id,
               history: [{ ...entry, event: "Plan created", values: v }],
             },
           });
+          if (v.active)
+            await queueAssignments(tx, {
+              type: "maintenance",
+              id: assignedPlan.id,
+              equipmentId: v.equipmentId,
+              assignees: [v.assigneeId],
+              revision: 1,
+            });
         }
       });
     } else if (b.action === "complete") {

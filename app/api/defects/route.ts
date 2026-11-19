@@ -1,3 +1,4 @@
+import { queueAssignments } from "@/lib/assignment-notifications";
 import { z } from "zod";
 import { focusedEquipmentIds } from "@/lib/equipment-label";
 import { workflowFocus } from "@/lib/workflow-focus";
@@ -235,6 +236,15 @@ export async function POST(req: Request) {
               history: [...(d.history as any[]), { ...entry, ...v }],
             },
           });
+          if (v.status === "Open" && v.assigneeId)
+            await queueAssignments(tx, {
+              type: "defect",
+              id,
+              equipmentId: d.equipmentId,
+              assignees: [v.assigneeId],
+              previous: d.assigneeId ? [d.assigneeId] : [],
+              revision: d.version + 1,
+            });
         } else if (b.action === "reconcile") {
           if (u.role !== "Admin")
             throw new HttpError(

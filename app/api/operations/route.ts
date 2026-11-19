@@ -1,3 +1,4 @@
+import { queueAssignments } from "@/lib/assignment-notifications";
 import { readFilters } from "@/lib/filters";
 import { focusedEquipmentIds } from "@/lib/equipment-label";
 import { workflowFocus } from "@/lib/workflow-focus";
@@ -448,6 +449,13 @@ export async function POST(req: Request) {
               create: participantIds.map((userId) => ({ userId })),
             },
           },
+        });
+        await queueAssignments(tx, {
+          type: "idea",
+          id: idea.id,
+          equipmentId: v.equipmentId,
+          assignees: [v.pilotId, v.validatorId],
+          revision: 1,
         });
         await tx.notification.create({
           data: {

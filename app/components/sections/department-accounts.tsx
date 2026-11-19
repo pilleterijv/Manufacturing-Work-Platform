@@ -1,4 +1,5 @@
 "use client";
+import AccountNameFields from "../account-name-fields";
 import { useSectionRefresh } from "../refresh-control";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client-api";
@@ -147,6 +148,7 @@ export default function DepartmentAccounts() {
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
+                  const identityFields = new FormData(e.currentTarget);
                   if (!selected) {
                     const l = data.locations.find(
                       (l: any) => l.id === draft.locationId,
@@ -157,6 +159,8 @@ export default function DepartmentAccounts() {
                     }
                     void save({
                       action: "create",
+                      firstName: identityFields.get("firstName"),
+                      lastName: identityFields.get("lastName"),
                       ...draft,
                       workspaceAccess: {
                         mode: "restricted",
@@ -180,6 +184,8 @@ export default function DepartmentAccounts() {
                       id: selected.id,
                       version: selected.version,
                       name: draft.name,
+                      firstName: identityFields.get("firstName"),
+                      lastName: identityFields.get("lastName"),
                       email: draft.email,
                       role: draft.role,
                     });
@@ -198,20 +204,16 @@ export default function DepartmentAccounts() {
                     />
                   </Field>
                 )}
-                <Field label="Account display name">
-                  <input
-                    required
-                    maxLength={150}
-                    disabled={!!selected && !p.includes("accounts.edit")}
-                    value={draft.name}
-                    onChange={(e) =>
-                      setDraft({ ...draft, name: e.target.value })
-                    }
-                  />
-                </Field>
+                <AccountNameFields
+                  key={selected?.id || "new"}
+                  name={draft.name}
+                  onChange={(name) => setDraft({ ...draft, name })}
+                  disabled={!!selected && !p.includes("accounts.edit")}
+                />
                 <Field label="Account work email">
                   <input
                     type="email"
+                    required={!selected}
                     maxLength={254}
                     value={draft.email ?? ""}
                     disabled={!!selected && !p.includes("accounts.edit")}

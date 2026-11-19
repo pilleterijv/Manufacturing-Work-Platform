@@ -1,3 +1,4 @@
+import { accountIdentity } from "@/lib/account-identity";
 import { securityEvent } from "@/lib/security-events";
 import { z } from "zod";
 import { randomBytes } from "node:crypto";
@@ -33,6 +34,8 @@ export async function POST(req: Request) {
   try {
     const b = await jsonBody(req);
     if (b.action === "register") {
+      const identity = accountIdentity(b);
+      b.name = identity.name;
       await limit("registration:global", 30, 3600);
       const v = z
         .object({
@@ -61,7 +64,9 @@ export async function POST(req: Request) {
           }))
         )
           return;
-        const r = await tx.registrationRequest.create({ data: v });
+        const r = await tx.registrationRequest.create({
+          data: { ...v, ...identity },
+        });
         const admins = await tx.user.findMany({
           where: { role: "Admin", active: true },
           select: { id: true },
@@ -171,6 +176,8 @@ export async function POST(req: Request) {
           data: {
             username: r.username,
             name: r.name,
+            firstName: r.firstName,
+            lastName: r.lastName,
             email: r.email,
             role: "Operator",
             password: await hashPassword(randomBytes(32).toString("hex")),

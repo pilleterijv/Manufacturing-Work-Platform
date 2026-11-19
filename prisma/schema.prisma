@@ -16,6 +16,8 @@ model SubmissionReceipt {
  @@index([userId])
 }
 model User {
+ firstName String @default("")
+ lastName String @default("")
  customRole String?
  id String @id @default(uuid())
  dashboardDepartment Json?
@@ -471,6 +473,8 @@ model Defect {
  @@index([equipmentId,status])
 }
 model RegistrationRequest {
+ firstName String @default("")
+ lastName String @default("")
  id String @id @default(uuid())
  username String
  name String
@@ -516,4 +520,21 @@ model Centerline {
  createdAt DateTime @default(now())
  updatedAt DateTime @default(now())
  @@index([equipmentId,active])
+}
+
+model AssignmentDelivery {
+ id String @id
+ userId String
+ entityType String
+ entityId String
+ equipmentId String
+ status String @default("Pending")
+ attempts Int @default(0)
+ nextAttemptAt DateTime @default(now())
+ claimedUntil DateTime?
+ sentAt DateTime?
+ lastError String?
+ createdAt DateTime @default(now())
+ @@index([status,nextAttemptAt])
+ @@index([userId])
 }
