@@ -120,6 +120,8 @@ export default function Accounts({
             <AccountNameFields
               key={identityKey}
               name={name}
+              initialFirstName={data.users.find((u) => u.id === id)?.firstName}
+              initialLastName={data.users.find((u) => u.id === id)?.lastName}
               onChange={setName}
             />
             <Field label="Email address">

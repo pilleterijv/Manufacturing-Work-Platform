@@ -488,7 +488,11 @@ async function main() {
   }
   await page.getByRole("button", { name: "♙ Accounts", exact: true }).click();
   await page.getByLabel("Username", { exact: true }).fill("new-" + suffix);
-  await page.getByLabel("Display name", { exact: true }).fill("New employee");
+  await page.getByLabel("First name", { exact: true }).fill("New");
+  await page.getByLabel("Last name", { exact: true }).fill("employee");
+  await page
+    .getByLabel("Email address", { exact: true })
+    .fill("new-" + suffix + "@example.invalid");
   await page.getByLabel("Temporary password", { exact: true }).fill(password);
   await page
     .getByRole("button", { name: "Create account", exact: true })

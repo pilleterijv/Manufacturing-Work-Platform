@@ -147,10 +147,23 @@ async function main() {
           .n,
         20,
       );
-      const roleMetadata = await pool.query('SELECT role,"baseRole" FROM "Policy" ORDER BY role');
-      for (const row of roleMetadata.rows) assert.equal(row.baseRole,row.role);
-      assert.equal((await pool.query('SELECT count(*)::int AS n FROM "RoleAudit"')).rows[0].n,0);
-      assert.equal((await pool.query('SELECT count(*)::int AS n FROM "User" WHERE "customRole" IS NOT NULL')).rows[0].n,0);
+      const roleMetadata = await pool.query(
+        'SELECT role,"baseRole" FROM "Policy" ORDER BY role',
+      );
+      for (const row of roleMetadata.rows) assert.equal(row.baseRole, row.role);
+      assert.equal(
+        (await pool.query('SELECT count(*)::int AS n FROM "RoleAudit"')).rows[0]
+          .n,
+        0,
+      );
+      assert.equal(
+        (
+          await pool.query(
+            'SELECT count(*)::int AS n FROM "User" WHERE "customRole" IS NOT NULL',
+          )
+        ).rows[0].n,
+        0,
+      );
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "Centerline"'))
           .rows[0].n,
