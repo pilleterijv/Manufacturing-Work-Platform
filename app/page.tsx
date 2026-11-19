@@ -101,6 +101,10 @@ const Leadership = dynamic(
   { loading: () => <p className="muted">Loading section…</p> },
 );
 
+const Submissions = dynamic(() => import("./components/sections/submissions"), {
+  loading: () => <p>Loading submission history…</p>,
+});
+
 const platformViews: Record<string, string> = {
   Overview: "overview",
   "Standard work": "work",
@@ -682,6 +686,7 @@ export default function Home() {
   const nav: [string, Capability | null, string][] = [
     ["Overview", null, "◫"],
     ["Work queue", null, "☷"],
+    ["Submission history", null, "▤"],
     ["Machines", null, "▣"],
     ["Dashboard settings", null, "⚙"],
     ["Assistant", null, "?"],
@@ -798,6 +803,7 @@ export default function Home() {
                           ![
                             "Overview",
                             "Work queue",
+                            "Submission history",
                             "Machines",
                             "Notifications",
                             ...roleHome(user).primary,
@@ -1124,6 +1130,7 @@ export default function Home() {
                   <ShiftHome user={user} go={setTab} />
                 )}
                 {tab === "Work queue" && <WorkQueue user={user} />}
+                {tab === "Submission history" && <Submissions user={user} />}
                 {tab === "Machines" && <Machines user={user} />}
                 {tab === "Overview" && (
                   <details

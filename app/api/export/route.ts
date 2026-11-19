@@ -78,7 +78,9 @@ export async function GET(req: Request) {
             recordScope(ids),
             recordFilters(person, search, matchingEquipment),
           ],
-          ...(g.includes("analytics") ? {} : { userId: u.id }),
+          ...(g.includes("analytics") || g.includes("history")
+            ? {}
+            : { userId: u.id }),
           created: { lte: asOf },
           kind: {
             in: [

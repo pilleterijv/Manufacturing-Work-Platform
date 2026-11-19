@@ -4,7 +4,7 @@ import { db } from "./db";
 import { equipmentIds, type ScopedUser } from "./location-access";
 import { grants, HttpError } from "./security";
 export { mediaSchema, evidenceSchema, type Evidence } from "./evidence-schema";
-import { visibleAreas } from "./area-access";
+import { allowedArea } from "./area-access";
 import type { Evidence } from "./evidence-schema";
 export async function ownEvidence(
   userId: string,
@@ -49,19 +49,21 @@ export async function canReadEvidence(
     select: { id: true },
   });
   if (content) return true;
-  const kinds = [
-    ...(g.includes("work") || g.includes("analytics") ? ["run"] : []),
-    ...(g.includes("audits") ? ["audit"] : []),
-    ...(g.includes("centerlines") ? ["centerline"] : []),
-    ...(g.includes("maintenance") ? ["pm", "cil"] : []),
-  ];
+  const kinds = g.includes("history")
+    ? ["run", "audit", "study", "pm", "cil", "centerline"]
+    : [
+        ...(g.includes("work") || g.includes("analytics") ? ["run"] : []),
+        ...(g.includes("audits") ? ["audit"] : []),
+        ...(g.includes("centerlines") ? ["centerline"] : []),
+        ...(g.includes("maintenance") ? ["pm", "cil"] : []),
+      ];
   if (kinds.length) {
     const key = kind === "photo" ? "photo" : "video";
     const rows = await db.$queryRaw<
       { id: string }[]
     >(Prisma.sql`SELECT r.id FROM "Record" r LEFT JOIN "Standard" s ON s.id=r."standardId"
  WHERE r.kind IN (${Prisma.join(kinds)}) AND COALESCE(s."equipmentId",r.data->>'equipmentId')=ANY(${ids}::text[])
- AND (r."userId"=${u.id} OR ${u.role === "Admin"} OR (r.kind='run' AND ${g.includes("analytics")}) OR (r.kind='audit' AND ${g.includes("audits")}) OR (r.kind='centerline' AND ${g.includes("centerlines")}) OR (r.kind IN ('pm','cil') AND ${g.includes("maintenance")}))
+ AND (r."userId"=${u.id} OR ${u.role === "Admin"} OR ${g.includes("history")} OR (r.kind='run' AND ${g.includes("analytics")}) OR (r.kind='audit' AND ${g.includes("audits")}) OR (r.kind='centerline' AND ${g.includes("centerlines")}) OR (r.kind IN ('pm','cil') AND ${g.includes("maintenance")}))
  AND ((r.data->'responses') @> ${JSON.stringify([{ [key]: id }])}::jsonb OR (r.data->'media') @> ${part}::jsonb) LIMIT 1`);
     if (rows.length) return true;
   }
@@ -109,8 +111,10 @@ export async function canReadEvidence(
     }))
   )
     return true;
-  if (g.includes("fiveS")) {
-    const areas = await visibleAreas(u);
+  if (g.includes("fiveS") || g.includes("history")) {
+    const areas = (await db.location.findMany()).filter((area) =>
+      allowedArea(u, area),
+    );
     if (
       await db.fiveSAudit.findFirst({
         where: {
