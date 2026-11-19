@@ -1,0 +1,14 @@
+{
+  "name": "Floorwork browser pilot",
+  "dockerComposeFile": "compose.yaml",
+  "service": "app",
+  "workspaceFolder": "/workspaces/Manufacturing-Work-Platform",
+  "remoteUser": "node",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": { "label": "Floorwork", "onAutoForward": "notify" }
+  },
+  "otherPortsAttributes": { "onAutoForward": "ignore" },
+  "postCreateCommand": "node scripts/codespaces.cjs setup",
+  "shutdownAction": "stopCompose"
+}
