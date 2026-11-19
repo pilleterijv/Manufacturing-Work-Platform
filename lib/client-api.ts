@@ -42,10 +42,7 @@ export function filterUrl(path: string) {
 }
 export async function api(path: string, body?: unknown, signal?: AbortSignal) {
   const event = (state: string) => {
-    if (body)
-      window.dispatchEvent(
-        new CustomEvent("floorwork:mutation", { detail: { path, state } }),
-      );
+    if (body) window.dispatchEvent(new CustomEvent("floorwork:mutation", { detail: { path, state } }));
   };
   event("saving");
   try {

@@ -3,15 +3,7 @@ import { securityEvent } from "@/lib/security-events";
 import { z } from "zod";
 import { randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
-import {
-  requireUser,
-  jsonBody,
-  failure,
-  HttpError,
-  limit,
-  digest,
-  hashPassword,
-} from "@/lib/security";
+import { requireUser, jsonBody, failure, HttpError, limit, digest, hashPassword } from "@/lib/security";
 import { sendRecovery, resetDigest } from "@/lib/account-recovery";
 const generic =
   "If an eligible account matches, a password email will be sent. Contact your administrator if it does not arrive.";
@@ -88,22 +80,13 @@ export async function POST(req: Request) {
     }
     if (b.action === "forgot") {
       await limit("recovery:global", 100, 3600);
-      const identity = z
-        .string()
-        .trim()
-        .min(1)
-        .max(254)
-        .parse(b.identity)
-        .toLowerCase();
+      const identity = z.string().trim().min(1).max(254).parse(b.identity).toLowerCase();
       await limit(`recovery:${digest(identity)}`, 3, 900);
       // Email must identify exactly one account; shared mailboxes cannot reset several accounts.
       const matches = await db.user.findMany({
         where: {
           active: true,
-          OR: [
-            { username: identity },
-            { email: { equals: identity, mode: "insensitive" } },
-          ],
+          OR: [{ username: identity }, { email: { equals: identity, mode: "insensitive" } }],
         },
         take: 2,
       });
@@ -124,8 +107,7 @@ export async function POST(req: Request) {
         const candidate = await tx.passwordReset.findUnique({
           where: { tokenHash },
         });
-        if (!candidate)
-          throw new HttpError(400, "Reset link is invalid or expired");
+        if (!candidate) throw new HttpError(400, "Reset link is invalid or expired");
         await tx.$queryRaw`SELECT id FROM "User" WHERE id=${candidate.userId} FOR UPDATE`;
         await tx.$queryRaw`SELECT "tokenHash" FROM "PasswordReset" WHERE "tokenHash"=${tokenHash} FOR UPDATE`;
         const reset = await tx.passwordReset.findUnique({
@@ -137,8 +119,7 @@ export async function POST(req: Request) {
           where: { id: reset.userId, version: reset.userVersion, active: true },
           data: { password, mustChange: false, version: { increment: 1 } },
         });
-        if (!updated.count)
-          throw new HttpError(400, "Reset link is invalid or expired");
+        if (!updated.count) throw new HttpError(400, "Reset link is invalid or expired");
         await tx.passwordReset.deleteMany({ where: { userId: reset.userId } });
         await tx.session.deleteMany({ where: { userId: reset.userId } });
       });
@@ -166,8 +147,7 @@ export async function POST(req: Request) {
       const r = await tx.registrationRequest.findUnique({
         where: { id: v.id },
       });
-      if (!r || r.status !== "Pending")
-        throw new HttpError(409, "Request already reviewed");
+      if (!r || r.status !== "Pending") throw new HttpError(409, "Request already reviewed");
       let userId: string | null = null;
       if (v.decision === "Approved") {
         if (await tx.user.findUnique({ where: { username: r.username } }))

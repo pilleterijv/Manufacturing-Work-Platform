@@ -4,25 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
 import type { Data, Step, Cycle, Standard } from "@/lib/workspace-types";
 import { api } from "@/lib/client-api";
-import {
-  Field,
-  Submit,
-  fmt,
-  Metric,
-  History,
-  EquipmentSelect,
-} from "../shared";
+import { Field, Submit, fmt, Metric, History, EquipmentSelect } from "../shared";
 type Save = (body: unknown) => Promise<boolean>;
 import { Timer } from "../timer";
-export default function Studies({
-  data,
-  save,
-  busy,
-}: {
-  data: Data;
-  save: Save;
-  busy: boolean;
-}) {
+export default function Studies({ data, save, busy }: { data: Data; save: Save; busy: boolean }) {
   const [cycles, setCycles] = useState<Cycle[]>([]),
     [equipment, setEquipment] = useState(""),
     [title, setTitle] = useState(""),
@@ -67,28 +52,19 @@ export default function Studies({
               />
             </Field>
             <Field label="Equipment">
-              <EquipmentSelect
-                data={data}
-                value={equipment}
-                onChange={setEquipment}
-              />
+              <EquipmentSelect data={data} value={equipment} onChange={setEquipment} />
             </Field>
           </div>
           <Timer cycles={cycles} setCycles={setCycles} />
           {error && <div className="error">{error}</div>}
-          <RecordingContext
-            equipment={data.equipment.find((e) => e.id === equipment)}
-          />
+          <RecordingContext equipment={data.equipment.find((e) => e.id === equipment)} />
           <Submit busy={busy}>Save time study</Submit>
         </form>
       </section>
       <div className="section-title">
         <h2>Saved studies</h2>
       </div>
-      <History
-        data={data}
-        records={data.records.filter((r) => r.kind === "study")}
-      />
+      <History data={data} records={data.records.filter((r) => r.kind === "study")} />
     </>
   );
 }

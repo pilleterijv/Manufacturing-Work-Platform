@@ -8,17 +8,13 @@ export const workScheduleSchema = z
     managerIds: z.array(z.string().uuid()).min(1).max(50),
     assigneeIds: z.array(z.string().uuid()).max(1000),
     shiftNames: z.array(z.string().min(1).max(50)).max(8).default([]),
-    weekdays: z
-      .array(z.number().int().min(1).max(7))
-      .min(1)
-      .max(7)
-      .default([1, 2, 3, 4, 5, 6, 7]),
+    weekdays: z.array(z.number().int().min(1).max(7)).min(1).max(7).default([1, 2, 3, 4, 5, 6, 7]),
     notifyInApp: z.boolean(),
     notifyEmail: z.boolean(),
   })
   .refine(
     (v) => v.crewNames.length > 0 || v.shiftNames.length > 0,
-    "Choose a rotating crew or a fixed shift",
+    "Choose a rotating crew or a fixed shift"
   );
 export function endedShiftWindows(config: ShiftConfig, after: Date, now: Date) {
   const first = Temporal.Instant.fromEpochMilliseconds(+after)
@@ -31,11 +27,7 @@ export function endedShiftWindows(config: ShiftConfig, after: Date, now: Date) {
     .add({ days: 1 });
   const boundaries: { at: number; name: string; date: string }[] = [];
   let day = first;
-  for (
-    let i = 0;
-    i < 34 && Temporal.PlainDate.compare(day, final) <= 0;
-    i++, day = day.add({ days: 1 })
-  )
+  for (let i = 0; i < 34 && Temporal.PlainDate.compare(day, final) <= 0; i++, day = day.add({ days: 1 }))
     for (const s of config.shifts) {
       const at = Temporal.ZonedDateTime.from({
         timeZone: config.timezone,

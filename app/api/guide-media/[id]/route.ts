@@ -3,16 +3,12 @@ import { db } from "@/lib/db";
 import { openVideo } from "@/lib/storage";
 import { videoRange } from "@/lib/media-range";
 import { requireUser, HttpError, failure } from "@/lib/security";
-export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   let file: Awaited<ReturnType<typeof openVideo>> | undefined;
   try {
     const u = await requireUser(),
       { id } = await params;
-    if (!/^[a-f0-9-]{36}$/.test(id))
-      throw new HttpError(404, "Video not found");
+    if (!/^[a-f0-9-]{36}$/.test(id)) throw new HttpError(404, "Video not found");
     const media = await db.guideMedia.findUnique({ where: { id } });
     if (!media) throw new HttpError(404, "Video not found");
     if (!(await canReadEvidence(u, id, "video", media.userId)))
@@ -36,9 +32,7 @@ export async function GET(
       });
     }
     headers["Content-Length"] = String(range.end - range.start + 1);
-    if (range.partial)
-      headers["Content-Range"] =
-        `bytes ${range.start}-${range.end}/${file.size}`;
+    if (range.partial) headers["Content-Range"] = `bytes ${range.start}-${range.end}/${file.size}`;
     const body = await file.stream(range.start, range.end);
     file = undefined; // stream owns its file handle and closes on completion/cancellation
     return new Response(body, { status: range.partial ? 206 : 200, headers });

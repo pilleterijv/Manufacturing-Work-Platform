@@ -24,11 +24,7 @@ async function main() {
     terminal: !!process.stdin.isTTY,
   });
   try {
-    const username = (
-      await rl.question(
-        "Admin username (3–80 lowercase letters, numbers, . _ -): ",
-      )
-    )
+    const username = (await rl.question("Admin username (3–80 lowercase letters, numbers, . _ -): "))
       .trim()
       .toLowerCase();
     if (!/^[a-z0-9._-]{3,80}$/.test(username)) throw Error("Invalid username");
@@ -50,9 +46,7 @@ async function main() {
     await db.user.create({
       data: { username, name, password: hash, role: "Admin" },
     });
-    console.log(
-      "Admin created. Change the temporary password at first sign-in.",
-    );
+    console.log("Admin created. Change the temporary password at first sign-in.");
   } finally {
     hidden = false;
     rl.close();
@@ -70,7 +64,7 @@ main()
           "Use a unique password of 12–128 characters",
         ].includes(e.message)
         ? e.message
-        : "Account creation failed. Check database connectivity.",
+        : "Account creation failed. Check database connectivity."
     );
     process.exitCode = 1;
   })

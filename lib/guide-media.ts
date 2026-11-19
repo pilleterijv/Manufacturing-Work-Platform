@@ -1,10 +1,6 @@
 import { db } from "./db";
 import { equipmentIds, type ScopedUser } from "./location-access";
-export async function linkedGuideMedia(
-  u: ScopedUser,
-  id: string,
-  kind: "photo" | "video",
-) {
+export async function linkedGuideMedia(u: ScopedUser, id: string, kind: "photo" | "video") {
   const ids = await equipmentIds(u);
   return db.content.findFirst({
     where: {

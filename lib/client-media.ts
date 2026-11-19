@@ -10,16 +10,14 @@ const extensions: Record<string, string> = {
 };
 export function mediaMime(file: File) {
   const mime = extensions[file.name.split(".").at(-1)?.toLowerCase() ?? ""];
-  if (file.type.startsWith("image/") || file.type.startsWith("video/"))
-    return file.type;
+  if (file.type.startsWith("image/") || file.type.startsWith("video/")) return file.type;
   if (mime) return mime;
   throw Error("Choose JPEG, PNG, WebP, MP4, MOV or WebM");
 }
 export async function readMediaFile(file: File) {
   const mime = mediaMime(file),
     limit = mime.startsWith("video/") ? 32 : 8;
-  if (file.size > limit * 1024 * 1024)
-    throw Error(`File must be under ${limit} MB`);
+  if (file.size > limit * 1024 * 1024) throw Error(`File must be under ${limit} MB`);
   const value = await new Promise<string>((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(String(r.result));
@@ -32,8 +30,7 @@ export async function readMediaFile(file: File) {
 // Sending the original Blob avoids the base64/JSON copies and 33% wire overhead.
 export async function uploadVideo(file: File) {
   const mime = mediaMime(file);
-  if (!["video/mp4", "video/webm", "video/quicktime"].includes(mime))
-    throw Error("Choose MP4, MOV or WebM");
+  if (!["video/mp4", "video/webm", "video/quicktime"].includes(mime)) throw Error("Choose MP4, MOV or WebM");
   if (file.size > 32 * 1024 * 1024) throw Error("Video must be under 32 MB");
   const response = await fetch("/api/guide-media", {
     method: "POST",

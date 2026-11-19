@@ -7,8 +7,7 @@ import { createIntegrationToken } from "@/lib/integrations";
 import { companySqlConfigured } from "@/lib/company-sql";
 async function admin() {
   const u = await requireUser();
-  if (u.role !== "Admin")
-    throw new HttpError(403, "Only Admin can manage integrations");
+  if (u.role !== "Admin") throw new HttpError(403, "Only Admin can manage integrations");
   return u;
 }
 export async function GET() {
@@ -126,7 +125,7 @@ export async function POST(req: Request) {
     if ((e as { code?: string })?.code === "P2002")
       return Response.json(
         { error: "This machine or external machine ID is already mapped" },
-        { status: 409 },
+        { status: 409 }
       );
     return failure(e);
   }

@@ -1,8 +1,4 @@
-const {
-  expandTools,
-  assignmentPanels,
-  planningTools,
-} = require("./ui-workspace.cjs");
+const { expandTools, assignmentPanels, planningTools } = require("./ui-workspace.cjs");
 require("tsx/cjs");
 require("dotenv").config({ quiet: true });
 const { chromium } = require("playwright");
@@ -24,7 +20,7 @@ const fixtureFamily = randomUUID();
 async function request(context, path, body) {
   const r = await context.request[body ? "post" : "get"](
     origin + path,
-    body ? { data: body, headers: { Origin: origin } } : {},
+    body ? { data: body, headers: { Origin: origin } } : {}
   );
   return { status: r.status(), body: await r.json() };
 }
@@ -38,28 +34,20 @@ async function login(context, username, p = password) {
   assert.equal(r.status, 200, JSON.stringify(r.body));
 }
 async function main() {
-  assert(
-    ["localhost", "127.0.0.1"].includes(new URL(origin).hostname),
-    "Tests only run against a local app",
-  );
+  assert(["localhost", "127.0.0.1"].includes(new URL(origin).hostname), "Tests only run against a local app");
   const hash = await hashPassword(password);
   for (const role of ["Admin", "Manager", "DL/TL", "Operator"])
     users.push(
       await db.user.create({
         data: {
           username: `test-${role.toLowerCase().replace("/", "")}-${suffix}`,
-          name:
-            role === "Admin"
-              ? "Jordan Test"
-              : role === "Manager"
-                ? "Morgan Supervisor"
-                : `${role} Test`,
+          name: role === "Admin" ? "Jordan Test" : role === "Manager" ? "Morgan Supervisor" : `${role} Test`,
           role,
           password: hash,
           mustChange: false,
           workspaceAccess: { mode: "all", locations: [], equipmentIds: [] },
         },
-      }),
+      })
     );
   browser = await chromium.launch({
     executablePath: process.env.CHROMIUM_PATH || "/usr/bin/chromium",
@@ -77,31 +65,20 @@ async function main() {
   page.on("pageerror", (e) => errors.push(e.message));
   await mkdir("docs/screenshots", { recursive: true });
   assert.equal((await request(context, "/api/platform")).status, 401);
-  assert.equal(
-    (await context.request.get(origin + "/api/preview")).status(),
-    404,
-  );
+  assert.equal((await context.request.get(origin + "/api/preview")).status(), 404);
   await page.goto(origin);
   await page.getByLabel("Username", { exact: true }).fill(users[0].username);
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByText("Keep me signed in").click();
   const browserLogin = page.waitForRequest(
-    (req) =>
-      new URL(req.url()).pathname === "/api/account" && req.method() === "POST",
+    (req) => new URL(req.url()).pathname === "/api/account" && req.method() === "POST"
   );
   await page.getByRole("button", { name: "Sign in →", exact: true }).click();
-  assert.equal(
-    (await browserLogin).headers()["x-floorwork-origin"],
-    new URL(origin).origin,
-  );
+  assert.equal((await browserLogin).headers()["x-floorwork-origin"], new URL(origin).origin);
   await page.getByRole("heading", { name: "Welcome, Jordan." }).waitFor();
   const cookies = await context.cookies();
   const cookie = cookies.find((c) => c.name === "floorwork");
-  assert(
-    cookie.httpOnly &&
-      cookie.sameSite === "Strict" &&
-      cookie.expires > Date.now() / 1000,
-  );
+  assert(cookie.httpOnly && cookie.sameSite === "Strict" && cookie.expires > Date.now() / 1000);
   await page.getByRole("button", { name: /Open operator tasks/ }).waitFor();
   await page.screenshot({
     path: "docs/screenshots/overview.png",
@@ -116,9 +93,7 @@ async function main() {
     equipmentId: equipment.id,
     target: 0.1,
     tolerance: 10,
-    steps: [
-      { id: "inspection", text: "Verify first piece quality", photo: true },
-    ],
+    steps: [{ id: "inspection", text: "Verify first piece quality", photo: true }],
   });
   assert.equal(r.status, 200);
   let s = await db.standard.findFirst({
@@ -140,9 +115,7 @@ async function main() {
   standardIds.push(auditStandard.id);
   await page.reload();
   await page.getByRole("heading", { name: "Welcome, Jordan." }).waitFor();
-  await page
-    .getByRole("button", { name: "☑ Operator tasks", exact: true })
-    .click();
+  await page.getByRole("button", { name: "☑ Operator tasks", exact: true }).click();
   await page.getByLabel("Standard work", { exact: true }).selectOption(s.id);
   await page.getByRole("button", { name: "✓ Yes", exact: true }).click();
   const image = await require("sharp")({
@@ -158,46 +131,23 @@ async function main() {
   });
   await page.getByAltText("Evidence").first().waitFor();
   photoId = (await db.photo.findFirst({ where: { userId: users[0].id } })).id;
-  await page
-    .getByRole("button", { name: "Complete standard work", exact: true })
-    .click();
-  await page
-    .getByRole("status")
-    .filter({ hasText: "Saved to the database." })
-    .waitFor();
-  assert.equal(
-    await db.record.count({ where: { userId: users[0].id, kind: "run" } }),
-    1,
-  );
-  await page
-    .getByRole("button", { name: "◷ Time studies", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Complete standard work", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "Saved to the database." }).waitFor();
+  assert.equal(await db.record.count({ where: { userId: users[0].id, kind: "run" } }), 1);
+  await page.getByRole("button", { name: "◷ Time studies", exact: true }).click();
   await page.getByLabel("Study name").fill("Browser baseline");
-  await page
-    .getByLabel("Equipment", { exact: true })
-    .selectOption(equipment.id);
+  await page.getByLabel("Equipment", { exact: true }).selectOption(equipment.id);
   await page.getByRole("button", { name: "Start cycle", exact: true }).click();
   await page.waitForTimeout(450);
-  await page
-    .getByRole("button", { name: "Stop & record cycle", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Save time study", exact: true })
-    .click();
-  await page
-    .getByRole("status")
-    .filter({ hasText: "Saved to the database." })
-    .waitFor();
+  await page.getByRole("button", { name: "Stop & record cycle", exact: true }).click();
+  await page.getByRole("button", { name: "Save time study", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "Saved to the database." }).waitFor();
   const study = await db.record.findFirst({
     where: { userId: users[0].id, kind: "study" },
   });
   assert(study.data.cycles[0].seconds > 0.3);
-  await page
-    .getByRole("button", { name: "◉ Process verification", exact: true })
-    .click();
-  await page
-    .getByLabel("Standard work", { exact: true })
-    .selectOption(auditStandard.id);
+  await page.getByRole("button", { name: "◉ Process verification", exact: true }).click();
+  await page.getByLabel("Standard work", { exact: true }).selectOption(auditStandard.id);
   await page.getByLabel("Operator / context (optional)").fill("Operator 104");
   await page.getByRole("button", { name: "✕ No", exact: true }).click();
   await page.locator("textarea").fill("Quality check requires follow-up.");
@@ -207,20 +157,13 @@ async function main() {
   await page.getByAltText("Evidence").first().waitFor();
   await page.getByRole("button", { name: "Start cycle", exact: true }).click();
   await page.waitForTimeout(350);
-  await page
-    .getByRole("button", { name: "Stop & record cycle", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Stop & record cycle", exact: true }).click();
   await page.screenshot({
     path: "docs/screenshots/supervisor-input.png",
     fullPage: true,
   });
-  await page
-    .getByRole("button", { name: "Complete process verification", exact: true })
-    .click();
-  await page
-    .getByRole("status")
-    .filter({ hasText: "Saved to the database." })
-    .waitFor();
+  await page.getByRole("button", { name: "Complete process verification", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "Saved to the database." }).waitFor();
   const audit = await db.record.findFirst({
     where: { userId: users[0].id, kind: "audit" },
   });
@@ -255,7 +198,7 @@ async function main() {
       await db.content.findFirst({
         where: { title: `Machine setup walkthrough ${suffix}` },
       })
-    ).id,
+    ).id
   );
   assert.equal(
     (
@@ -265,7 +208,7 @@ async function main() {
         body: "javascript:alert(1)",
       })
     ).status,
-    400,
+    400
   );
   await page.getByRole("button", { name: "▷ Training", exact: true }).click();
   await page.reload();
@@ -284,11 +227,9 @@ async function main() {
     route.fulfill({
       contentType: "text/html",
       body: "<p>Provider test fixture</p>",
-    }),
+    })
   );
-  await page
-    .getByRole("button", { name: `Play Machine setup walkthrough ${suffix}` })
-    .click();
+  await page.getByRole("button", { name: `Play Machine setup walkthrough ${suffix}` }).click();
   await page.locator("iframe").waitFor();
   const exportResponse = await context.request.get(origin + "/api/export");
   assert.equal(exportResponse.status(), 200);
@@ -306,28 +247,20 @@ async function main() {
         grants: ["users"],
       })
     ).status,
-    403,
+    403
   );
-  assert.equal(
-    (await operator.request.get(origin + "/api/export")).status(),
-    403,
-  );
-  assert.equal(
-    (await operator.request.get(origin + "/api/photos/" + photoId)).status(),
-    403,
-  );
+  assert.equal((await operator.request.get(origin + "/api/export")).status(), 403);
+  assert.equal((await operator.request.get(origin + "/api/photos/" + photoId)).status(), 403);
   assert.equal(
     (
       await request(operator, "/api/platform", {
         action: "run",
         standardId: s.id,
         started: new Date().toISOString(),
-        responses: [
-          { stepId: "inspection", answer: true, photo: photoId, comment: "" },
-        ],
+        responses: [{ stepId: "inspection", answer: true, photo: photoId, comment: "" }],
       })
     ).status,
-    403,
+    403
   );
   assert.equal(
     (
@@ -336,7 +269,7 @@ async function main() {
         headers: { Origin: "https://evil.example" },
       })
     ).status(),
-    403,
+    403
   );
   assert.equal(
     (
@@ -344,7 +277,7 @@ async function main() {
         data: { action: "study" },
       })
     ).status(),
-    403,
+    403
   );
   assert.equal(
     (
@@ -353,7 +286,7 @@ async function main() {
         headers: { Origin: origin, "Content-Type": "application/json" },
       })
     ).status(),
-    413,
+    413
   );
   assert.equal(
     (
@@ -361,7 +294,7 @@ async function main() {
         image: "data:image/png;base64,YmFk",
       })
     ).status,
-    400,
+    400
   );
   const manager = await browser.newContext({
     viewport: { width: 1440, height: 1100 },
@@ -371,27 +304,18 @@ async function main() {
   const mp = await manager.newPage();
   await mp.goto(origin);
   await expandTools(mp);
-  await mp
-    .getByRole("button", { name: "◉ Process verification", exact: true })
-    .click();
-  await mp
-    .getByLabel("Standard work", { exact: true })
-    .selectOption(auditStandard.id);
+  await mp.getByRole("button", { name: "◉ Process verification", exact: true }).click();
+  await mp.getByLabel("Standard work", { exact: true }).selectOption(auditStandard.id);
   await mp.getByLabel("Operator / context (optional)").fill("Operator 104");
   await mp.getByRole("button", { name: "✓ Yes", exact: true }).click();
   await mp.getByRole("button", { name: "Start cycle", exact: true }).click();
   await mp.waitForTimeout(300);
-  await mp
-    .getByRole("button", { name: "Stop & record cycle", exact: true })
-    .click();
+  await mp.getByRole("button", { name: "Stop & record cycle", exact: true }).click();
   await mp.screenshot({
     path: "docs/screenshots/supervisor-manager.png",
     fullPage: true,
   });
-  assert.equal(
-    await mp.getByRole("button", { name: "Accounts", exact: true }).count(),
-    0,
-  );
+  assert.equal(await mp.getByRole("button", { name: "Accounts", exact: true }).count(), 0);
   const tl = await browser.newContext();
   await login(tl, users[2].username);
   assert.equal(
@@ -405,11 +329,9 @@ async function main() {
         line: "L",
       })
     ).status,
-    403,
+    403
   );
-  const managerPolicy = (
-    await db.policy.findUnique({ where: { role: "Manager" } })
-  ).grants;
+  const managerPolicy = (await db.policy.findUnique({ where: { role: "Manager" } })).grants;
   try {
     await db.policy.update({
       where: { role: "Manager" },
@@ -424,7 +346,7 @@ async function main() {
           body: "Approved guidance.",
         })
       ).status,
-      200,
+      200
     );
     const guide = await db.content.findFirst({
       where: { title: "Archive regression " + suffix },
@@ -437,7 +359,7 @@ async function main() {
           id: guide.id,
         })
       ).status,
-      200,
+      200
     );
     assert.equal(
       (
@@ -446,7 +368,7 @@ async function main() {
           id: contentIds[0],
         })
       ).status,
-      403,
+      403
     );
   } finally {
     await db.policy.update({
@@ -454,8 +376,7 @@ async function main() {
       data: { grants: managerPolicy },
     });
   }
-  const original = (await db.policy.findUnique({ where: { role: "Operator" } }))
-    .grants;
+  const original = (await db.policy.findUnique({ where: { role: "Operator" } })).grants;
   try {
     assert.equal(
       (
@@ -465,7 +386,7 @@ async function main() {
           grants: [],
         })
       ).status,
-      200,
+      200
     );
     assert.equal(
       (
@@ -473,12 +394,10 @@ async function main() {
           action: "study",
           title: "Denied",
           equipmentId: equipment.id,
-          cycles: [
-            { element: "Cycle", seconds: 1, at: new Date().toISOString() },
-          ],
+          cycles: [{ element: "Cycle", seconds: 1, at: new Date().toISOString() }],
         })
       ).status,
-      403,
+      403
     );
   } finally {
     await db.policy.update({
@@ -490,17 +409,10 @@ async function main() {
   await page.getByLabel("Username", { exact: true }).fill("new-" + suffix);
   await page.getByLabel("First name", { exact: true }).fill("New");
   await page.getByLabel("Last name", { exact: true }).fill("employee");
-  await page
-    .getByLabel("Email address", { exact: true })
-    .fill("new-" + suffix + "@example.invalid");
+  await page.getByLabel("Email address", { exact: true }).fill("new-" + suffix + "@example.invalid");
   await page.getByLabel("Temporary password", { exact: true }).fill(password);
-  await page
-    .getByRole("button", { name: "Create account", exact: true })
-    .click();
-  await page
-    .getByRole("status")
-    .filter({ hasText: "Saved to the database." })
-    .waitFor();
+  await page.getByRole("button", { name: "Create account", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "Saved to the database." }).waitFor();
   const created = await db.user.findUnique({
     where: { username: "new-" + suffix },
   });
@@ -518,7 +430,7 @@ async function main() {
         password,
       })
     ).status,
-    400,
+    400
   );
   assert.equal(
     (
@@ -528,7 +440,7 @@ async function main() {
         password: newPassword,
       })
     ).status,
-    200,
+    200
   );
   assert.equal((await request(fresh, "/api/platform")).status, 401);
   await login(fresh, created.username, newPassword);
@@ -550,7 +462,7 @@ async function main() {
         active: false,
       })
     ).status,
-    200,
+    200
   );
   assert.equal((await request(operator, "/api/platform")).status, 401);
   assert.equal(
@@ -562,7 +474,7 @@ async function main() {
         remember: false,
       })
     ).status,
-    401,
+    401
   );
   assert.equal(
     (
@@ -575,7 +487,7 @@ async function main() {
         active: true,
       })
     ).status,
-    400,
+    400
   );
   for (let i = 0; i < 6; i++) {
     const attempt = await request(context, "/api/account", {
@@ -594,54 +506,35 @@ async function main() {
   });
   const mobilePage = await mobile.newPage();
   await mobilePage.goto(origin);
-  await mobilePage
-    .getByRole("heading", { name: "Welcome back", exact: true })
-    .waitFor();
+  await mobilePage.getByRole("heading", { name: "Welcome back", exact: true }).waitFor();
   await mobilePage.screenshot({
     path: "docs/screenshots/mobile-login.png",
     fullPage: true,
   });
-  assert(
-    await mobilePage.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  );
+  assert(await mobilePage.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await login(mobile, users[0].username);
   await mobilePage.reload();
   await mobilePage.getByRole("heading", { name: "Welcome, Jordan." }).waitFor();
-  await mobilePage
-    .getByRole("button", { name: /Open operator tasks/ })
-    .waitFor();
+  await mobilePage.getByRole("button", { name: /Open operator tasks/ }).waitFor();
   await mobilePage.screenshot({
     path: "docs/screenshots/mobile-overview.png",
     fullPage: true,
   });
-  assert(
-    await mobilePage.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  );
+  assert(await mobilePage.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   const probe = await context.newPage();
   await probe.route(origin + "/", async (route) => {
     const response = await route.fetch();
     const original = await response.text();
     const body = original.replace(
       "<head>",
-      '<head><script id="untrusted-probe">globalThis.__untrustedProbe = true</script>',
+      '<head><script id="untrusted-probe">globalThis.__untrustedProbe = true</script>'
     );
     assert.notEqual(body, original);
     await route.fulfill({ response, body });
   });
   await probe.goto(origin);
-  assert(
-    await probe.evaluate(
-      () => document.getElementById("untrusted-probe") !== null,
-    ),
-  );
-  assert.equal(
-    await probe.evaluate(() => globalThis.__untrustedProbe),
-    undefined,
-  );
+  assert(await probe.evaluate(() => document.getElementById("untrusted-probe") !== null));
+  assert.equal(await probe.evaluate(() => globalThis.__untrustedProbe), undefined);
   await probe.close();
   const decoded = await context.request.get(origin + "/api/photos/" + photoId);
   assert.equal(decoded.status(), 200);
@@ -657,7 +550,7 @@ async function main() {
   assert.equal(html.headers()["x-content-type-options"], "nosniff");
   assert.equal(errors.length, 0, errors.join("\n"));
   console.log(
-    "PASS: real login, photos, standard runs, timers, audits, immutable revisions, training, nine-sheet Excel, four roles, role revocation, CSRF, upload validation, size limits, account provisioning, forced password change, session replay, CSP, and mobile layout.",
+    "PASS: real login, photos, standard runs, timers, audits, immutable revisions, training, nine-sheet Excel, four roles, role revocation, CSRF, upload validation, size limits, account provisioning, forced password change, session replay, CSP, and mobile layout."
   );
 }
 main()
@@ -673,7 +566,7 @@ main()
     for (const photo of photos)
       await require("node:fs/promises").rm(
         require("node:path").join(process.cwd(), "uploads", photo.id + ".webp"),
-        { force: true },
+        { force: true }
       );
     await db.photo.deleteMany({ where: { userId: { in: ids } } });
     await db.session.deleteMany({ where: { userId: { in: ids } } });
@@ -682,6 +575,8 @@ main()
     });
     await db.standard.deleteMany({ where: { id: { in: standardIds } } });
     await db.roleAudit.deleteMany({ where: { actorId: { in: ids } } });
+    await db.notification.deleteMany({ where: { userId: { in: ids }, kind: "assignment" } });
+    await db.assignmentDelivery.deleteMany({ where: { userId: { in: ids } } });
     await db.user.deleteMany({ where: { id: { in: ids } } });
     await db.rate.deleteMany({
       where: { OR: ids.map((id) => ({ key: { contains: id } })) },

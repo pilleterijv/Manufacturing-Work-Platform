@@ -4,10 +4,7 @@ import { useSectionRefresh } from "../refresh-control";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/client-api";
 import { openWorkflow } from "@/lib/floor-navigation";
-import {
-  dashboardPreferences,
-  type DashboardPreferences,
-} from "@/lib/dashboard-preferences";
+import { dashboardPreferences, type DashboardPreferences } from "@/lib/dashboard-preferences";
 import { Field } from "../shared";
 export default function PersonalDashboard({
   go,
@@ -19,15 +16,13 @@ export default function PersonalDashboard({
   canGo?: (name: string) => boolean;
 }) {
   const [data, setData] = useState<any>(null),
-    [scope, setScope] = useState(
-      dashboardPreferences(preferences).defaultScope,
-    ),
+    [scope, setScope] = useState(dashboardPreferences(preferences).defaultScope),
     [error, setError] = useState("");
   useSectionRefresh(
     async () => {
       setData(await api("/api/personal-dashboard?scope=" + scope));
     },
-    (e) => setError(e.message),
+    (e) => setError(e.message)
   );
   useEffect(() => {
     const c = new AbortController();
@@ -41,9 +36,7 @@ export default function PersonalDashboard({
       });
     return () => c.abort();
   }, [scope]);
-  const chosen = dashboardPreferences(
-    preferences ?? data?.preferences,
-  ).widgets.filter((key) =>
+  const chosen = dashboardPreferences(preferences ?? data?.preferences).widgets.filter((key) =>
     canGo(
       {
         ideas: "Improvement ideas",
@@ -51,8 +44,8 @@ export default function PersonalDashboard({
         maintenance: "Preventive maintenance",
         defects: "Defect reporting",
         fiveS: "5S audits",
-      }[key],
-    ),
+      }[key]
+    )
   );
   const focus = () => ({
     focus: scope === "personal" ? "personal-open" : "department-open",
@@ -61,17 +54,13 @@ export default function PersonalDashboard({
       : {}),
   });
   const due = (d: string) => (d < data.today ? " · OVERDUE" : ""),
-    machine = (id: string) =>
-      data.equipment.find((e: any) => e.id === id)?.name ?? id;
+    machine = (id: string) => data.equipment.find((e: any) => e.id === id)?.name ?? id;
   return (
     <section className="panel personal-dashboard">
-      <h2>
-        {scope === "personal" ? "My assignments" : "My department at a glance"}
-      </h2>
+      <h2>{scope === "personal" ? "My assignments" : "My department at a glance"}</h2>
       <p>
-        Open items assigned to you, your ideas and investigations, and your
-        routine checks. Lists show up to 100 items per section; counts include
-        all matching items.
+        Open items assigned to you, your ideas and investigations, and your routine checks. Lists show up to
+        100 items per section; counts include all matching items.
       </p>
       {error && <p role="alert">{error}</p>}
       {data?.canDepartment && (
@@ -82,9 +71,7 @@ export default function PersonalDashboard({
               onChange={async (e) => {
                 try {
                   await api("/api/personal-dashboard", {
-                    department: e.target.value
-                      ? JSON.parse(e.target.value)
-                      : null,
+                    department: e.target.value ? JSON.parse(e.target.value) : null,
                   });
                   setScope("personal");
                   setData(await api("/api/personal-dashboard?scope=personal"));
@@ -120,19 +107,11 @@ export default function PersonalDashboard({
           </div>
         </>
       )}
-      {!chosen.length && (
-        <p>
-          No assignment panels selected. Choose panels in Dashboard settings.
-        </p>
-      )}
+      {!chosen.length && <p>No assignment panels selected. Choose panels in Dashboard settings.</p>}
       {data && (
         <>
           <DashboardChart
-            title={
-              scope === "personal"
-                ? "My assigned work by section"
-                : "Department work by section"
-            }
+            title={scope === "personal" ? "My assigned work by section" : "Department work by section"}
             items={[
               { label: "Ideas", count: data.counts[0], key: "ideas" },
               {
@@ -151,25 +130,14 @@ export default function PersonalDashboard({
             note="Counts cover all matching items in the selected personal or department scope; these categories are not equivalent measures of overdue work."
           />
           <div className="metrics assignment-metrics">
-            {[
-              "Ideas",
-              "Problem solvings",
-              "PM plans",
-              "Open defects",
-              "5S plans",
-            ]
+            {["Ideas", "Problem solvings", "PM plans", "Open defects", "5S plans"]
               .map((s, i) => ({
                 s,
                 i,
-                key: ["ideas", "problems", "maintenance", "defects", "fiveS"][
-                  i
-                ],
+                key: ["ideas", "problems", "maintenance", "defects", "fiveS"][i],
               }))
               .filter((x) => chosen.includes(x.key as any))
-              .sort(
-                (a, b) =>
-                  chosen.indexOf(a.key as any) - chosen.indexOf(b.key as any),
-              )
+              .sort((a, b) => chosen.indexOf(a.key as any) - chosen.indexOf(b.key as any))
               .map(({ s, i }) => (
                 <button
                   type="button"
@@ -183,7 +151,7 @@ export default function PersonalDashboard({
                         "Preventive maintenance",
                         "Defect reporting",
                         "5S audits",
-                      ][i],
+                      ][i]
                     )
                   }
                   onClick={() =>
@@ -200,11 +168,7 @@ export default function PersonalDashboard({
                   }
                   aria-label={`View ${s} assignments`}
                 >
-                  <strong>
-                    {i === 2
-                      ? (data.maintenanceCounts?.pm ?? data.counts[i])
-                      : data.counts[i]}
-                  </strong>
+                  <strong>{i === 2 ? (data.maintenanceCounts?.pm ?? data.counts[i]) : data.counts[i]}</strong>
                   <span>{s}</span>
                   <small>Open section →</small>
                 </button>
@@ -214,9 +178,7 @@ export default function PersonalDashboard({
                 type="button"
                 className="metric metric-shortcut"
                 disabled={!canGo("TPM / CIL")}
-                onClick={() =>
-                  openWorkflow({ tab: "TPM / CIL", filters: focus() })
-                }
+                onClick={() => openWorkflow({ tab: "TPM / CIL", filters: focus() })}
               >
                 <strong>{data.maintenanceCounts?.cil ?? 0}</strong>
                 <span>CIL plans</span>
@@ -274,17 +236,12 @@ export default function PersonalDashboard({
               rows: data.fiveS.map((p: any) => ({
                 id: p.id,
                 title: p.title,
-                sub:
-                  data.areas.find((l: any) => l.id === p.locationId)?.area ??
-                  "",
+                sub: data.areas.find((l: any) => l.id === p.locationId)?.area ?? "",
               })),
             },
           ]
             .filter((group) => chosen.includes(group.key as any))
-            .sort(
-              (a, b) =>
-                chosen.indexOf(a.key as any) - chosen.indexOf(b.key as any),
-            )
+            .sort((a, b) => chosen.indexOf(a.key as any) - chosen.indexOf(b.key as any))
             .map((group) => (
               <details key={group.title} open>
                 <summary>

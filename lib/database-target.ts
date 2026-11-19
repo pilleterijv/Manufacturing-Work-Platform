@@ -1,7 +1,4 @@
-export function validateDatabaseTargets(
-  runtime: string | undefined,
-  setup?: string,
-) {
+export function validateDatabaseTargets(runtime: string | undefined, setup?: string) {
   if (!runtime) throw Error("DATABASE_URL is required");
   const primary = new URL(runtime),
     migration = new URL(setup || runtime);
@@ -16,10 +13,9 @@ export function validateDatabaseTargets(
   if (
     primary.hostname.toLowerCase() !== migration.hostname.toLowerCase() ||
     (primary.port || "5432") !== (migration.port || "5432") ||
-    decodeURIComponent(primary.pathname) !==
-      decodeURIComponent(migration.pathname)
+    decodeURIComponent(primary.pathname) !== decodeURIComponent(migration.pathname)
   )
     throw Error(
-      "DATABASE_SETUP_URL must target the same host, port and database as DATABASE_URL; only credentials may differ",
+      "DATABASE_SETUP_URL must target the same host, port and database as DATABASE_URL; only credentials may differ"
     );
 }

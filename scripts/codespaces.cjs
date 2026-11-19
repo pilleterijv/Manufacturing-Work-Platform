@@ -3,14 +3,10 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const { parseEnv } = require("node:util");
 function configuration(env) {
-  if (env.CODESPACES !== "true")
-    throw new Error("Run this command inside GitHub Codespaces.");
+  if (env.CODESPACES !== "true") throw new Error("Run this command inside GitHub Codespaces.");
   const name = env.CODESPACE_NAME;
   const domain = env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN;
-  if (
-    !/^[a-z0-9-]+$/.test(name || "") ||
-    !/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(domain || "")
-  )
+  if (!/^[a-z0-9-]+$/.test(name || "") || !/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(domain || ""))
     throw new Error("Codespaces preview address is unavailable.");
   return {
     DATABASE_URL: "postgresql://work:work@db:5432/work_rebuild",
@@ -21,25 +17,19 @@ function configuration(env) {
 function prepareEnvironment(root, source) {
   const expected = configuration(source);
   const file = path.join(root, ".env.codespaces");
-  const existing = fs.existsSync(file)
-    ? parseEnv(fs.readFileSync(file, "utf8"))
-    : {};
+  const existing = fs.existsSync(file) ? parseEnv(fs.readFileSync(file, "utf8")) : {};
   for (const key of ["DATABASE_URL", "DATABASE_SETUP_URL"])
     if (existing[key] && existing[key] !== expected[key])
       throw new Error(
-        "Codespaces pilot configuration targets a different database. Review it privately before continuing.",
+        "Codespaces pilot configuration targets a different database. Review it privately before continuing."
       );
   const values = { ...existing, ...expected };
   // Keep private provider settings byte-for-byte; only append managed pilot values.
-  const updates = Object.entries(expected).filter(
-    ([key, value]) => existing[key] !== value,
-  );
+  const updates = Object.entries(expected).filter(([key, value]) => existing[key] !== value);
   if (updates.length) {
-    fs.appendFileSync(
-      file,
-      "\n" + updates.map(([key, value]) => `${key}=${value}`).join("\n") + "\n",
-      { mode: 0o600 },
-    );
+    fs.appendFileSync(file, "\n" + updates.map(([key, value]) => `${key}=${value}`).join("\n") + "\n", {
+      mode: 0o600,
+    });
   }
   fs.chmodSync(file, 0o600);
   return {
@@ -68,9 +58,7 @@ function main() {
       npm("run", "db:generate");
       npm("run", "db:setup");
       npm("run", "build");
-      console.log(
-        "Ready. Run npm run codespaces:admin, then npm run codespaces:start.",
-      );
+      console.log("Ready. Run npm run codespaces:admin, then npm run codespaces:start.");
       break;
     case "admin":
       npm("run", "user:create", "--", "--if-needed");

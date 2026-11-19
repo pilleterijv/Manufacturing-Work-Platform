@@ -42,25 +42,14 @@ export function LocationPicker({ data }: { data: Data }) {
           }}
         >
           <option value="">Choose a department</option>
-          {options(
-            rows.filter((r) => r.plant === plant).map((r) => r.department),
-          )}
+          {options(rows.filter((r) => r.plant === plant).map((r) => r.department))}
         </select>
       </Field>
       <Field label="Area">
-        <select
-          name="area"
-          value={area}
-          onChange={(e) => setArea(e.target.value)}
-        >
+        <select name="area" value={area} onChange={(e) => setArea(e.target.value)}>
           <option value="">No area</option>
           {options(
-            rows
-              .filter(
-                (r) =>
-                  r.plant === plant && r.department === department && r.area,
-              )
-              .map((r) => r.area),
+            rows.filter((r) => r.plant === plant && r.department === department && r.area).map((r) => r.area)
           )}
         </select>
       </Field>
@@ -69,14 +58,8 @@ export function LocationPicker({ data }: { data: Data }) {
           <option value="">No line</option>
           {options(
             rows
-              .filter(
-                (r) =>
-                  r.plant === plant &&
-                  r.department === department &&
-                  r.area === area &&
-                  r.line,
-              )
-              .map((r) => r.line),
+              .filter((r) => r.plant === plant && r.department === department && r.area === area && r.line)
+              .map((r) => r.line)
           )}
         </select>
       </Field>
@@ -103,19 +86,17 @@ export function LocationsEditor({
       (r, i) =>
         rows.findIndex(
           (x) =>
-            x.plant === r.plant &&
-            x.department === r.department &&
-            (mode !== "line" || x.area === r.area),
+            x.plant === r.plant && x.department === r.department && (mode !== "line" || x.area === r.area)
         ) === i &&
-        (mode !== "line" || r.area),
+        (mode !== "line" || r.area)
     );
   const chosen = rows.find((r) => r.id === parent);
   return (
     <section className="panel">
       <h2>Departments, areas and lines</h2>
       <p className="muted">
-        Create the official names here, then use the dropdowns throughout the
-        app. Existing equipment names and historical records are retained.
+        Create the official names here, then use the dropdowns throughout the app. Existing equipment names
+        and historical records are retained.
       </p>
       <datalist id="reference-catalog-sites">
         {[...new Set(rows.map((r) => r.plant))].map((plant) => (
@@ -124,19 +105,15 @@ export function LocationsEditor({
       </datalist>
       {canInstall && (
         <details>
-          <summary>
-            Install the four Tableting DL/TL standard works and department
-            catalog
-          </summary>
+          <summary>Install the four Tableting DL/TL standard works and department catalog</summary>
           <p>
-            Creates Compressing, Upstairs Blending, Weigh Room / Bin Blending,
-            and Coating leader checklists from the supplied documents. Adds all
-            17 departments and their supplied areas for the selected site.
+            Creates Compressing, Upstairs Blending, Weigh Room / Bin Blending, and Coating leader checklists
+            from the supplied documents. Adds all 17 departments and their supplied areas for the selected
+            site.
           </p>
           <p>
-            Area checklist work points are clearly labelled DL/TL area
-            checklist; they are not physical machines. Existing standards,
-            retired work, completed records and user access are preserved.
+            Area checklist work points are clearly labelled DL/TL area checklist; they are not physical
+            machines. Existing standards, retired work, completed records and user access are preserved.
             Repeating installation does not overwrite your edits.
           </p>
           <form
@@ -166,9 +143,8 @@ export function LocationsEditor({
             </button>
           </form>
           <p>
-            After installing, assign leaders to the relevant areas under
-            Accounts and set shift requirements. The Weigh Room checklist also
-            covers Bin Blending and Inspection; the Blending checklist covers
+            After installing, assign leaders to the relevant areas under Accounts and set shift requirements.
+            The Weigh Room checklist also covers Bin Blending and Inspection; the Blending checklist covers
             upstairs and mezzanine activities.
           </p>
         </details>
@@ -182,16 +158,8 @@ export function LocationsEditor({
             await save({
               action: "location",
               plant: mode === "department" ? f.get("plant") : chosen?.plant,
-              department:
-                mode === "department"
-                  ? f.get("department")
-                  : chosen?.department,
-              area:
-                mode === "area"
-                  ? f.get("name")
-                  : mode === "line"
-                    ? chosen?.area
-                    : "",
+              department: mode === "department" ? f.get("department") : chosen?.department,
+              area: mode === "area" ? f.get("name") : mode === "line" ? chosen?.area : "",
               line: mode === "line" ? f.get("name") : "",
             })
           ) {
@@ -216,12 +184,7 @@ export function LocationsEditor({
         {mode === "department" ? (
           <div className="form-grid">
             <Field label="Plant name">
-              <input
-                name="plant"
-                list="official-plants"
-                required
-                maxLength={100}
-              />
+              <input name="plant" list="official-plants" required maxLength={100} />
               <datalist id="official-plants">
                 {[...new Set(rows.map((r) => r.plant))].map((p) => (
                   <option key={p}>{p}</option>
@@ -235,19 +198,11 @@ export function LocationsEditor({
         ) : (
           <>
             <Field label="Parent location">
-              <select
-                required
-                value={parent}
-                onChange={(e) => setParent(e.target.value)}
-              >
-                <option value="">
-                  Choose existing {mode === "line" ? "area" : "department"}
-                </option>
+              <select required value={parent} onChange={(e) => setParent(e.target.value)}>
+                <option value="">Choose existing {mode === "line" ? "area" : "department"}</option>
                 {parents.map((r) => (
                   <option key={r.id} value={r.id}>
-                    {[r.plant, r.department, mode === "line" ? r.area : ""]
-                      .filter(Boolean)
-                      .join(" / ")}
+                    {[r.plant, r.department, mode === "line" ? r.area : ""].filter(Boolean).join(" / ")}
                   </option>
                 ))}
               </select>
@@ -270,9 +225,7 @@ export function LocationsEditor({
           placeholder="Choose or search site, department, area or line"
           choices={rows.map((r) => ({
             value: r.id,
-            label: [r.plant, r.department, r.area, r.line]
-              .filter(Boolean)
-              .join(" / "),
+            label: [r.plant, r.department, r.area, r.line].filter(Boolean).join(" / "),
             detail: r.active ? "Active" : "Inactive",
           }))}
           onSelect={(choice) => {
@@ -281,8 +234,8 @@ export function LocationsEditor({
           }}
         />
         <p className="small muted">
-          {rows.length} locations. Choose one to view its official name; the
-          full catalog stays inside the dropdown.
+          {rows.length} locations. Choose one to view its official name; the full catalog stays inside the
+          dropdown.
         </p>
       </div>
     </section>

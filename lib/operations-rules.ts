@@ -20,15 +20,14 @@ export const shiftConfigSchema = z
         z.object({
           name: z.string().trim().min(1).max(50),
           startMinute: z.number().int().min(0).max(1439),
-        }),
+        })
       )
       .min(1)
       .max(8),
   })
   .superRefine((c, ctx) => {
     if (
-      new Set((c.crews || []).map((x) => x.name.toLowerCase())).size !==
-        (c.crews || []).length ||
+      new Set((c.crews || []).map((x) => x.name.toLowerCase())).size !== (c.crews || []).length ||
       c.crews?.some((x) => !c.shifts.some((s) => s.name === x.shiftName))
     )
       ctx.addIssue({
@@ -38,8 +37,7 @@ export const shiftConfigSchema = z
 
     if (
       new Set(c.shifts.map((s) => s.startMinute)).size !== c.shifts.length ||
-      new Set(c.shifts.map((s) => s.name.toLowerCase())).size !==
-        c.shifts.length
+      new Set(c.shifts.map((s) => s.name.toLowerCase())).size !== c.shifts.length
     )
       ctx.addIssue({
         code: "custom",
@@ -62,15 +60,10 @@ export type ShiftSlice = {
   end: string;
   seconds: number;
 };
-export function splitDowntime(
-  start: Date | string,
-  end: Date | string,
-  config: ShiftConfig,
-): ShiftSlice[] {
+export function splitDowntime(start: Date | string, end: Date | string, config: ShiftConfig): ShiftSlice[] {
   const from = +new Date(start),
     to = +new Date(end);
-  if (!Number.isFinite(from) || !Number.isFinite(to) || to < from)
-    throw Error("Invalid downtime interval");
+  if (!Number.isFinite(from) || !Number.isFinite(to) || to < from) throw Error("Invalid downtime interval");
   if (to === from) return [];
   const first = Temporal.Instant.fromEpochMilliseconds(from)
       .toZonedDateTimeISO(config.timezone)
@@ -145,12 +138,7 @@ export const ideaSchema = z.object({
     .max(100)
     .transform((v) => [...new Set(v)]),
 });
-export const ideaStatuses = [
-  "Open",
-  "Piloting",
-  "Validation",
-  "Completed",
-] as const;
+export const ideaStatuses = ["Open", "Piloting", "Validation", "Completed"] as const;
 export function durationText(seconds: number) {
   const value = Math.max(0, Math.floor(seconds));
   return `${Math.floor(value / 3600)

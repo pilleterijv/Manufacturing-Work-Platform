@@ -6,41 +6,26 @@ import { createHash } from "node:crypto";
 import { db } from "../lib/db";
 import { defaults } from "../lib/rules";
 async function main() {
-  validateDatabaseTargets(
-    process.env.DATABASE_URL,
-    process.env.DATABASE_SETUP_URL,
-  );
+  validateDatabaseTargets(process.env.DATABASE_URL, process.env.DATABASE_SETUP_URL);
   const pool = new Pool({
-    connectionString:
-      process.env.DATABASE_SETUP_URL || process.env.DATABASE_URL,
+    connectionString: process.env.DATABASE_SETUP_URL || process.env.DATABASE_URL,
   });
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
     await client.query("SELECT pg_advisory_xact_lock(7543921)");
-    await client.query(
-      'CREATE TABLE IF NOT EXISTS "Migration" (name TEXT PRIMARY KEY, hash TEXT NOT NULL)',
-    );
-    const migrations = (await readdir("prisma"))
-      .filter((name) => /^\d{3}\.sql$/.test(name))
-      .sort();
+    await client.query('CREATE TABLE IF NOT EXISTS "Migration" (name TEXT PRIMARY KEY, hash TEXT NOT NULL)');
+    const migrations = (await readdir("prisma")).filter((name) => /^\d{3}\.sql$/.test(name)).sort();
     for (const file of migrations) {
       const name = file.slice(0, -4),
         sql = await readFile(`prisma/${file}`, "utf8");
       const hash = createHash("sha256").update(sql).digest("hex");
-      const prior = await client.query(
-        'SELECT hash FROM "Migration" WHERE name=$1',
-        [name],
-      );
+      const prior = await client.query('SELECT hash FROM "Migration" WHERE name=$1', [name]);
       if (prior.rowCount) {
-        if (prior.rows[0].hash !== hash)
-          throw Error("Applied migration checksum changed");
+        if (prior.rows[0].hash !== hash) throw Error("Applied migration checksum changed");
       } else {
         await client.query(sql);
-        await client.query('INSERT INTO "Migration" VALUES ($1,$2)', [
-          name,
-          hash,
-        ]);
+        await client.query('INSERT INTO "Migration" VALUES ($1,$2)', [name, hash]);
       }
     }
     await client.query("COMMIT");
@@ -103,20 +88,9 @@ async function main() {
       },
     });
   }
-  const locationKey = (e: {
-    plant: string;
-    department: string;
-    area: string;
-    line: string;
-  }) =>
-    JSON.stringify(
-      [e.plant, e.department, e.area, e.line].map((v) =>
-        v.trim().toLowerCase(),
-      ),
-    );
-  const knownLocations = new Set(
-    (await db.location.findMany()).map(locationKey),
-  );
+  const locationKey = (e: { plant: string; department: string; area: string; line: string }) =>
+    JSON.stringify([e.plant, e.department, e.area, e.line].map((v) => v.trim().toLowerCase()));
+  const knownLocations = new Set((await db.location.findMany()).map(locationKey));
   for (const e of await db.equipment.findMany()) {
     const key = locationKey(e);
     if (!knownLocations.has(key)) {
@@ -137,9 +111,7 @@ async function main() {
 }
 main()
   .catch(() => {
-    console.error(
-      "Database setup failed. Check PostgreSQL and the configured database.",
-    );
+    console.error("Database setup failed. Check PostgreSQL and the configured database.");
     process.exitCode = 1;
   })
   .finally(() => db.$disconnect());

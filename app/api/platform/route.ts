@@ -25,21 +25,8 @@ import { downtimeAccessSchema } from "@/lib/downtime-access-rules";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import {
-  requireUser,
-  grants,
-  jsonBody,
-  HttpError,
-  failure,
-  hashPassword,
-} from "@/lib/security";
-import {
-  capabilities,
-  roles,
-  standardSchema,
-  cyclesSchema,
-  videoUrl,
-} from "@/lib/rules";
+import { requireUser, grants, jsonBody, HttpError, failure, hashPassword } from "@/lib/security";
+import { capabilities, roles, standardSchema, cyclesSchema, videoUrl } from "@/lib/rules";
 export async function GET(req: Request) {
   try {
     const u = await requireUser();
@@ -50,9 +37,7 @@ export async function GET(req: Request) {
       .uuid()
       .optional()
       .parse(new URL(req.url).searchParams.get("equipment") || undefined);
-    const ids = focusedMachine
-      ? permittedIds.filter((id) => id === focusedMachine)
-      : permittedIds;
+    const ids = focusedMachine ? permittedIds.filter((id) => id === focusedMachine) : permittedIds;
     const { person, search } = readFilters(req.url);
     const assignmentIds = await assignedEquipmentIds(ids, person);
     const matchingEquipment = search
@@ -118,10 +103,7 @@ export async function GET(req: Request) {
       });
     }
     if (["audits", "leaders"].includes(view) && !g.includes("audits"))
-      throw new HttpError(
-        403,
-        "You do not have permission for leader work or process audits",
-      );
+      throw new HttpError(403, "You do not have permission for leader work or process audits");
     const overview = view === "overview" || view === "equipment";
     const history = [
       "full",
@@ -134,14 +116,7 @@ export async function GET(req: Request) {
       "analytics",
       "records",
     ].includes(view);
-    const standardsNeeded = [
-      "full",
-      "work",
-      "audits",
-      "leaders",
-      "changeovers",
-      "manage",
-    ].includes(view);
+    const standardsNeeded = ["full", "work", "audits", "leaders", "changeovers", "manage"].includes(view);
     const contentNeeded = ["full", "training", "guides"].includes(view);
     const kinds = [
       ...(g.includes("work") || g.includes("analytics") ? ["run"] : []),
@@ -152,9 +127,7 @@ export async function GET(req: Request) {
     const historyKind = view === "records" ? requestedKind : view;
     const scope = {
       AND: [recordScope(ids), recordFilters(person, search, matchingEquipment)],
-      ...(g.includes("analytics") || g.includes("history")
-        ? {}
-        : { userId: u.id }),
+      ...(g.includes("analytics") || g.includes("history") ? {} : { userId: u.id }),
       ...(historyKind === "changeovers"
         ? { data: { path: ["snapshot", "workflow"], equals: "changeover" } }
         : historyKind === "work"
@@ -232,18 +205,17 @@ export async function GET(req: Request) {
         ])
       : [[], 0];
 
-    const [equipment, standards, records, content, users, policies] =
-      await Promise.all([
-        db.equipment.findMany({
-          where: {
-            id: {
-              in: ["training", "guides"].includes(view) ? ids : assignmentIds,
-            },
+    const [equipment, standards, records, content, users, policies] = await Promise.all([
+      db.equipment.findMany({
+        where: {
+          id: {
+            in: ["training", "guides"].includes(view) ? ids : assignmentIds,
           },
-          orderBy: { name: "asc" },
-        }),
-        standardsNeeded
-          ? db.$queryRaw<Prisma.StandardGetPayload<{}>[]>`
+        },
+        orderBy: { name: "asc" },
+      }),
+      standardsNeeded
+        ? db.$queryRaw<Prisma.StandardGetPayload<{}>[]>`
           SELECT s.* FROM "Standard" s JOIN (
             SELECT family, max(revision) AS revision FROM "Standard" GROUP BY family
           ) latest ON s.family=latest.family AND s.revision=latest.revision
@@ -258,82 +230,71 @@ export async function GET(req: Request) {
           AND (${search}='' OR s.title ILIKE ${"%" + search + "%"} OR s."equipmentId"=ANY(${matchingEquipment}::text[]))
           ORDER BY s.title
         `
-          : [],
-        history
-          ? db.record.findMany({
-              where: scope,
-              orderBy: [{ created: "desc" }, { id: "desc" }],
-              take: overview ? 8 : 101,
-              include: { user: { select: { name: true } } },
-            })
-          : [],
-        contentNeeded
-          ? db.content.findMany({
-              where: {
-                active: true,
-                ...(person ? { createdBy: person } : {}),
-                ...(search
-                  ? {
-                      AND: [
-                        {
-                          OR: [
-                            { equipmentId: { in: matchingEquipment } },
-                            {
-                              title: {
-                                contains: search,
-                                mode: "insensitive" as const,
-                              },
+        : [],
+      history
+        ? db.record.findMany({
+            where: scope,
+            orderBy: [{ created: "desc" }, { id: "desc" }],
+            take: overview ? 8 : 101,
+            include: { user: { select: { name: true } } },
+          })
+        : [],
+      contentNeeded
+        ? db.content.findMany({
+            where: {
+              active: true,
+              ...(person ? { createdBy: person } : {}),
+              ...(search
+                ? {
+                    AND: [
+                      {
+                        OR: [
+                          { equipmentId: { in: matchingEquipment } },
+                          {
+                            title: {
+                              contains: search,
+                              mode: "insensitive" as const,
                             },
-                            {
-                              body: {
-                                contains: search,
-                                mode: "insensitive" as const,
-                              },
+                          },
+                          {
+                            body: {
+                              contains: search,
+                              mode: "insensitive" as const,
                             },
-                          ],
-                        },
-                      ],
-                    }
-                  : {}),
-                OR: [{ equipmentId: null }, { equipmentId: { in: ids } }],
-                ...(view === "training"
-                  ? { kind: "video" }
-                  : view === "guides"
-                    ? { kind: "guide" }
-                    : {}),
-              },
-            })
-          : [],
-        (["full", "users"].includes(view) && g.includes("users")) ||
-        (view === "manage" &&
-          (g.includes("manage") ||
-            (await adminPrivileges(u)).includes("standards.manage")))
-          ? db.user.findMany({
-              select: {
-                id: true,
-                username: true,
-                name: true,
-                firstName: true,
-                lastName: true,
-                role: true,
-                customRole: true,
-                active: true,
-                mustChange: true,
-                email: true,
-                dashboardDepartment: true,
-                overdueEmail: true,
-                overdueInApp: true,
-                ...(u.role === "Admin"
-                  ? { downtimeAccess: true, workspaceAccess: true }
-                  : {}),
-              },
-            })
-          : [],
-        ["full", "policies", "users"].includes(view) &&
-        g.includes("permissions")
-          ? db.policy.findMany()
-          : [],
-      ]);
+                          },
+                        ],
+                      },
+                    ],
+                  }
+                : {}),
+              OR: [{ equipmentId: null }, { equipmentId: { in: ids } }],
+              ...(view === "training" ? { kind: "video" } : view === "guides" ? { kind: "guide" } : {}),
+            },
+          })
+        : [],
+      (["full", "users"].includes(view) && g.includes("users")) ||
+      (view === "manage" && (g.includes("manage") || (await adminPrivileges(u)).includes("standards.manage")))
+        ? db.user.findMany({
+            select: {
+              id: true,
+              username: true,
+              name: true,
+              firstName: true,
+              lastName: true,
+              role: true,
+              customRole: true,
+              active: true,
+              mustChange: true,
+              email: true,
+              dashboardDepartment: true,
+              overdueEmail: true,
+              overdueInApp: true,
+              ...(u.role === "Admin" ? { downtimeAccess: true, workspaceAccess: true } : {}),
+            },
+          })
+        : [],
+      ["full", "policies", "users"].includes(view) && g.includes("permissions") ? db.policy.findMany() : [],
+    ]);
     return Response.json({
       overview: {
         runs: counts.find((c) => c.kind === "run")?._count._all ?? 0,
@@ -341,15 +302,10 @@ export async function GET(req: Request) {
         leaderWork: g.includes("audits")
           ? await db.record.count({
               where: {
-                AND: [
-                  recordScope(ids),
-                  recordFilters(person, search, matchingEquipment),
-                ],
+                AND: [recordScope(ids), recordFilters(person, search, matchingEquipment)],
                 kind: "audit",
                 data: { path: ["snapshot", "workflow"], equals: "leader" },
-                ...(g.includes("analytics") || g.includes("history")
-                  ? {}
-                  : { userId: u.id }),
+                ...(g.includes("analytics") || g.includes("history") ? {} : { userId: u.id }),
               },
             })
           : 0,
@@ -358,12 +314,7 @@ export async function GET(req: Request) {
       },
       locations: await db.location.findMany({
         where: { active: true },
-        orderBy: [
-          { plant: "asc" },
-          { department: "asc" },
-          { area: "asc" },
-          { line: "asc" },
-        ],
+        orderBy: [{ plant: "asc" }, { department: "asc" }, { area: "asc" }, { line: "asc" }],
       }),
       equipment,
       standards,
@@ -378,7 +329,7 @@ export async function GET(req: Request) {
             ? g.includes("work") || g.includes("analytics")
             : r.kind === "audit"
               ? g.includes("audits")
-              : g.includes("studies") || g.includes("analytics"),
+              : g.includes("studies") || g.includes("analytics")
         ),
       content,
       users:
@@ -386,19 +337,14 @@ export async function GET(req: Request) {
           ? users.filter(
               (p) =>
                 (!person || p.id === person) &&
-                (!search ||
-                  `${p.name} ${p.username}`
-                    .toLowerCase()
-                    .includes(search.toLowerCase())),
+                (!search || `${p.name} ${p.username}`.toLowerCase().includes(search.toLowerCase()))
             )
-          : (view === "manage" ? await visiblePeople(u, ids) : []).map(
-              (person) => ({
-                id: person.id,
-                name: person.name,
-                role: person.role,
-                active: person.active,
-              }),
-            ),
+          : (view === "manage" ? await visiblePeople(u, ids) : []).map((person) => ({
+              id: person.id,
+              name: person.name,
+              role: person.role,
+              active: person.active,
+            })),
       policies,
     });
   } catch (e) {
@@ -445,16 +391,10 @@ export async function POST(req: Request) {
       ? await requireDelegated(actionPrivilege, cap)
       : await requireUser(action === "archive" ? undefined : cap);
     if (["user", "policy"].includes(action) && u.role !== "Admin")
-      throw new HttpError(
-        403,
-        "Only Admin can manage accounts, policies and locations",
-      );
+      throw new HttpError(403, "Only Admin can manage accounts, policies and locations");
     if (action === "install-tableting") {
       if (u.role !== "Admin" || u.customRole)
-        throw new HttpError(
-          403,
-          "Only Admin can install the Tableting reference package",
-        );
+        throw new HttpError(403, "Only Admin can install the Tableting reference package");
       const plant = z.string().trim().min(1).max(100).parse(b.plant);
       return Response.json({
         ok: true,
@@ -463,10 +403,7 @@ export async function POST(req: Request) {
     }
     if (action === "seed-catalog") {
       if (u.role !== "Admin" && !(await canAdminister(u, "locations.manage")))
-        throw new HttpError(
-          403,
-          "Location administration has not been delegated to you",
-        );
+        throw new HttpError(403, "Location administration has not been delegated to you");
       const plant = z.string().trim().min(1).max(100).parse(b.plant);
       const existing = await db.location.findMany({
         where: { plant: { equals: plant, mode: "insensitive" } },
@@ -477,8 +414,7 @@ export async function POST(req: Request) {
           existing.find(
             (l) =>
               l.department.toLowerCase() === department.toLowerCase() ||
-              (department === "Maintenance/Facilities" &&
-                l.department.toLowerCase() === "maintenance"),
+              (department === "Maintenance/Facilities" && l.department.toLowerCase() === "maintenance")
           )?.department || department;
         return ["", ...(referenceAreas[department] || [])].map((area) => ({
           plant: site,
@@ -486,9 +422,7 @@ export async function POST(req: Request) {
           area:
             existing.find(
               (l) =>
-                l.department === canonical &&
-                l.area.toLowerCase() === area.toLowerCase() &&
-                l.line === "",
+                l.department === canonical && l.area.toLowerCase() === area.toLowerCase() && l.line === ""
             )?.area || area,
           line: "",
         }));
@@ -532,10 +466,7 @@ export async function POST(req: Request) {
     }
     if (action === "location") {
       if (u.role !== "Admin" && !(await canAdminister(u, "locations.manage")))
-        throw new HttpError(
-          403,
-          "Location administration has not been delegated to you",
-        );
+        throw new HttpError(403, "Location administration has not been delegated to you");
       const v = z
         .object({
           plant: z.string().trim().min(1).max(100),
@@ -544,41 +475,29 @@ export async function POST(req: Request) {
           line: z.string().trim().max(100).default(""),
         })
         .parse(b);
-      if (v.line && !v.area)
-        throw new HttpError(400, "Choose an area before adding a line");
+      if (v.line && !v.area) throw new HttpError(400, "Choose an area before adding a line");
       const rows = await db.location.findMany();
-      const same = (a: string, c: string) =>
-        a.trim().toLowerCase() === c.trim().toLowerCase();
+      const same = (a: string, c: string) => a.trim().toLowerCase() === c.trim().toLowerCase();
       const plant = rows.find((r) => same(r.plant, v.plant));
       if (plant) v.plant = plant.plant;
-      const parent = rows.find(
-        (r) => same(r.plant, v.plant) && same(r.department, v.department),
-      );
+      const parent = rows.find((r) => same(r.plant, v.plant) && same(r.department, v.department));
       if (parent) {
         v.plant = parent.plant;
         v.department = parent.department;
       }
       const area = rows.find(
-        (r) =>
-          r.plant === v.plant &&
-          r.department === v.department &&
-          same(r.area, v.area),
+        (r) => r.plant === v.plant && r.department === v.department && same(r.area, v.area)
       );
       if (area) v.area = area.area;
-      if (
-        !allowedDowntimeEquipment(u.role, u.workspaceAccess, { ...v, id: "" })
-      )
-        throw new HttpError(
-          403,
-          "Location is outside your assigned departments/areas",
-        );
+      if (!allowedDowntimeEquipment(u.role, u.workspaceAccess, { ...v, id: "" }))
+        throw new HttpError(403, "Location is outside your assigned departments/areas");
       if (
         rows.some(
           (r) =>
             same(r.plant, v.plant) &&
             same(r.department, v.department) &&
             same(r.area, v.area) &&
-            same(r.line, v.line),
+            same(r.line, v.line)
         )
       )
         throw new HttpError(409, "This location already exists");
@@ -587,10 +506,7 @@ export async function POST(req: Request) {
     }
     if (action === "downtimeAccess" || action === "workspaceAccess") {
       if (u.role !== "Admin")
-        throw new HttpError(
-          403,
-          "Only Admin can assign departments, areas and machines",
-        );
+        throw new HttpError(403, "Only Admin can assign departments, areas and machines");
       const id = z.string().uuid().parse(b.id);
       const access = downtimeAccessSchema.parse(b.access);
       await db.$transaction(async (tx) => {
@@ -599,14 +515,8 @@ export async function POST(req: Request) {
         if (target.role === "Admin" && access.mode !== "all")
           throw new HttpError(400, "Admin retains access to every machine");
         const ids = [...new Set(access.equipmentIds)];
-        if (
-          (await tx.equipment.count({ where: { id: { in: ids } } })) !==
-          ids.length
-        )
-          throw new HttpError(
-            400,
-            "One or more selected machines no longer exist",
-          );
+        if ((await tx.equipment.count({ where: { id: { in: ids } } })) !== ids.length)
+          throw new HttpError(400, "One or more selected machines no longer exist");
         for (const l of access.locations) {
           if (
             !(await tx.location.findFirst({
@@ -651,21 +561,16 @@ export async function POST(req: Request) {
       if (!loc)
         throw new HttpError(
           400,
-          "Choose an existing location from the dropdowns. Admin can add locations first",
+          "Choose an existing location from the dropdowns. Admin can add locations first"
         );
-      if (
-        !allowedDowntimeEquipment(u.role, u.workspaceAccess, { ...loc, id: "" })
-      )
+      if (!allowedDowntimeEquipment(u.role, u.workspaceAccess, { ...loc, id: "" }))
         throw new HttpError(403, "This location is outside your assignments");
       if (
         await db.equipment.findFirst({
           where: { ...v, name: { equals: v.name.trim(), mode: "insensitive" } },
         })
       )
-        throw new HttpError(
-          409,
-          "Equipment with this name already exists at this location",
-        );
+        throw new HttpError(409, "Equipment with this name already exists at this location");
       await db.equipment.create({ data: { ...v, name: v.name.trim() } });
     }
     if (action === "standard") {
@@ -683,14 +588,10 @@ export async function POST(req: Request) {
           },
         })) !== v.assigneeIds.length
       )
-        throw new HttpError(
-          400,
-          "DL/TL tasks require DL/TL or Manager assignees",
-        );
+        throw new HttpError(400, "DL/TL tasks require DL/TL or Manager assignees");
       for (const step of v.steps) {
         if (!step.fiveSPlanId) continue;
-        if (v.kind !== "audit")
-          throw new HttpError(400, "5S links belong to DL/TL standard work");
+        if (v.kind !== "audit") throw new HttpError(400, "5S links belong to DL/TL standard work");
         const plan = await db.fiveSPlan.findUnique({
           where: { id: step.fiveSPlanId },
         });
@@ -699,15 +600,8 @@ export async function POST(req: Request) {
           eq = await db.equipment.findUniqueOrThrow({
             where: { id: v.equipmentId },
           });
-        if (
-          area.plant !== eq.plant ||
-          area.department !== eq.department ||
-          area.area !== eq.area
-        )
-          throw new HttpError(
-            400,
-            "The 5S plan must match the standard-work machine's area",
-          );
+        if (area.plant !== eq.plant || area.department !== eq.department || area.area !== eq.area)
+          throw new HttpError(400, "The 5S plan must match the standard-work machine's area");
       }
       const family = v.family ?? crypto.randomUUID();
       await db.$transaction(
@@ -718,41 +612,22 @@ export async function POST(req: Request) {
             orderBy: { revision: "desc" },
           });
           if (last?.archived)
-            throw new HttpError(
-              409,
-              "This standard family has been retired. Create a new standard instead.",
-            );
-          if (
-            last &&
-            (last.equipmentId !== v.equipmentId || last.kind !== v.kind)
-          )
-            throw new HttpError(
-              400,
-              "Equipment and task type cannot change within a standard family",
-            );
+            throw new HttpError(409, "This standard family has been retired. Create a new standard instead.");
+          if (last && (last.equipmentId !== v.equipmentId || last.kind !== v.kind))
+            throw new HttpError(400, "Equipment and task type cannot change within a standard family");
           await assertEquipmentAccess(u, v.equipmentId, tx);
           for (const planId of new Set(
-            v.steps
-              .map((step) => step.fiveSPlanId)
-              .filter((id): id is string => !!id),
+            v.steps.map((step) => step.fiveSPlanId).filter((id): id is string => !!id)
           )) {
             await tx.$queryRaw`SELECT id FROM "FiveSPlan" WHERE id=${planId} FOR SHARE`;
-            if (
-              !(await tx.fiveSPlan.findUnique({ where: { id: planId } }))
-                ?.active
-            )
-              throw new HttpError(
-                409,
-                "A linked 5S plan was retired. Reload and revise the checklist.",
-              );
+            if (!(await tx.fiveSPlan.findUnique({ where: { id: planId } }))?.active)
+              throw new HttpError(409, "A linked 5S plan was retired. Reload and revise the checklist.");
           }
           const assignedStandard = await tx.standard.create({
             data: {
               ...v,
               handoffProfile:
-                v.workflow === "leader"
-                  ? (v.handoffProfile ?? last?.handoffProfile ?? "generic")
-                  : "generic",
+                v.workflow === "leader" ? (v.handoffProfile ?? last?.handoffProfile ?? "generic") : "generic",
               family,
               revision: (last?.revision ?? 0) + 1,
               steps: v.steps,
@@ -768,7 +643,7 @@ export async function POST(req: Request) {
           });
         },
         // Family writers share the advisory lock; ReadCommitted observes the state after waiting.
-        { isolationLevel: "ReadCommitted" },
+        { isolationLevel: "ReadCommitted" }
       );
     }
     if (action === "guide" || action === "video") {
@@ -781,7 +656,7 @@ export async function POST(req: Request) {
                 id: z.string().uuid(),
                 kind: z.enum(["photo", "video"]),
                 caption: z.string().max(500),
-              }),
+              })
             )
             .max(20)
             .default([]),
@@ -790,13 +665,9 @@ export async function POST(req: Request) {
           body: z.string().max(10000).default(""),
         })
         .parse(b);
-      if (
-        v.equipmentId &&
-        !(await db.equipment.findUnique({ where: { id: v.equipmentId } }))
-      )
+      if (v.equipmentId && !(await db.equipment.findUnique({ where: { id: v.equipmentId } })))
         throw new HttpError(400, "Unknown equipment");
-      if (action === "guide" && !v.body.trim())
-        throw new HttpError(400, "Enter instructions");
+      if (action === "guide" && !v.body.trim()) throw new HttpError(400, "Enter instructions");
       if (action === "video" && v.body) {
         try {
           v.body = videoUrl(v.body);
@@ -804,22 +675,15 @@ export async function POST(req: Request) {
           throw new HttpError(400, "Use an HTTPS YouTube or Vimeo video link");
         }
       }
-      if (
-        action === "video" &&
-        !v.body &&
-        !v.media.some((m) => m.kind === "video")
-      )
+      if (action === "video" && !v.body && !v.media.some((m) => m.kind === "video"))
         throw new HttpError(400, "Upload a video or enter a video link");
       if (v.equipmentId) await assertEquipmentAccess(u, v.equipmentId);
-      else if (u.role !== "Admin")
-        throw new HttpError(403, "Choose equipment in your assigned area");
+      else if (u.role !== "Admin") throw new HttpError(403, "Choose equipment in your assigned area");
       if (v.id) {
         const old = await db.content.findUnique({ where: { id: v.id } });
-        if (!old || old.kind !== action)
-          throw new HttpError(404, "Resource not found");
+        if (!old || old.kind !== action) throw new HttpError(404, "Resource not found");
         if (old.equipmentId) await assertEquipmentAccess(u, old.equipmentId);
-        else if (u.role !== "Admin")
-          throw new HttpError(403, "Only Admin can edit shared resources");
+        else if (u.role !== "Admin") throw new HttpError(403, "Only Admin can edit shared resources");
       }
       for (const m of v.media) {
         const owned =
@@ -828,18 +692,11 @@ export async function POST(req: Request) {
             : await db.guideMedia.findFirst({
                 where: { id: m.id, userId: u.id },
               });
-        const old = v.id
-          ? await db.content.findUnique({ where: { id: v.id } })
-          : null;
+        const old = v.id ? await db.content.findUnique({ where: { id: v.id } }) : null;
         const retained =
-          old &&
-          Array.isArray(old.media) &&
-          old.media.some((x: any) => x.id === m.id && x.kind === m.kind);
+          old && Array.isArray(old.media) && old.media.some((x: any) => x.id === m.id && x.kind === m.kind);
         if (!owned && !retained)
-          throw new HttpError(
-            403,
-            "Upload your own media or retain media already attached to this guide",
-          );
+          throw new HttpError(403, "Upload your own media or retain media already attached to this guide");
       }
       const { id, ...fields } = v;
       const values = {
@@ -857,11 +714,10 @@ export async function POST(req: Request) {
       if (!item) throw new HttpError(404, "Not found");
       await requireDelegated(
         item.kind === "guide" ? "resources.manage" : "training.manage",
-        item.kind === "guide" ? "manage" : "training",
+        item.kind === "guide" ? "manage" : "training"
       );
       if (item.equipmentId) await assertEquipmentAccess(u, item.equipmentId);
-      else if (u.role !== "Admin")
-        throw new HttpError(403, "Only Admin can archive shared resources");
+      else if (u.role !== "Admin") throw new HttpError(403, "Only Admin can archive shared resources");
       await db.content.update({ where: { id }, data: { active: false } });
     }
     if (action === "run" || action === "audit") {
@@ -880,7 +736,7 @@ export async function POST(req: Request) {
                 fiveSAuditId: z.string().uuid().optional(),
                 comment: z.string().max(1000),
                 at: z.iso.datetime().optional(),
-              }),
+              })
             )
             .max(100),
           cycles: cyclesSchema.optional(),
@@ -900,40 +756,24 @@ export async function POST(req: Request) {
       });
       if (!standard) throw new HttpError(404, "Standard not found");
       if (standard.workflow === "changeover" && !v.changeover)
-        throw new HttpError(
-          400,
-          "Record the previous/next product and changeover type",
-        );
+        throw new HttpError(400, "Record the previous/next product and changeover type");
       if (standard.workflow !== "changeover" && v.changeover)
-        throw new HttpError(
-          400,
-          "Changeover details require a changeover standard",
-        );
+        throw new HttpError(400, "Changeover details require a changeover standard");
       if (standard.archived)
-        throw new HttpError(
-          409,
-          "This standard has been retired and is no longer available for new work.",
-        );
+        throw new HttpError(409, "This standard has been retired and is no longer available for new work.");
       await assertEquipmentAccess(u, standard.equipmentId);
       if (standard.workflow === "leader" && !v.handoff?.shift.trim())
         throw new HttpError(400, "Choose the leader-work shift");
       if (v.handoff && standard.workflow !== "leader")
-        throw new HttpError(
-          400,
-          "Shift handoff fields belong to DL/TL leader work.",
-        );
-      if (standard.kind !== action)
-        throw new HttpError(400, "Choose the correct standard-work task type");
+        throw new HttpError(400, "Shift handoff fields belong to DL/TL leader work.");
+      if (standard.kind !== action) throw new HttpError(400, "Choose the correct standard-work task type");
       if (
         action === "audit" &&
         u.role !== "Admin" &&
         (standard.assigneeIds as string[]).length &&
         !(standard.assigneeIds as string[]).includes(u.id)
       )
-        throw new HttpError(
-          403,
-          "This DL/TL task is assigned to another person",
-        );
+        throw new HttpError(403, "This DL/TL task is assigned to another person");
       const steps = standard.steps as {
         id: string;
         text: string;
@@ -943,20 +783,11 @@ export async function POST(req: Request) {
       if (
         v.responses.length !== steps.length ||
         new Set(v.responses.map((x) => x.stepId)).size !== steps.length ||
-        steps.some(
-          (s) =>
-            !v.responses.some(
-              (r) => r.stepId === s.id && (!s.photo || r.photo || r.video),
-            ),
-        )
+        steps.some((s) => !v.responses.some((r) => r.stepId === s.id && (!s.photo || r.photo || r.video)))
       )
         throw new HttpError(400, "Complete every step and required photo");
       const photoIds = [
-        ...new Set(
-          v.responses
-            .map((r) => r.photo)
-            .filter((id): id is string => Boolean(id)),
-        ),
+        ...new Set(v.responses.map((r) => r.photo).filter((id): id is string => Boolean(id))),
       ];
       if (
         photoIds.length &&
@@ -968,18 +799,11 @@ export async function POST(req: Request) {
       await ownEvidence(
         u.id,
         v.responses.flatMap((r) => [
-          ...(r.photo
-            ? [{ id: r.photo, kind: "photo" as const, caption: "" }]
-            : []),
-          ...(r.video
-            ? [{ id: r.video, kind: "video" as const, caption: "" }]
-            : []),
-        ]),
+          ...(r.photo ? [{ id: r.photo, kind: "photo" as const, caption: "" }] : []),
+          ...(r.video ? [{ id: r.video, kind: "video" as const, caption: "" }] : []),
+        ])
       );
-      if (
-        new Date(v.started) > new Date() ||
-        Date.now() - +new Date(v.started) > 86400000
-      )
+      if (new Date(v.started) > new Date() || Date.now() - +new Date(v.started) > 86400000)
         throw new HttpError(400, "Invalid start time");
       const data = {
         ...v,
@@ -997,22 +821,13 @@ export async function POST(req: Request) {
         durationSeconds: (Date.now() - +new Date(v.started)) / 1000,
         followUp:
           v.responses.some((r) => !r.answer) ||
-          (v.cycles ?? []).some(
-            (c) => c.seconds > standard.target * (1 + standard.tolerance / 100),
-          ),
+          (v.cycles ?? []).some((c) => c.seconds > standard.target * (1 + standard.tolerance / 100)),
       };
       await db.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT id FROM "Standard" WHERE id=${standard.id} FOR SHARE`;
-        if (
-          (await tx.standard.findUniqueOrThrow({ where: { id: standard.id } }))
-            .archived
-        )
+        if ((await tx.standard.findUniqueOrThrow({ where: { id: standard.id } })).archived)
           throw new HttpError(409, "This standard has been retired.");
-        const machine = await assertEquipmentAccess(
-          u,
-          standard.equipmentId,
-          tx,
-        );
+        const machine = await assertEquipmentAccess(u, standard.equipmentId, tx);
         for (const step of steps) {
           if (!step.fiveSPlanId) {
             if (v.responses.find((r) => r.stepId === step.id)?.fiveSAuditId)
@@ -1025,31 +840,22 @@ export async function POST(req: Request) {
                   where: { id: r.fiveSAuditId },
                 })
               : null;
-          const zone = (
-            await tx.setting.findUniqueOrThrow({ where: { key: "shifts" } })
-          ).value as any;
+          const zone = (await tx.setting.findUniqueOrThrow({ where: { key: "shifts" } })).value as any;
           if (
             !audit ||
             audit.planId !== step.fiveSPlanId ||
             audit.userId !== u.id ||
             Date.now() - +audit.createdAt > 86400000 ||
-            localToday(zone.timezone, audit.createdAt) !==
-              localToday(zone.timezone)
+            localToday(zone.timezone, audit.createdAt) !== localToday(zone.timezone)
           )
-            throw new HttpError(
-              400,
-              "Complete today's linked 5S audit before saving this DL/TL step",
-            );
+            throw new HttpError(400, "Complete today's linked 5S audit before saving this DL/TL step");
           const area = await assertAreaAccess(u, audit.locationId, tx);
           if (
             area.plant !== machine.plant ||
             area.department !== machine.department ||
             area.area !== machine.area
           )
-            throw new HttpError(
-              400,
-              "The completed 5S audit must match this machine's area",
-            );
+            throw new HttpError(400, "The completed 5S audit must match this machine's area");
         }
         await tx.record.create({
           data: {
@@ -1086,11 +892,8 @@ export async function POST(req: Request) {
       });
     }
     if (action === "policy") {
-      const v = z
-        .object({ role: z.enum(roles), grants: z.array(z.enum(capabilities)) })
-        .parse(b);
-      if (v.role === "Admin")
-        throw new HttpError(400, "Admin permissions are protected");
+      const v = z.object({ role: z.enum(roles), grants: z.array(z.enum(capabilities)) }).parse(b);
+      if (v.role === "Admin") throw new HttpError(400, "Admin permissions are protected");
       await db.$transaction(async (tx) => {
         await tx.$queryRaw`SELECT role FROM "Policy" WHERE role=${v.role} FOR UPDATE`;
         const before = await tx.policy.findUnique({ where: { role: v.role } });
@@ -1132,13 +935,9 @@ export async function POST(req: Request) {
       if (u.role !== "Admin" && v.role === "Admin")
         throw new HttpError(403, "Only Admin can assign the Admin role");
       if (id === u.id && (!v.active || v.role !== u.role))
-        throw new HttpError(
-          400,
-          "You cannot change your own role or deactivate yourself",
-        );
+        throw new HttpError(400, "You cannot change your own role or deactivate yourself");
       const passwordHash = password ? await hashPassword(password) : undefined;
-      if (!id && !passwordHash)
-        throw new HttpError(400, "A temporary password is required");
+      if (!id && !passwordHash) throw new HttpError(400, "A temporary password is required");
       await db.$transaction(
         async (tx) => {
           const assignment = await resolveRole(v.role, tx);
@@ -1146,10 +945,7 @@ export async function POST(req: Request) {
             const old = await tx.user.findUnique({ where: { id } });
             if (!old) throw new HttpError(404, "User not found");
             if (u.role !== "Admin" && old.role === "Admin")
-              throw new HttpError(
-                403,
-                "Only Admin can edit administrator accounts",
-              );
+              throw new HttpError(403, "Only Admin can edit administrator accounts");
             if (
               old.role === "Admin" &&
               old.active &&
@@ -1164,9 +960,7 @@ export async function POST(req: Request) {
               data: {
                 ...fields,
                 ...assignment,
-                ...(passwordHash
-                  ? { password: passwordHash, mustChange: true }
-                  : {}),
+                ...(passwordHash ? { password: passwordHash, mustChange: true } : {}),
                 version: { increment: 1 },
               },
             });
@@ -1176,7 +970,7 @@ export async function POST(req: Request) {
               data: { ...fields, ...assignment, password: passwordHash! },
             });
         },
-        { isolationLevel: "Serializable" },
+        { isolationLevel: "Serializable" }
       );
     }
     return Response.json({ ok: true });

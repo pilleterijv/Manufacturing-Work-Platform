@@ -1,11 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import {
-  fiveSPlanSchema,
-  fiveSPillars,
-  validateFiveS,
-} from "../lib/floor-rules";
+import { fiveSPlanSchema, fiveSPillars, validateFiveS } from "../lib/floor-rules";
 import { allowedArea } from "../lib/area-access";
 import { maintenanceSchema } from "../lib/maintenance-rules";
 import { maintainxPayload } from "../lib/maintainx";
@@ -28,13 +24,13 @@ test("5S covers every pillar, unique questions, bounded scores and required medi
     !fiveSPlanSchema.safeParse({
       ...plan,
       questions: questions.map((q) => ({ ...q, pillar: "Sort" })),
-    }).success,
+    }).success
   );
   assert(
     !fiveSPlanSchema.safeParse({
       ...plan,
       questions: [...questions, questions[0]],
-    }).success,
+    }).success
   );
   const responses = questions.map((q) => ({
     questionId: q.id,
@@ -47,12 +43,7 @@ test("5S covers every pillar, unique questions, bounded scores and required medi
     maximum: 25,
   });
   assert.throws(() => validateFiveS(questions, responses.slice(1)));
-  assert.throws(() =>
-    validateFiveS(
-      [{ ...questions[0], photo: true }, ...questions.slice(1)],
-      responses,
-    ),
-  );
+  assert.throws(() => validateFiveS([{ ...questions[0], photo: true }, ...questions.slice(1)], responses));
 });
 test("machine-only access does not grant an entire 5S area", () => {
   const area = { plant: "Plant", department: "Packing", area: "A" },
@@ -76,9 +67,9 @@ test("machine-only access does not grant an entire 5S area", () => {
           locations: [{ ...area }],
         },
       },
-      area,
+      area
     ),
-    true,
+    true
   );
   assert.equal(
     allowedArea(
@@ -90,9 +81,9 @@ test("machine-only access does not grant an entire 5S area", () => {
           locations: [{ ...area, plant: "Other" }],
         },
       },
-      area,
+      area
     ),
-    false,
+    false
   );
 });
 test("CIL and PM plans retain distinct kinds with the same validation", () => {
@@ -125,7 +116,7 @@ test("MaintainX work order includes a stable defect reference without leaking pr
         },
         media: [{ id: randomUUID(), kind: "photo" }],
       },
-      12,
+      12
     );
   assert.equal(payload.assetId, 12);
   assert.deepEqual(payload.externalData, { floorworkDefectId: id });

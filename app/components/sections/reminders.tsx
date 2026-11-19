@@ -12,7 +12,7 @@ export default function Reminders({ admin }: { admin: boolean }) {
   }
   useSectionRefresh(
     () => load(),
-    (e) => setError(e.message),
+    (e) => setError(e.message)
   );
   useEffect(() => {
     load().catch((e) => setError(e.message));
@@ -26,7 +26,7 @@ export default function Reminders({ admin }: { admin: boolean }) {
       setNotice(
         b.action === "send"
           ? `${r.queued} reminder deliveries queued. Daily duplicates are skipped.`
-          : "Notification preferences saved.",
+          : "Notification preferences saved."
       );
     } catch (e) {
       setError((e as Error).message);
@@ -38,9 +38,8 @@ export default function Reminders({ admin }: { admin: boolean }) {
     <section className="panel">
       <h2>Overdue work reminders</h2>
       <p>
-        Daily reminders go to the pilot/validator, problem facilitator/reviewer,
-        action owner or PM assignee, and managers assigned to that machine’s
-        department/area. Email requires an approved SMTP relay.
+        Daily reminders go to the pilot/validator, problem facilitator/reviewer, action owner or PM assignee,
+        and managers assigned to that machine’s department/area. Email requires an approved SMTP relay.
       </p>
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
@@ -103,9 +102,8 @@ export default function Reminders({ admin }: { admin: boolean }) {
             </button>
           )}
           <p className="small muted">
-            Automatic checks run on the server even when browsers are closed.
-            Turning off a channel also cancels unsent deliveries when the worker
-            checks them.
+            Automatic checks run on the server even when browsers are closed. Turning off a channel also
+            cancels unsent deliveries when the worker checks them.
           </p>
           <h3>Recent reminder deliveries</h3>
           {data.items.map((r: any) => (
@@ -115,8 +113,7 @@ export default function Reminders({ admin }: { admin: boolean }) {
               </summary>
               <p>{r.message}</p>
               <p className="small">
-                Recipient ID {r.userId} ·{" "}
-                {new Date(r.createdAt).toLocaleString()}
+                Recipient ID {r.userId} · {new Date(r.createdAt).toLocaleString()}
               </p>
               {r.lastError && <p>{r.lastError}</p>}
             </details>

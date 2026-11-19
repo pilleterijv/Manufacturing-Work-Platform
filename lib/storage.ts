@@ -7,7 +7,7 @@ async function container() {
   if (!conn) return null;
   const { BlobServiceClient } = await import("@azure/storage-blob");
   return BlobServiceClient.fromConnectionString(conn).getContainerClient(
-    process.env.AZURE_STORAGE_CONTAINER ?? "floorwork",
+    process.env.AZURE_STORAGE_CONTAINER ?? "floorwork"
   );
 }
 export async function storePhoto(id: string, data: Buffer) {
@@ -57,9 +57,7 @@ export async function openVideo(id: string, signal?: AbortSignal) {
           abortSignal: signal,
         });
         if (!result.readableStreamBody) throw Error("Video stream unavailable");
-        return Readable.toWeb(
-          result.readableStreamBody as Readable,
-        ) as ReadableStream<Uint8Array>;
+        return Readable.toWeb(result.readableStreamBody as Readable) as ReadableStream<Uint8Array>;
       },
     };
   }
@@ -83,7 +81,7 @@ export async function openVideo(id: string, signal?: AbortSignal) {
               highWaterMark: 64 * 1024,
               size: (chunk: Uint8Array) => chunk.byteLength,
             },
-          },
+          }
         ) as ReadableStream<Uint8Array>,
     };
   } catch (e) {

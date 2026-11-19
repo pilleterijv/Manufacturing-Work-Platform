@@ -31,7 +31,7 @@ async function main() {
           mustChange: false,
           workspaceAccess: { mode: "all", locations: [], equipmentIds: [] },
         },
-      }),
+      })
     );
   eq = await db.equipment.create({
     data: {
@@ -76,10 +76,7 @@ async function main() {
     return r.json();
   };
   const anon = await browser.newContext();
-  assert.equal(
-    (await anon.request.get(origin + "/api/problems")).status(),
-    401,
-  );
+  assert.equal((await anon.request.get(origin + "/api/problems")).status(), 401);
   const input = {
     title: "Recurring label misalignment",
     method: "2D",
@@ -108,7 +105,7 @@ async function main() {
         status: "In progress",
       })
     ).status,
-    403,
+    403
   );
   assert.equal(
     (
@@ -120,7 +117,7 @@ async function main() {
         status: "Closed",
       })
     ).status,
-    403,
+    403
   );
   assert.equal(
     (
@@ -132,7 +129,7 @@ async function main() {
         status: "Closed",
       })
     ).status,
-    400,
+    400
   );
   assert.equal(
     (
@@ -145,7 +142,7 @@ async function main() {
         status: "Open",
       })
     ).status,
-    400,
+    400
   );
   r = await post(operator, {
     action: "addAction",
@@ -169,7 +166,7 @@ async function main() {
         dueDate: "2026-11-07",
       })
     ).status,
-    409,
+    409
   );
   detail = await get(operator, "?id=" + id);
   let a = detail.actions[0];
@@ -184,7 +181,7 @@ async function main() {
         comment: "Unauthorized",
       })
     ).status,
-    403,
+    403
   );
   r = await post(operator, {
     action: "updateAction",
@@ -206,17 +203,12 @@ async function main() {
         comment: "Stale",
       })
     ).status,
-    409,
+    409
   );
-  const queue = await get(
-    operator,
-    "?view=queue&department=" + encodeURIComponent(eq.department),
-  );
+  const queue = await get(operator, "?view=queue&department=" + encodeURIComponent(eq.department));
   assert.equal(queue.items.length, 0);
   const answers = Object.fromEntries(
-    methodology["2D"].sections.flatMap((s) =>
-      s.fields.map(([key]) => [key, "Verified test evidence"]),
-    ),
+    methodology["2D"].sections.flatMap((s) => s.fields.map(([key]) => [key, "Verified test evidence"]))
   );
   r = await post(reviewer, {
     action: "update",
@@ -243,7 +235,7 @@ async function main() {
         dueDate: "2026-11-07",
       })
     ).status,
-    409,
+    409
   );
   r = await post(operator, {
     action: "create",
@@ -253,16 +245,11 @@ async function main() {
   });
   assert.equal(r.status, 200);
   records.push(r.body.id);
-  const summary = await get(
-    admin,
-    "?department=" + encodeURIComponent(eq.department),
-  );
+  const summary = await get(admin, "?department=" + encodeURIComponent(eq.department));
   assert.equal(summary.summary.closedActions, 1);
   assert.equal(summary.items.length, 2);
   const xlsx = await admin.request.get(
-    origin +
-      "/api/problems?format=xlsx&department=" +
-      encodeURIComponent(eq.department),
+    origin + "/api/problems?format=xlsx&department=" + encodeURIComponent(eq.department)
   );
   assert.equal(xlsx.status(), 200);
   const Excel = require("exceljs"),
@@ -272,29 +259,14 @@ async function main() {
   assert.equal(book.getWorksheet("Actions and checkpoints").rowCount, 2);
   const page = await operator.newPage();
   await page.goto(origin);
-  await page
-    .getByText("More tools and workspace settings", { exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Open Problem solving section", exact: true })
-    .click();
-  await page
-    .getByRole("heading", { name: "Problem-solving records", exact: true })
-    .waitFor();
+  await page.getByText("More tools and workspace settings", { exact: true }).click();
+  await page.getByRole("button", { name: "Open Problem solving section", exact: true }).click();
+  await page.getByRole("heading", { name: "Problem-solving records", exact: true }).waitFor();
   await page.getByLabel("Problem department").selectOption(eq.department);
-  await page
-    .getByRole("row")
-    .filter({ hasText: input.title })
-    .first()
-    .waitFor();
-  assert.equal(
-    await page
-      .getByRole("button", { name: "Open Accounts section", exact: true })
-      .count(),
-    0,
-  );
+  await page.getByRole("row").filter({ hasText: input.title }).first().waitFor();
+  assert.equal(await page.getByRole("button", { name: "Open Accounts section", exact: true }).count(), 0);
   console.log(
-    "Problem-solving integration passed: persistence, assigned roles, stale writes, closure, escalation, queue, Excel and dashboard navigation.",
+    "Problem-solving integration passed: persistence, assigned roles, stale writes, closure, escalation, queue, Excel and dashboard navigation."
   );
 }
 main()
@@ -313,6 +285,10 @@ main()
     });
     await db.problem.deleteMany({ where: { id: { in: records } } });
     if (eq) await db.equipment.delete({ where: { id: eq.id } });
+    await db.notification.deleteMany({
+      where: { userId: { in: users.map((u) => u.id) }, kind: "assignment" },
+    });
+    await db.assignmentDelivery.deleteMany({ where: { userId: { in: users.map((u) => u.id) } } });
     await db.user.deleteMany({ where: { id: { in: users.map((u) => u.id) } } });
     await db.$disconnect();
   });

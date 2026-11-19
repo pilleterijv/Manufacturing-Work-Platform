@@ -33,9 +33,7 @@ export async function pollCompanySql() {
   if (!source?.active) return { configured: true, processed: 0 };
   let processed = 0;
   try {
-    const view = sqlViewName(
-      process.env.COMPANY_SQL_VIEW || "dbo.FloorworkDowntimeEvents",
-    );
+    const view = sqlViewName(process.env.COMPANY_SQL_VIEW || "dbo.FloorworkDowntimeEvents");
     if (!pool?.connected) {
       if (pool) await pool.close().catch(() => {});
       pool = await new sql.ConnectionPool(companySqlConfig()).connect();
@@ -44,7 +42,7 @@ export async function pollCompanySql() {
       .request()
       .input("lastSequence", sql.VarChar(30), sqlSequence(source.sqlCursor))
       .query(
-        `SELECT TOP (100) CONVERT(varchar(30), EventSequence) AS EventSequence, EventID, MachineID, State, OccurredAt FROM ${view} WHERE EventSequence > CONVERT(bigint, @lastSequence) ORDER BY EventSequence ASC`,
+        `SELECT TOP (100) CONVERT(varchar(30), EventSequence) AS EventSequence, EventID, MachineID, State, OccurredAt FROM ${view} WHERE EventSequence > CONVERT(bigint, @lastSequence) ORDER BY EventSequence ASC`
       );
     processed = await processSqlRows(source.id, result.recordset);
     await db.setting.upsert({
@@ -91,7 +89,7 @@ export async function processSqlRows(
     MachineID: unknown;
     State: unknown;
     OccurredAt: unknown;
-  }[],
+  }[]
 ) {
   let processed = 0;
   for (const row of rows) {

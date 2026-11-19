@@ -14,12 +14,9 @@ test("statistics retain variation, odd and even medians, and population deviatio
 test("only supported HTTPS video URLs can produce embeds", () => {
   assert.equal(
     videoUrl("https://youtu.be/dQw4w9WgXcQ"),
-    "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+    "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"
   );
-  assert.equal(
-    videoUrl("https://vimeo.com/1234"),
-    "https://player.vimeo.com/video/1234",
-  );
+  assert.equal(videoUrl("https://vimeo.com/1234"), "https://player.vimeo.com/video/1234");
   for (const url of [
     "javascript:alert(1)",
     "http://youtube.com/watch?v=dQw4w9WgXcQ",
@@ -39,10 +36,7 @@ test("standards reject duplicate step identities and invalid audit targets", () 
   };
   assert(standardSchema.safeParse(s).success);
   assert(!standardSchema.safeParse({ ...s, target: 0 }).success);
-  assert(
-    !standardSchema.safeParse({ ...s, steps: [...s.steps, ...s.steps] })
-      .success,
-  );
+  assert(!standardSchema.safeParse({ ...s, steps: [...s.steps, ...s.steps] }).success);
 });
 test("password hashes are salted and wrong passwords fail", async () => {
   const p = "A private example 382!";

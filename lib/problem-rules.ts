@@ -2,12 +2,7 @@ import { evidenceSchema } from "./evidence-schema";
 import { z } from "zod";
 export const methods = ["2D", "4D", "8D"] as const;
 export type Method = (typeof methods)[number];
-export const problemStatuses = [
-  "Open",
-  "In progress",
-  "Verification",
-  "Closed",
-] as const;
+export const problemStatuses = ["Open", "In progress", "Verification", "Closed"] as const;
 export const actionStatuses = ["Open", "In progress", "Completed"] as const;
 export const checkpoints = [
   "OPL",
@@ -125,17 +120,12 @@ export const methodology: Record<
       },
       {
         title: "D3 · Interim containment",
-        fields: [
-          ["correction", "Temporary actions protecting customer / process"],
-        ],
+        fields: [["correction", "Temporary actions protecting customer / process"]],
       },
       {
         title: "D4 · Determine root cause",
         fields: [
-          [
-            "fishbone",
-            "Fishbone analysis · people, machine, method, material, measurement, environment",
-          ],
+          ["fishbone", "Fishbone analysis · people, machine, method, material, measurement, environment"],
           ["why1", "Why 1"],
           ["why2", "Why 2"],
           ["why3", "Why 3"],
@@ -147,9 +137,7 @@ export const methodology: Record<
       },
       {
         title: "D5 · Select & verify corrective action",
-        fields: [
-          ["corrective", "Selected corrective actions and verification"],
-        ],
+        fields: [["corrective", "Selected corrective actions and verification"]],
       },
       {
         title: "D6 · Implement corrective action",
@@ -170,9 +158,7 @@ export const methodology: Record<
   },
 };
 export const secondCauseFields: [string, string][] = [
-  ...[1, 2, 3, 4, 5].map(
-    (i) => [`why${i}b`, `Root cause path 2 · Why ${i}`] as [string, string],
-  ),
+  ...[1, 2, 3, 4, 5].map((i) => [`why${i}b`, `Root cause path 2 · Why ${i}`] as [string, string]),
   ["rootCause2", "Root cause path 2 · Root cause summary"],
 ];
 const newOptional = new Set([
@@ -199,21 +185,17 @@ for (const method of methods) {
     "Facilitator department",
   ]);
   if (method === "2D") {
-    methodology[method].sections[0].title =
-      "D1 · Problem definition and standard check";
+    methodology[method].sections[0].title = "D1 · Problem definition and standard check";
     methodology[method].sections[0].fields.push(
       ["standardExists", "Does a standard exist?"],
       ["standardClear", "Is the standard clear and available?"],
-      ["trained", "Are people trained?"],
+      ["trained", "Are people trained?"]
     );
-    methodology[method].sections.at(-1)!.title =
-      "D2 · Actions and effectiveness";
+    methodology[method].sections.at(-1)!.title = "D2 · Actions and effectiveness";
   }
   if (method !== "2D")
     methodology[method].sections.splice(
-      methodology[method].sections.findIndex((s) =>
-        s.fields.some(([key]) => key === "rootCause"),
-      ) + 1,
+      methodology[method].sections.findIndex((s) => s.fields.some(([key]) => key === "rootCause")) + 1,
       0,
       {
         title: "Second root cause path (optional)",
@@ -226,7 +208,7 @@ for (const method of methods) {
               ] as [string, string][])
             : []),
         ],
-      },
+      }
     );
 }
 methodology["8D"].sections[1].fields.push(
@@ -236,7 +218,7 @@ methodology["8D"].sections[1].fields.push(
   ["severity", "Severity · low / high"],
   ["occurrence", "Occurrence · 1–10+"],
   ["internalExternal", "Internal / external problem"],
-  ["emergencyNeeded", "Emergency actions needed?"],
+  ["emergencyNeeded", "Emergency actions needed?"]
 );
 methodology["8D"].sections[2].fields.push(
   ["vagueProblem", "Initial / vague problem statement"],
@@ -246,24 +228,14 @@ methodology["8D"].sections[2].fields.push(
   ["where", "Where did the symptom occur?"],
   ["howMuch", "Cost or frequency"],
   ["whyCare", "Why do we care?"],
-  ["desiredDifference", "How does this differ from the desired state?"],
+  ["desiredDifference", "How does this differ from the desired state?"]
 );
-for (const name of [
-  "People",
-  "Machine",
-  "Process",
-  "Material",
-  "Measurement",
-  "Environment",
-]) {
+for (const name of ["People", "Machine", "Process", "Material", "Measurement", "Environment"]) {
   const key = "fishbone" + name;
   newOptional.add(key);
   methodology["8D"].sections[4].fields.push([key, `Fishbone · ${name}`]);
 }
-methodology["8D"].sections[4].fields.push(
-  ["why6", "Why 6 (optional)"],
-  ["why7", "Why 7 (optional)"],
-);
+methodology["8D"].sections[4].fields.push(["why6", "Why 6 (optional)"], ["why7", "Why 7 (optional)"]);
 for (const department of [
   "Operations",
   "Tech Ops",
@@ -291,24 +263,13 @@ methodology["8D"].guidance =
 const allKeys = [
   "secondRootCauseEnabled",
   ...new Set(
-    Object.values(methodology).flatMap((m) =>
-      m.sections.flatMap((s) => s.fields.map(([key]) => key)),
-    ),
+    Object.values(methodology).flatMap((m) => m.sections.flatMap((s) => s.fields.map(([key]) => key)))
   ),
 ];
 export const answersSchema = z
   .record(z.string(), z.string().max(5000))
-  .refine(
-    (a) => Object.keys(a).every((k) => allKeys.includes(k)),
-    "Unknown methodology field",
-  );
-export const actionTypes = [
-  "Containment",
-  "Correction",
-  "Corrective",
-  "Preventive",
-  "Checkpoint",
-] as const;
+  .refine((a) => Object.keys(a).every((k) => allKeys.includes(k)), "Unknown methodology field");
+export const actionTypes = ["Containment", "Correction", "Corrective", "Preventive", "Checkpoint"] as const;
 export const requirementsSchema = z
   .object({
     fields: z.array(z.string()).max(100),
@@ -316,10 +277,7 @@ export const requirementsSchema = z
     requireAction: z.boolean(),
   })
   .strict()
-  .refine(
-    (r) => r.fields.every((k) => allKeys.includes(k)),
-    "Unknown required field",
-  );
+  .refine((r) => r.fields.every((k) => allKeys.includes(k)), "Unknown required field");
 export const defaultRequirements = (method: Method) => ({
   fields: methodology[method].sections
     .flatMap((s) => s.fields.map(([k]) => k))
@@ -328,18 +286,9 @@ export const defaultRequirements = (method: Method) => ({
         !newOptional.has(k) &&
         !(
           method === "2D" &&
-          [
-            "standardExists",
-            "standardClear",
-            "trained",
-            "preventive",
-            "recognition",
-          ].includes(k)
+          ["standardExists", "standardClear", "trained", "preventive", "recognition"].includes(k)
         ) &&
-        !(
-          method === "8D" &&
-          ["who", "what", "when", "where", "howMuch"].includes(k)
-        ),
+        !(method === "8D" && ["who", "what", "when", "where", "howMuch"].includes(k))
     ),
   actionTypes: [] as (typeof actionTypes)[number][],
   requireAction: true,
@@ -363,13 +312,7 @@ export const actionSchema = z
   .object({
     media: evidenceSchema.default([]),
     required: z.boolean().default(true),
-    type: z.enum([
-      "Containment",
-      "Correction",
-      "Corrective",
-      "Preventive",
-      "Checkpoint",
-    ]),
+    type: z.enum(["Containment", "Correction", "Corrective", "Preventive", "Checkpoint"]),
     title: z.string().trim().min(1).max(500),
     ownerId: z.string().uuid(),
     dueDate: z.iso.date(),
@@ -387,20 +330,17 @@ export function closureErrors(
     fields: string[];
     actionTypes: readonly string[];
     requireAction: boolean;
-  } = defaultRequirements(method),
+  } = defaultRequirements(method)
 ) {
   const errors = methodology[method].sections.flatMap((s) =>
     s.fields
-      .filter(
-        ([key]) => requirements.fields.includes(key) && !answers[key]?.trim(),
-      )
-      .map(([, label]) => label),
+      .filter(([key]) => requirements.fields.includes(key) && !answers[key]?.trim())
+      .map(([, label]) => label)
   );
   for (const type of requirements.actionTypes)
     if (!actions.some((a) => a.type === type && a.status === "Completed"))
       errors.push("Complete a " + type + " action");
-  if (requirements.requireAction && !actions.length)
-    errors.push("At least one tracked action");
+  if (requirements.requireAction && !actions.length) errors.push("At least one tracked action");
   if (actions.some((a) => a.required !== false && a.status !== "Completed"))
     errors.push("Complete all actions and checkpoints");
   return errors;

@@ -50,10 +50,7 @@ export default function SectionDashboard({
   if (!data) return <p role="status">Loading section dashboard…</p>;
   const snapshot = sectionSnapshot(section, data);
   return (
-    <section
-      className="section-dashboard"
-      aria-label={`${sectionLabel(section)} dashboard`}
-    >
+    <section className="section-dashboard" aria-label={`${sectionLabel(section)} dashboard`}>
       <div className="section-title">
         <h2>{sectionLabel(section)} at a glance</h2>
         <div className="button-row">
@@ -82,11 +79,7 @@ export default function SectionDashboard({
           />
         ))}
       </div>
-      <DashboardChart
-        title="Status breakdown"
-        items={snapshot.buckets}
-        note={snapshot.note}
-      />
+      <DashboardChart title="Status breakdown" items={snapshot.buckets} note={snapshot.note} />
       <div className="panel">
         <h3>Matching records</h3>
         <div className="table-wrap">
@@ -111,8 +104,7 @@ export default function SectionDashboard({
                   </td>
                   <td>
                     {r.date
-                      ? /^\d{4}-\d{2}-\d{2}$/.test(r.date) ||
-                        Number.isNaN(Date.parse(r.date))
+                      ? /^\d{4}-\d{2}-\d{2}$/.test(r.date) || Number.isNaN(Date.parse(r.date))
                         ? r.date
                         : new Date(r.date).toLocaleString()
                       : "—"}
@@ -122,9 +114,7 @@ export default function SectionDashboard({
             </tbody>
           </table>
         </div>
-        {!snapshot.rows.length && (
-          <p>No matching records. Choose In detail to start working.</p>
-        )}
+        {!snapshot.rows.length && <p>No matching records. Choose In detail to start working.</p>}
       </div>
     </section>
   );

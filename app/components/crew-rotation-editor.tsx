@@ -12,47 +12,36 @@ export default function CrewRotationEditor({
   busy: boolean;
 }) {
   const [timezone, setTimezone] = useState(config.timezone);
-  const [slots, setSlots] = useState<any[]>(
-    config.crews?.length ? config.shifts : plantCrewPreset().shifts,
-  );
+  const [slots, setSlots] = useState<any[]>(config.crews?.length ? config.shifts : plantCrewPreset().shifts);
   const [crews, setCrews] = useState<any[]>(
-    (config.crews?.length ? config.crews : plantCrewPreset().crews).map(
-      (c: any) => ({
-        ...c,
-        slot: String(
-          (config.crews?.length
-            ? config.shifts
-            : plantCrewPreset().shifts
-          ).findIndex((s: any) => s.name === c.shiftName),
-        ),
-      }),
-    ),
+    (config.crews?.length ? config.crews : plantCrewPreset().crews).map((c: any) => ({
+      ...c,
+      slot: String(
+        (config.crews?.length ? config.shifts : plantCrewPreset().shifts).findIndex(
+          (s: any) => s.name === c.shiftName
+        )
+      ),
+    }))
   );
-  const patch = (i: number, v: any) =>
-    setCrews((old) => old.map((c, n) => (n === i ? { ...c, ...v } : c)));
+  const patch = (i: number, v: any) => setCrews((old) => old.map((c, n) => (n === i ? { ...c, ...v } : c)));
   const ready = crews.every((c) => c.anchorDate && ["0", "1"].includes(c.slot));
   const preview = ready
     ? Array.from({ length: 14 }, (_, i) =>
-        Temporal.PlainDate.from(crews[0].anchorDate)
-          .add({ days: i })
-          .toString(),
+        Temporal.PlainDate.from(crews[0].anchorDate).add({ days: i }).toString()
       )
     : [];
   function usePlantRoster() {
     const p = plantCrewPreset();
     setSlots(p.shifts);
-    setCrews(
-      p.crews.map((c) => ({ ...c, slot: c.shiftName === "Day" ? "0" : "1" })),
-    );
+    setCrews(p.crews.map((c) => ({ ...c, slot: c.shiftName === "Day" ? "0" : "1" })));
   }
   return (
     <details className="panel">
       <summary>Configure rotating crews and 12-hour shift times</summary>
       <p>
-        Configure crews 4–7 once, then assign each requirement to a crew and
-        named people. An anchor date is day 1 of that crew’s repeating pattern.
-        A night shift belongs to the date it starts. Review the preview against
-        your roster before saving.
+        Configure crews 4–7 once, then assign each requirement to a crew and named people. An anchor date is
+        day 1 of that crew’s repeating pattern. A night shift belongs to the date it starts. Review the
+        preview against your roster before saving.
       </p>
       <button type="button" className="outline" onClick={usePlantRoster}>
         Use plant roster: crews 4/7 and 5/6 · 5:30 starts
@@ -95,11 +84,7 @@ export default function CrewRotationEditor({
                   maxLength={50}
                   value={s.name}
                   onChange={(e) =>
-                    setSlots((old) =>
-                      old.map((x, n) =>
-                        n === i ? { ...x, name: e.target.value } : x,
-                      ),
-                    )
+                    setSlots((old) => old.map((x, n) => (n === i ? { ...x, name: e.target.value } : x)))
                   }
                 />
               </label>
@@ -111,11 +96,7 @@ export default function CrewRotationEditor({
                   value={`${String(Math.floor(s.startMinute / 60)).padStart(2, "0")}:${String(s.startMinute % 60).padStart(2, "0")}`}
                   onChange={(e) => {
                     const [h, m] = e.target.value.split(":").map(Number);
-                    setSlots((old) =>
-                      old.map((x, n) =>
-                        n === i ? { ...x, startMinute: h * 60 + m } : x,
-                      ),
-                    );
+                    setSlots((old) => old.map((x, n) => (n === i ? { ...x, startMinute: h * 60 + m } : x)));
                   }}
                 />
               </label>
@@ -128,11 +109,7 @@ export default function CrewRotationEditor({
             <div className="form-grid">
               <label className="field">
                 <span>{c.name} time slot</span>
-                <select
-                  required
-                  value={c.slot}
-                  onChange={(e) => patch(i, { slot: e.target.value })}
-                >
+                <select required value={c.slot} onChange={(e) => patch(i, { slot: e.target.value })}>
                   <option value="">Choose day/night time slot</option>
                   {slots.map((s, n) => (
                     <option key={n} value={String(n)}>
@@ -162,10 +139,7 @@ export default function CrewRotationEditor({
                     const n = Number(e.target.value);
                     if (n >= 2 && n <= 28)
                       patch(i, {
-                        workingDays: Array.from(
-                          { length: n },
-                          (_, j) => c.workingDays[j] ?? false,
-                        ),
+                        workingDays: Array.from({ length: n }, (_, j) => c.workingDays[j] ?? false),
                       });
                   }}
                 />
@@ -180,9 +154,8 @@ export default function CrewRotationEditor({
                     checked={on}
                     onChange={(e) =>
                       patch(i, {
-                        workingDays: c.workingDays.map(
-                          (v: boolean, j: number) =>
-                            j === d ? e.target.checked : v,
+                        workingDays: c.workingDays.map((v: boolean, j: number) =>
+                          j === d ? e.target.checked : v
                         ),
                       })
                     }
@@ -194,17 +167,14 @@ export default function CrewRotationEditor({
           </fieldset>
         ))}
         <p>
-          Use the plant roster preset for the confirmed 14-day 2-2-3 pattern.
-          November 18–19, 2026: Shift 5 days / Shift 6 nights. November 20–22:
-          Shift 4 days / Shift 7 nights. Review the preview and save before
-          creating crew requirements.
+          Use the plant roster preset for the confirmed 14-day 2-2-3 pattern. November 18–19, 2026: Shift 5
+          days / Shift 6 nights. November 20–22: Shift 4 days / Shift 7 nights. Review the preview and save
+          before creating crew requirements.
         </p>
         {preview.length > 0 && (
           <div className="history">
             <table>
-              <caption>
-                Roster preview — starting at the first crew’s anchor date
-              </caption>
+              <caption>Roster preview — starting at the first crew’s anchor date</caption>
               <thead>
                 <tr>
                   <th>Date</th>
@@ -220,9 +190,7 @@ export default function CrewRotationEditor({
                     {slots.map((_, i) => (
                       <td key={i}>
                         {crews
-                          .filter(
-                            (c) => c.slot === String(i) && crewWorks(c, date),
-                          )
+                          .filter((c) => c.slot === String(i) && crewWorks(c, date))
                           .map((c) => c.name)
                           .join(", ") || "No crew scheduled"}
                       </td>
@@ -237,9 +205,8 @@ export default function CrewRotationEditor({
           Save shift times and crew rotations
         </button>
         <p>
-          Existing requirements keep their original schedule snapshot. Replace
-          or pause old weekday requirements after reviewing them; this save does
-          not rewrite past completions or alerts.
+          Existing requirements keep their original schedule snapshot. Replace or pause old weekday
+          requirements after reviewing them; this save does not rewrite past completions or alerts.
         </p>
       </form>
     </details>

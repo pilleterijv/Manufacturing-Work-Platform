@@ -5,7 +5,7 @@ import { db } from "./db";
 import { z } from "zod";
 export const maintainxMappingSchema = z.record(
   z.string().uuid(),
-  z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  z.number().int().positive().max(Number.MAX_SAFE_INTEGER)
 );
 export const maintainxReady = () => !!process.env.MAINTAINX_API_KEY;
 export async function maintainxMapping() {
@@ -21,7 +21,7 @@ export function maintainxPayload(
     equipmentSnapshot: unknown;
     media: unknown;
   },
-  assetId: number,
+  assetId: number
 ) {
   const e = d.equipmentSnapshot as any;
   return {
@@ -32,11 +32,7 @@ export function maintainxPayload(
   };
 }
 // No automatic retry after an ambiguous response: a work order may already exist.
-export async function submitMaintainx(
-  id: string,
-  actor: ScopedUser,
-  request: typeof fetch = fetch,
-) {
+export async function submitMaintainx(id: string, actor: ScopedUser, request: typeof fetch = fetch) {
   if (!maintainxReady()) throw Error("MaintainX is not configured");
   const assets = await maintainxMapping(),
     old = await db.defect.findUniqueOrThrow({ where: { id } }),
@@ -67,28 +63,21 @@ export async function submitMaintainx(
       },
     });
   });
-  if (!claimed.count)
-    throw Error("Already submitted or awaiting reconciliation; reload");
+  if (!claimed.count) throw Error("Already submitted or awaiting reconciliation; reload");
   try {
     const headers: Record<string, string> = {
       Authorization: `Bearer ${process.env.MAINTAINX_API_KEY}`,
       "Content-Type": "application/json",
     };
     if (process.env.MAINTAINX_ORGANIZATION_ID)
-      headers["x-organization-id"] = z
-        .string()
-        .regex(/^\d+$/)
-        .parse(process.env.MAINTAINX_ORGANIZATION_ID);
-    const response = await request(
-      "https://api.getmaintainx.com/v1/workorders",
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify(maintainxPayload(old, asset)),
-        signal: AbortSignal.timeout(15000),
-        redirect: "error",
-      },
-    );
+      headers["x-organization-id"] = z.string().regex(/^\d+$/).parse(process.env.MAINTAINX_ORGANIZATION_ID);
+    const response = await request("https://api.getmaintainx.com/v1/workorders", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(maintainxPayload(old, asset)),
+      signal: AbortSignal.timeout(15000),
+      redirect: "error",
+    });
     if (!response.ok) throw Error("Work order submission was not confirmed");
     const body = await readBoundedResponseJson(response, 256 * 1024),
       orderId = z
@@ -96,8 +85,7 @@ export async function submitMaintainx(
         .int()
         .positive()
         .safeParse(body.workOrder?.id ?? body.id);
-    if (!orderId.success)
-      throw Error("Work order response could not be verified");
+    if (!orderId.success) throw Error("Work order response could not be verified");
     await db.defect.update({
       where: { id },
       data: {
@@ -116,8 +104,6 @@ export async function submitMaintainx(
           "Submission could not be confirmed. Check MaintainX for the Floorwork defect ID before retrying.",
       },
     });
-    throw Error(
-      "Check MaintainX before retrying; submission could not be confirmed",
-    );
+    throw Error("Check MaintainX before retrying; submission could not be confirmed");
   }
 }

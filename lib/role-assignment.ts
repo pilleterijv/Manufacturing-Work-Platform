@@ -2,10 +2,7 @@ import { db } from "./db";
 import type { Prisma } from "@prisma/client";
 import { HttpError } from "./http-error";
 import { builtinRole } from "./role-rules";
-export async function resolveRole(
-  name: string,
-  tx: Prisma.TransactionClient = db,
-) {
+export async function resolveRole(name: string, tx: Prisma.TransactionClient = db) {
   await tx.$queryRaw`SELECT role FROM "Policy" WHERE role=${name} FOR SHARE`;
   const policy = await tx.policy.findUnique({ where: { role: name } });
   if (!policy?.active) throw new HttpError(400, "Choose an active role");

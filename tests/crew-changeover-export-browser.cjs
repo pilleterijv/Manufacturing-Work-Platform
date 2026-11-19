@@ -16,9 +16,7 @@ const origin = process.env.APP_URL,
 let browser, originalConfig;
 async function main() {
   assert(["localhost", "127.0.0.1"].includes(new URL(origin).hostname));
-  originalConfig = (
-    await db.setting.findUniqueOrThrow({ where: { key: "shifts" } })
-  ).value;
+  originalConfig = (await db.setting.findUniqueOrThrow({ where: { key: "shifts" } })).value;
   const pass = "Fixture " + randomUUID() + "!",
     hash = await hashPassword(pass),
     eq = [];
@@ -32,7 +30,7 @@ async function main() {
           line: "Line 1",
           name: "Press " + suffix,
         },
-      }),
+      })
     );
   const users = [];
   for (const role of ["Admin", "DL/TL", "Manager"]) {
@@ -50,7 +48,7 @@ async function main() {
             equipmentIds: [eq[0].id],
           },
         },
-      }),
+      })
     );
   }
   browser = await chromium.launch({
@@ -60,7 +58,7 @@ async function main() {
   async function req(c, path, body, status = 200) {
     const r = await c.request[body ? "post" : "get"](
       origin + path,
-      body ? { headers: { Origin: origin }, data: body } : {},
+      body ? { headers: { Origin: origin }, data: body } : {}
     );
     assert.equal(r.status(), status, await r.text());
     return r.json();
@@ -92,7 +90,7 @@ async function main() {
       action: "configureCrews",
       config: { timezone: "America/Chicago", ...plantCrewPreset() },
     },
-    403,
+    403
   );
   const standards = [];
   for (const workflow of ["leader", "process", "changeover"]) {
@@ -118,7 +116,7 @@ async function main() {
             },
           ],
         },
-      }),
+      })
     );
   }
   for (const crew of ["Shift 5", "Shift 4"]) {
@@ -151,10 +149,7 @@ async function main() {
     orderBy: { shiftStart: "asc" },
   });
   assert.equal(checks.length, 2);
-  assert.equal(
-    await db.shiftCheck.count({ where: { scheduleId: four.id } }),
-    0,
-  );
+  assert.equal(await db.shiftCheck.count({ where: { scheduleId: four.id } }), 0);
   assert.equal(checks[0].shiftStart.toISOString(), "2026-11-18T11:30:00.000Z");
   await req(leader, "/api/platform", {
     action: "audit",
@@ -193,11 +188,9 @@ async function main() {
       action: "run",
       standardId: standards[2].id,
       started: new Date(Date.now() - 1000).toISOString(),
-      responses: [
-        { stepId: "check", answer: true, photo: null, comment: "Fixture" },
-      ],
+      responses: [{ stepId: "check", answer: true, photo: null, comment: "Fixture" }],
     },
-    400,
+    400
   );
   const page = await leader.newPage(),
     errors = [];
@@ -215,31 +208,18 @@ async function main() {
       level: 1,
     })
     .waitFor();
-  await page
-    .getByLabel("Standard work", { exact: true })
-    .selectOption(standards[2].id);
-  await page
-    .getByLabel("Previous product / format", { exact: true })
-    .fill("Product A");
-  await page
-    .getByLabel("Next product / format", { exact: true })
-    .fill("Product B");
-  await page
-    .getByLabel("Changeover type", { exact: true })
-    .selectOption("Major");
+  await page.getByLabel("Standard work", { exact: true }).selectOption(standards[2].id);
+  await page.getByLabel("Previous product / format", { exact: true }).fill("Product A");
+  await page.getByLabel("Next product / format", { exact: true }).fill("Product B");
+  await page.getByLabel("Changeover type", { exact: true }).selectOption("Major");
   await page.getByRole("button", { name: "✓ Yes", exact: true }).click();
   await fs.mkdir("docs/screenshots/crew-changeover-flow", { recursive: true });
   await page.screenshot({
     path: "docs/screenshots/crew-changeover-flow/changeover.png",
     fullPage: true,
   });
-  await page
-    .getByRole("button", { name: "Complete changeover", exact: true })
-    .click();
-  await page
-    .getByRole("status")
-    .filter({ hasText: "Saved to the database." })
-    .waitFor();
+  await page.getByRole("button", { name: "Complete changeover", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "Saved to the database." }).waitFor();
   const saved = await db.record.findFirstOrThrow({
     where: { standardId: standards[2].id },
   });
@@ -265,34 +245,19 @@ async function main() {
     await book.xlsx.load(await r.body());
     return book;
   }
-  const book = await workbook(
-    manager,
-    "/api/export?section=leaders&equipment=" + eq[0].id,
-  );
+  const book = await workbook(manager, "/api/export?section=leaders&equipment=" + eq[0].id);
   const rows = book.getWorksheet("Leader handoff");
   assert.equal(rows.rowCount, 2);
   assert.equal(rows.getRow(2).getCell(3).value, "Room 1");
   assert.equal(rows.getRow(2).getCell(6).value, "100");
-  assert.equal(
-    book.getWorksheet("Task answers").getRow(2).getCell(7).value,
-    "Recorded detail",
-  );
+  assert.equal(book.getWorksheet("Task answers").getRow(2).getCell(7).value, "Recorded detail");
   assert(book.getWorksheet("Published checklists").rowCount > 1);
   assert(!JSON.stringify(book.model).includes(foreign.title));
-  const empty = await workbook(
-    manager,
-    "/api/export?section=leaders&equipment=" + eq[1].id,
-  );
+  const empty = await workbook(manager, "/api/export?section=leaders&equipment=" + eq[1].id);
   assert.equal(empty.getWorksheet("Task answers").rowCount, 1);
   assert.equal(empty.getWorksheet("Published checklists").rowCount, 1);
-  const co = await workbook(
-    manager,
-    "/api/export?section=changeovers&equipment=" + eq[0].id,
-  );
-  assert.equal(
-    co.getWorksheet("Changeovers").getRow(2).getCell(14).value,
-    "Product A",
-  );
+  const co = await workbook(manager, "/api/export?section=changeovers&equipment=" + eq[0].id);
+  assert.equal(co.getWorksheet("Changeovers").getRow(2).getCell(14).value, "Product A");
   const searched = await workbook(
     manager,
     "/api/export?section=leaders&equipment=" +
@@ -300,13 +265,10 @@ async function main() {
       "&person=" +
       users[1].id +
       "&search=" +
-      encodeURIComponent(eq[0].name),
+      encodeURIComponent(eq[0].name)
   );
   assert.equal(searched.getWorksheet("Task answers").rowCount, 2);
-  const otherPerson = await workbook(
-    manager,
-    "/api/export?section=leaders&person=" + users[0].id,
-  );
+  const otherPerson = await workbook(manager, "/api/export?section=leaders&person=" + users[0].id);
   assert.equal(otherPerson.getWorksheet("Task answers").rowCount, 1);
   await db.record.create({
     data: {
@@ -323,38 +285,29 @@ async function main() {
       },
     },
   });
-  const study = await workbook(
-    manager,
-    "/api/export?section=studies&equipment=" + eq[0].id,
-  );
+  const study = await workbook(manager, "/api/export?section=studies&equipment=" + eq[0].id);
   assert.equal(study.getWorksheet("Time observations").rowCount, 3);
   assert.equal(study.getWorksheet("Statistics").getRow(2).getCell(4).value, 3);
   assert.equal(study.getWorksheet("Leader handoff"), undefined);
   const productMatches = await req(
     leader,
-    "/api/platform?view=changeovers&search=" + encodeURIComponent("Product A"),
+    "/api/platform?view=changeovers&search=" + encodeURIComponent("Product A")
   );
   assert.equal(productMatches.records.length, 1);
   const productExport = await workbook(
     manager,
-    "/api/export?section=changeovers&search=" + encodeURIComponent("Product A"),
+    "/api/export?section=changeovers&search=" + encodeURIComponent("Product A")
   );
   assert.equal(productExport.getWorksheet("Changeovers").rowCount, 2);
-  const downtimeExport = await workbook(
-    manager,
-    "/api/export?section=downtime&equipment=" + eq[0].id,
-  );
+  const downtimeExport = await workbook(manager, "/api/export?section=downtime&equipment=" + eq[0].id);
   assert.deepEqual(
     downtimeExport.worksheets.map((s) => s.name),
-    ["Downtime events", "Downtime shifts"],
+    ["Downtime events", "Downtime shifts"]
   );
-  const ideasExport = await workbook(
-    manager,
-    "/api/export?section=ideas&equipment=" + eq[0].id,
-  );
+  const ideasExport = await workbook(manager, "/api/export?section=ideas&equipment=" + eq[0].id);
   assert.deepEqual(
     ideasExport.worksheets.map((s) => s.name),
-    ["Improvement ideas"],
+    ["Improvement ideas"]
   );
   for (const [status, owner] of [
     ["Open", users[2].id],
@@ -378,7 +331,7 @@ async function main() {
     });
   const personalIdeas = await workbook(
     manager,
-    "/api/export?section=ideas&focus=personal-open&equipment=" + eq[0].id,
+    "/api/export?section=ideas&focus=personal-open&equipment=" + eq[0].id
   );
   assert.equal(personalIdeas.getWorksheet("Improvement ideas").rowCount, 2);
   const adminPage = await admin.newPage();
@@ -398,11 +351,9 @@ async function main() {
         exact: true,
       })
       .count(),
-    0,
+    0
   );
-  await adminPage
-    .getByRole("combobox", { name: "Find an existing location", exact: true })
-    .fill("Tableting");
+  await adminPage.getByRole("combobox", { name: "Find an existing location", exact: true }).fill("Tableting");
   assert((await adminPage.getByRole("option").count()) > 0);
   await fs.mkdir("docs/screenshots/crew-changeover-flow", { recursive: true });
   await adminPage.screenshot({
@@ -425,18 +376,14 @@ async function main() {
     })
     .click();
   await adminPage.setViewportSize({ width: 820, height: 1180 });
-  assert(
-    await adminPage.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  );
+  assert(await adminPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await adminPage.screenshot({
     path: "docs/screenshots/crew-changeover-flow/roster-tablet.png",
     fullPage: true,
   });
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: confirmed roster setup, per-user crew requirements, off-day alert suppression, scoped changeover UI completion, immutable context, readable filtered Excel and empty definitions, foreign department isolation, compact locations and tablet roster.",
+    "PASS: confirmed roster setup, per-user crew requirements, off-day alert suppression, scoped changeover UI completion, immutable context, readable filtered Excel and empty definitions, foreign department isolation, compact locations and tablet roster."
   );
 }
 main()

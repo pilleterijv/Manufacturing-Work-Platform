@@ -8,11 +8,7 @@ const { db } = require("../lib/db.ts"),
   { hashPassword } = require("../lib/security.ts"),
   { checkShiftWork } = require("../lib/shift-monitor.ts"),
   { deliverShiftEmails } = require("../lib/email-delivery.ts"),
-  {
-    processSqlRows,
-    companySqlConfig,
-    pollCompanySql,
-  } = require("../lib/company-sql.ts");
+  { processSqlRows, companySqlConfig, pollCompanySql } = require("../lib/company-sql.ts");
 const origin = process.env.APP_URL || "http://localhost:3000",
   users = [],
   equipment = [],
@@ -22,14 +18,8 @@ const origin = process.env.APP_URL || "http://localhost:3000",
 let browser, reason, photoId;
 async function main() {
   assert(["localhost", "127.0.0.1"].includes(new URL(origin).hostname));
-  assert(
-    !process.env.SMTP_HOST,
-    "Tests require email delivery to be unconfigured",
-  );
-  assert(
-    !process.env.COMPANY_SQL_SERVER,
-    "Tests must not use a company SQL connection",
-  );
+  assert(!process.env.SMTP_HOST, "Tests require email delivery to be unconfigured");
+  assert(!process.env.COMPANY_SQL_SERVER, "Tests must not use a company SQL connection");
   const suffix = randomUUID().slice(0, 8),
     password = `Connected ${randomUUID()}!`,
     hash = await hashPassword(password);
@@ -50,7 +40,7 @@ async function main() {
           mustChange: false,
           workspaceAccess: { mode: "all", locations: [], equipmentIds: [] },
         },
-      }),
+      })
     );
   for (const name of ["Connected packing station", "Connected machining cell"])
     equipment.push(
@@ -62,7 +52,7 @@ async function main() {
           area: "Packing",
           line: "Line A",
         },
-      }),
+      })
     );
   reason = await db.downtimeReason.create({
     data: { name: "Automatic machine stop " + suffix },
@@ -87,7 +77,7 @@ async function main() {
           ],
           created,
         },
-      }),
+      })
     );
   browser = await chromium.launch({
     executablePath: "/usr/bin/chromium",
@@ -131,15 +121,9 @@ async function main() {
     action: "run",
     standardId: standards[0].id,
     started: new Date().toISOString(),
-    responses: [
-      { stepId: "check", answer: true, photo: null, comment: "Test" },
-    ],
+    responses: [{ stepId: "check", answer: true, photo: null, comment: "Test" }],
   };
-  assert.equal(
-    (await post(operator, "/api/platform", run)).status,
-    400,
-    "Required photo cannot be bypassed",
-  );
+  assert.equal((await post(operator, "/api/platform", run)).status, 400, "Required photo cannot be bypassed");
   const image = await require("sharp")({
     create: { width: 80, height: 50, channels: 3, background: "#b5c9ac" },
   })
@@ -153,19 +137,19 @@ async function main() {
   assert.equal(
     (await manager.request.get(origin + "/api/photos/" + photoId)).status(),
     403,
-    "Unlinked photos remain private",
+    "Unlinked photos remain private"
   );
   run.responses[0].photo = photoId;
   assert.equal((await post(operator, "/api/platform", run)).status, 200);
   assert.equal(
     (await manager.request.get(origin + "/api/photos/" + photoId)).status(),
     200,
-    "Managers can view saved task evidence",
+    "Managers can view saved task evidence"
   );
   assert.equal(
     (await other.request.get(origin + "/api/photos/" + photoId)).status(),
     403,
-    "Other operators cannot read evidence",
+    "Other operators cannot read evidence"
   );
   // Historical fixtures prove one station completion and per-person requirements.
   const config = {
@@ -177,8 +161,7 @@ async function main() {
       ],
     },
     now = new Date("2026-11-01T08:00:00Z");
-  const serverShift = (await get(admin, "/api/shift-schedules")).config
-    .shifts[0].name;
+  const serverShift = (await get(admin, "/api/shift-schedules")).config.shifts[0].name;
   const requirement = {
     managerIds: [users[1].id],
     assigneeIds: [],
@@ -195,7 +178,7 @@ async function main() {
         ...requirement,
       })
     ).status,
-    403,
+    403
   );
   for (const standard of standards) {
     r = await post(admin, "/api/shift-schedules", {
@@ -240,10 +223,7 @@ async function main() {
     },
   });
   await checkShiftWork(new Date(+now - 1));
-  assert.equal(
-    await db.shiftCheck.count({ where: { scheduleId: { in: schedules } } }),
-    0,
-  );
+  assert.equal(await db.shiftCheck.count({ where: { scheduleId: { in: schedules } } }), 0);
   await checkShiftWork(now);
   await checkShiftWork(now);
   let checks = await db.shiftCheck.findMany({
@@ -255,20 +235,14 @@ async function main() {
     await db.notification.count({
       where: { userId: users[1].id, kind: "missed-work" },
     }),
-    1,
+    1
   );
-  assert.equal(
-    await db.emailDelivery.count({ where: { scheduleId: { in: schedules } } }),
-    1,
-  );
+  assert.equal(await db.emailDelivery.count({ where: { scheduleId: { in: schedules } } }), 1);
   const messages = await get(manager, "/api/operations?view=summary");
   assert(
     messages.notifications.some(
-      (n) =>
-        n.kind === "missed-work" &&
-        n.ideaId === null &&
-        n.message.includes("Missed cleaning check"),
-    ),
+      (n) => n.kind === "missed-work" && n.ideaId === null && n.message.includes("Missed cleaning check")
+    )
   );
   // A completion after the deadline does not erase the missed-shift record.
   await db.record.create({
@@ -289,7 +263,7 @@ async function main() {
     await db.notification.count({
       where: { userId: users[1].id, kind: "missed-work" },
     }),
-    1,
+    1
   );
   const per = await db.workSchedule.create({
     data: {
@@ -310,10 +284,7 @@ async function main() {
   });
   schedules.push(per.id);
   await checkShiftWork(now);
-  assert.equal(
-    await db.shiftCheck.count({ where: { scheduleId: per.id, missed: true } }),
-    1,
-  );
+  assert.equal(await db.shiftCheck.count({ where: { scheduleId: per.id, missed: true } }), 1);
   const off = await db.workSchedule.create({
     data: {
       ...per,
@@ -331,12 +302,9 @@ async function main() {
     await db.notification.count({
       where: { userId: users[1].id, kind: "missed-work" },
     }),
-    2,
+    2
   );
-  assert.equal(
-    await db.emailDelivery.count({ where: { scheduleId: off.id } }),
-    0,
-  );
+  assert.equal(await db.emailDelivery.count({ where: { scheduleId: off.id } }), 0);
   // SMTP retries/outbox are tested with a local message stream, never external mail.
   const previousEnv = {
     SMTP_HOST: process.env.SMTP_HOST,
@@ -425,7 +393,7 @@ async function main() {
         where: { id: cancelEmail.id },
       })
     ).status,
-    "Cancelled",
+    "Cancelled"
   );
   assert.equal(
     (
@@ -438,7 +406,7 @@ async function main() {
         notifyEmail: false,
       })
     ).status,
-    409,
+    409
   );
   // Authenticated incoming transitions, retries, conflict safety and SQL processing.
   assert.equal(
@@ -448,7 +416,7 @@ async function main() {
         name: "Unauthorized",
       })
     ).status,
-    403,
+    403
   );
   r = await post(admin, "/api/integrations", {
     action: "createSource",
@@ -472,16 +440,13 @@ async function main() {
           reasonId: reason.id,
         })
       ).status,
-      200,
+      200
     );
   const call = async (data) => {
-    const rr = await external.request.post(
-      origin + "/api/integrations/events",
-      {
-        headers: { Authorization: "Bearer " + token },
-        data,
-      },
-    );
+    const rr = await external.request.post(origin + "/api/integrations/events", {
+      headers: { Authorization: "Bearer " + token },
+      data,
+    });
     return { status: rr.status(), body: await rr.json() };
   };
   assert.equal(
@@ -491,7 +456,7 @@ async function main() {
         data: { padding: "x".repeat(70 * 1024) },
       })
     ).status(),
-    413,
+    413
   );
   assert.equal(
     (
@@ -499,7 +464,7 @@ async function main() {
         data: {},
       })
     ).status(),
-    401,
+    401
   );
   const startTime = new Date(Date.now() - 600000),
     event = {
@@ -511,20 +476,14 @@ async function main() {
   const concurrent = await Promise.all([call(event), call(event)]);
   assert(
     concurrent.every((r) => r.status === 200),
-    JSON.stringify(
-      concurrent.map((r) => ({ status: r.status, error: r.body.error })),
-    ),
+    JSON.stringify(concurrent.map((r) => ({ status: r.status, error: r.body.error })))
   );
   assert.equal(concurrent.filter((r) => r.body.duplicate).length, 1);
   const automatic = await db.downtime.findFirstOrThrow({
     where: { equipmentId: equipment[0].id, endedAt: null },
   });
   assert.equal(automatic.externalSourceId, sourceId);
-  assert.equal(
-    (await call({ ...event, state: "running" })).status,
-    409,
-    "ID reuse must not rewrite history",
-  );
+  assert.equal((await call({ ...event, state: "running" })).status, 409, "ID reuse must not rewrite history");
   assert.equal(
     (
       await call({
@@ -533,13 +492,12 @@ async function main() {
         occurredAt: new Date(+startTime - 1000).toISOString(),
       })
     ).status,
-    409,
+    409
   );
   assert.equal(
-    (await post(admin, "/api/operations", { action: "stop", id: automatic.id }))
-      .status,
+    (await post(admin, "/api/operations", { action: "stop", id: automatic.id })).status,
     409,
-    "Automatic timers cannot be overwritten manually while enabled",
+    "Automatic timers cannot be overwritten manually while enabled"
   );
   let live = await get(operator, "/api/operations?view=live");
   assert(live.active.find((e) => e.id === automatic.id).integrationManaged);
@@ -552,13 +510,11 @@ async function main() {
         occurredAt: new Date(+startTime + 120000).toISOString(),
       })
     ).status,
-    200,
+    200
   );
   assert.equal(
-    (
-      await db.downtime.findUniqueOrThrow({ where: { id: automatic.id } })
-    ).endedAt.toISOString(),
-    new Date(+startTime + 120000).toISOString(),
+    (await db.downtime.findUniqueOrThrow({ where: { id: automatic.id } })).endedAt.toISOString(),
+    new Date(+startTime + 120000).toISOString()
   );
   await processSqlRows(sourceId, [
     {
@@ -577,9 +533,8 @@ async function main() {
     },
   ]);
   assert.equal(
-    (await db.integrationSource.findUniqueOrThrow({ where: { id: sourceId } }))
-      .sqlCursor,
-    "9007199254740994",
+    (await db.integrationSource.findUniqueOrThrow({ where: { id: sourceId } })).sqlCursor,
+    "9007199254740994"
   );
   await assert.rejects(() =>
     processSqlRows(sourceId, [
@@ -590,12 +545,11 @@ async function main() {
         State: "DOWN",
         OccurredAt: new Date(+startTime + 300000),
       },
-    ]),
+    ])
   );
   assert.equal(
-    (await db.integrationSource.findUniqueOrThrow({ where: { id: sourceId } }))
-      .sqlCursor,
-    "9007199254740994",
+    (await db.integrationSource.findUniqueOrThrow({ where: { id: sourceId } })).sqlCursor,
+    "9007199254740994"
   );
   const sqlVars = [
     "COMPANY_SQL_SERVER",
@@ -605,9 +559,7 @@ async function main() {
     "COMPANY_SQL_SOURCE_ID",
     "COMPANY_SQL_VIEW",
   ];
-  const priorSql = Object.fromEntries(
-    sqlVars.map((key) => [key, process.env[key]]),
-  );
+  const priorSql = Object.fromEntries(sqlVars.map((key) => [key, process.env[key]]));
   try {
     Object.assign(process.env, {
       COMPANY_SQL_SERVER: "localhost",
@@ -625,7 +577,7 @@ async function main() {
           where: { id: sourceId },
         })
       ).sqlCursor,
-      "9007199254740994",
+      "9007199254740994"
     );
     assert.equal(
       (
@@ -633,7 +585,7 @@ async function main() {
           where: { key: "company-sql-health" },
         })
       ).value.ok,
-      false,
+      false
     );
   } finally {
     for (const [key, value] of Object.entries(priorSql))
@@ -659,15 +611,8 @@ async function main() {
     active: false,
   });
   live = await get(admin, "/api/operations?view=live");
-  assert.equal(
-    live.active.find((e) => e.id === active.id).integrationManaged,
-    false,
-  );
-  assert.equal(
-    (await post(admin, "/api/operations", { action: "stop", id: active.id }))
-      .status,
-    200,
-  );
+  assert.equal(live.active.find((e) => e.id === active.id).integrationManaged, false);
+  assert.equal((await post(admin, "/api/operations", { action: "stop", id: active.id })).status, 200);
   await post(admin, "/api/integrations", {
     action: "sourceState",
     id: sourceId,
@@ -693,9 +638,7 @@ async function main() {
     .locator("nav")
     .getByRole("button", { name: /Shift requirements$/ })
     .click();
-  await page
-    .getByRole("heading", { name: "Scheduled standard work", exact: true })
-    .waitFor();
+  await page.getByRole("heading", { name: "Scheduled standard work", exact: true }).waitFor();
   await page.screenshot({
     path: "docs/screenshots/connected/shift-requirements.png",
     fullPage: true,
@@ -704,9 +647,7 @@ async function main() {
     .locator("nav")
     .getByRole("button", { name: /Integrations$/ })
     .click();
-  await page
-    .getByRole("heading", { name: "Mapped machines", exact: true })
-    .waitFor();
+  await page.getByRole("heading", { name: "Mapped machines", exact: true }).waitFor();
   await page.screenshot({
     path: "docs/screenshots/connected/integrations.png",
     fullPage: true,
@@ -717,16 +658,13 @@ async function main() {
     .locator("nav")
     .getByRole("button", { name: /Notifications/ })
     .click();
-  await mp
-    .getByRole("button", { name: "Open standard work", exact: true })
-    .first()
-    .waitFor();
+  await mp.getByRole("button", { name: "Open standard work", exact: true }).first().waitFor();
   await mp.screenshot({
     path: "docs/screenshots/connected/manager-alerts.png",
     fullPage: true,
   });
   console.log(
-    "PASS: required photos, manager evidence privacy, shift deadlines/per-person checks, deduplicated alerts, channels, local email stream/retries, source auth/rotation, idempotent real-time transitions, manual conflict protection, SQL cursor precision/retry and production UI.",
+    "PASS: required photos, manager evidence privacy, shift deadlines/per-person checks, deduplicated alerts, channels, local email stream/retries, source auth/rotation, idempotent real-time transitions, manual conflict protection, SQL cursor precision/retry and production UI."
   );
 }
 main()
@@ -761,15 +699,7 @@ main()
     await db.integrationSource.deleteMany({ where: { id: { in: sources } } });
     await db.record.deleteMany({ where: { userId: { in: ids } } });
     if (photoId) {
-      await fs
-        .unlink(
-          require("node:path").join(
-            process.cwd(),
-            "uploads",
-            photoId + ".webp",
-          ),
-        )
-        .catch(() => {});
+      await fs.unlink(require("node:path").join(process.cwd(), "uploads", photoId + ".webp")).catch(() => {});
       await db.photo.deleteMany({ where: { id: photoId } });
     }
     await db.standard.deleteMany({
@@ -779,6 +709,8 @@ main()
       where: { id: { in: equipment.map((e) => e.id) } },
     });
     if (reason) await db.downtimeReason.delete({ where: { id: reason.id } });
+    await db.notification.deleteMany({ where: { userId: { in: ids }, kind: "assignment" } });
+    await db.assignmentDelivery.deleteMany({ where: { userId: { in: ids } } });
     await db.user.deleteMany({ where: { id: { in: ids } } });
     await db.$disconnect();
   });

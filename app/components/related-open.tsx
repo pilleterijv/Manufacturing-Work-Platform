@@ -10,11 +10,7 @@ export default function RelatedOpen({ equipment }: { equipment: string }) {
     setError("");
     if (!equipment) return;
     const c = new AbortController();
-    api(
-      "/api/related-open?equipment=" + encodeURIComponent(equipment),
-      undefined,
-      c.signal,
-    )
+    api("/api/related-open?equipment=" + encodeURIComponent(equipment), undefined, c.signal)
       .then(setData)
       .catch((e) => {
         if (!c.signal.aborted) setError(e.message);
@@ -36,8 +32,8 @@ export default function RelatedOpen({ equipment }: { equipment: string }) {
           ) : (
             <>
               <p>
-                These issues are already open. Review them before reporting the
-                same condition. Up to 10 of each type are shown.
+                These issues are already open. Review them before reporting the same condition. Up to 10 of
+                each type are shown.
               </p>
               {[
                 ["Defect reporting", data.defects],
@@ -48,13 +44,11 @@ export default function RelatedOpen({ equipment }: { equipment: string }) {
                     key={r.id}
                     type="button"
                     className="outline"
-                    onClick={() =>
-                      openWorkflow({ tab, filters: { item: r.id } })
-                    }
+                    onClick={() => openWorkflow({ tab, filters: { item: r.id } })}
                   >
                     {r.reference || "Defect"}: {r.title}
                   </button>
-                )),
+                ))
               )}
             </>
           )}

@@ -11,7 +11,7 @@ export const downtimeAccessSchema = z
             // null grants the department; a string (including empty) grants one area.
             area: z.string().max(100).nullable(),
           })
-          .strict(),
+          .strict()
       )
       .max(200),
     equipmentIds: z.array(z.string().uuid()).max(1000),
@@ -29,11 +29,7 @@ export type LocationEquipment = {
   department: string;
   area: string;
 };
-export function allowedDowntimeEquipment(
-  role: string,
-  raw: unknown,
-  e: LocationEquipment,
-) {
+export function allowedDowntimeEquipment(role: string, raw: unknown, e: LocationEquipment) {
   if (role === "Admin") return true;
   const parsed = downtimeAccessSchema.safeParse(raw);
   if (!parsed.success) return false;
@@ -42,10 +38,7 @@ export function allowedDowntimeEquipment(
     a.mode === "all" ||
     a.equipmentIds.includes(e.id) ||
     a.locations.some(
-      (l) =>
-        l.plant === e.plant &&
-        l.department === e.department &&
-        (l.area === null || l.area === e.area),
+      (l) => l.plant === e.plant && l.department === e.department && (l.area === null || l.area === e.area)
     )
   );
 }

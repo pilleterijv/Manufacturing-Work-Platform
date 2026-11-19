@@ -14,9 +14,7 @@ export default function SectionFiltersBar({
 }) {
   const settings = searchSettings(section);
   const [draft, setDraft] = useState(value),
-    [people, setPeople] = useState<
-      { id: string; name: string; username: string; active: boolean }[]
-    >([]),
+    [people, setPeople] = useState<{ id: string; name: string; username: string; active: boolean }[]>([]),
     [name, setName] = useState(""),
     [error, setError] = useState("");
   const [options, setOptions] = useState<SearchChoice[]>([]);
@@ -36,10 +34,9 @@ export default function SectionFiltersBar({
     const controller = new AbortController();
     const timer = setTimeout(() => {
       api(
-        "/api/section-options?" +
-          new URLSearchParams({ section, q: draft.search }),
+        "/api/section-options?" + new URLSearchParams({ section, q: draft.search }),
         undefined,
-        controller.signal,
+        controller.signal
       )
         .then((r) => !controller.signal.aborted && setOptions(r.options))
         .catch((e) => {
@@ -63,8 +60,7 @@ export default function SectionFiltersBar({
         onSubmit={(e) => {
           e.preventDefault();
           if (name.trim() && !draft.person) return;
-          if (document.activeElement instanceof HTMLElement)
-            document.activeElement.blur();
+          if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
           onApply(draft);
         }}
       >
@@ -79,12 +75,7 @@ export default function SectionFiltersBar({
         <SearchPicker
           label={settings.personLabel!}
           selection={draft.person}
-          value={
-            name ||
-            (selectedPerson
-              ? `${selectedPerson.name} (${selectedPerson.username})`
-              : "")
-          }
+          value={name || (selectedPerson ? `${selectedPerson.name} (${selectedPerson.username})` : "")}
           onChange={(text) => {
             setName(text);
             setDraft((d) => ({ ...d, person: "" }));
@@ -119,13 +110,12 @@ export default function SectionFiltersBar({
       </form>
       {error && <p role="alert">{error}</p>}
       <p className="small muted">
-        {settings.help} {settings.personHelp} Filters and exports stay within
-        your permitted departments and areas.
+        {settings.help} {settings.personHelp} Filters and exports stay within your permitted departments and
+        areas.
       </p>
       {!!name.trim() && !draft.person && (
         <p className="small" role="status">
-          Choose a person from the suggestions, or clear the name to search
-          without a person filter.
+          Choose a person from the suggestions, or clear the name to search without a person filter.
         </p>
       )}
     </section>

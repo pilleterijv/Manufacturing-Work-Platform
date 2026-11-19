@@ -28,3 +28,9 @@ Missing emails or SMTP failures remain pending with bounded backoff, then become
 ## Validation
 
 Meaningful checks cover account/request names, compound names, legacy compatibility, directory search, same-ID identity, assignment creation/reassignment, current-email lookup, recipient disablement/revocation, duplicate/retry behavior, missing-email recovery, charts and tablet layout. Migration checks use randomly named temporary databases and preserve existing accounts/records on upgrade. The existing floor workflow and security suites are also run before publishing. No persistent plant database is migrated by these tests.
+
+## Source readability
+
+Project formatting is defined in `.prettierrc.json`: 110-character lines, two-space indentation and trailing commas only where ES5 permits them. Short calls stay on one line; blocks and longer expressions retain clear scope/indentation. The pass covers TypeScript/React, Node scripts and browser/unit tests, not generated dependencies or already-applied SQL migrations. The timer interval now fits on one line without changing timing/cleanup behavior. Source line count across the 233 source/test files dropped from about 49,165 to 42,258; this is readability/formatting, not removal of application logic or a runtime performance optimization.
+
+Verified before publishing: TypeScript, 85 unit tests, production build, fresh/001/003 migration upgrades, core login/submission/export browser workflows, custom-role boundaries, floor-role/tablet usability, security/media checks and scoped submission history. A comparison of the emitted production-code syntax trees across 178 files (normalizing parentheses and equivalent adjacent JSX text chunks) found no semantic structure differences from the pre-format checkpoint. The mail regression uses `.invalid` fixture addresses and a fake transport; live SMTP/inbox delivery still requires company configuration and a pilot test.

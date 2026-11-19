@@ -22,15 +22,8 @@ test("section dashboards distinguish whole-history counts from capped loaded row
     equipment: [{ id: "machine", name: "Packing station" }],
   });
   assert.equal(snapshot.metrics[0].value, 501);
-  assert.equal(
-    snapshot.metrics.find((m) => m.label === "Observations shown")?.value,
-    2,
-  );
-  assert.equal(
-    snapshot.metrics.find((m) => m.label === "Mean cycle shown (seconds)")
-      ?.value,
-    5,
-  );
+  assert.equal(snapshot.metrics.find((m) => m.label === "Observations shown")?.value, 2);
+  assert.equal(snapshot.metrics.find((m) => m.label === "Mean cycle shown (seconds)")?.value, 5);
   assert.equal(snapshot.rows.length, 1);
   assert.equal(snapshot.rows[0].title, "Packing observation");
   assert.equal(snapshot.rows[0].equipment, "Packing station");
@@ -68,14 +61,7 @@ test("operational sections offer both views without adding fake views to account
   assert(!hasSectionViews("constructor"));
 });
 test("database failures expose actionable fixed codes without SQL, URLs or credentials", () => {
-  for (const code of [
-    "P1001",
-    "P2024",
-    "ECONNREFUSED",
-    "P2021",
-    "42P01",
-    "28P01",
-  ]) {
+  for (const code of ["P1001", "P2024", "ECONNREFUSED", "P2021", "42P01", "28P01"]) {
     const result = serviceIssue({
       code,
       message: "postgresql://user:secret@private/db SQL confidential",

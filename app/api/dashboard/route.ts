@@ -17,16 +17,12 @@ export async function GET(req: Request) {
         orderBy: { department: "asc" },
         select: { department: true },
       });
-      if (!first)
-        throw new HttpError(
-          400,
-          "Add department equipment before opening its dashboard",
-        );
+      if (!first) throw new HttpError(400, "Add department equipment before opening its dashboard");
       params.set("department", first.department);
     }
     if (params.get("format") === "xlsx") await requireUser("export");
     return await withReportSlot(async () =>
-      reportResponse(await leadershipReport(params, user), params, req.signal),
+      reportResponse(await leadershipReport(params, user), params, req.signal)
     );
   } catch (error) {
     return failure(error);

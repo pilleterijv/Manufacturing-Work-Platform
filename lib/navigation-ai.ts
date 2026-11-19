@@ -5,7 +5,7 @@ export async function answerNavigationQuestion(
   question: string,
   topics: HelpTopic[],
   config: { model: string; apiKey: string },
-  request: typeof fetch = fetch,
+  request: typeof fetch = fetch
 ) {
   if (!config.model.trim() || config.model.length > 150 || !config.apiKey)
     throw Error("AI is not configured");

@@ -1,12 +1,5 @@
 import { db } from "@/lib/db";
-import {
-  grants,
-  requireUser,
-  jsonBody,
-  failure,
-  HttpError,
-  limit,
-} from "@/lib/security";
+import { grants, requireUser, jsonBody, failure, HttpError, limit } from "@/lib/security";
 import { equipmentIds } from "@/lib/location-access";
 import { readFilters } from "@/lib/filters";
 import { queueOverdueReminders, reminderConfig } from "@/lib/reminders";
@@ -31,9 +24,7 @@ export async function GET(req: Request) {
             ? { userId: person }
             : {}
           : { userId: u.id }),
-        ...(search
-          ? { message: { contains: search, mode: "insensitive" } }
-          : {}),
+        ...(search ? { message: { contains: search, mode: "insensitive" } } : {}),
       },
       orderBy: { createdAt: "desc" },
       take: 100,
@@ -62,13 +53,8 @@ export async function POST(req: Request) {
     }
     if (b.action === "channels") {
       if (u.role !== "Admin")
-        throw new HttpError(
-          403,
-          "Only Admin can configure company notification channels",
-        );
-      const value = z
-        .object({ inApp: z.boolean(), email: z.boolean() })
-        .parse(b);
+        throw new HttpError(403, "Only Admin can configure company notification channels");
+      const value = z.object({ inApp: z.boolean(), email: z.boolean() }).parse(b);
       await db.setting.upsert({
         where: { key: "overdue-channels" },
         create: { key: "overdue-channels", value },
@@ -78,10 +64,7 @@ export async function POST(req: Request) {
     }
     if (b.action === "send") {
       if (!["Admin", "Manager", "DL/TL"].includes(u.role))
-        throw new HttpError(
-          403,
-          "Only department managers and supervisors can send department reminders",
-        );
+        throw new HttpError(403, "Only department managers and supervisors can send department reminders");
       await limit("reminders:" + u.id, 10, 3600);
       const person = z
         .string()

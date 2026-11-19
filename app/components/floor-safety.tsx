@@ -1,9 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 export function confirmDraftChange() {
-  return window.dispatchEvent(
-    new Event("floorwork:discard", { cancelable: true }),
-  );
+  return window.dispatchEvent(new Event("floorwork:discard", { cancelable: true }));
 }
 export function useFloorSafety() {
   const dirty = useRef(new Set<HTMLFormElement>()),
@@ -12,14 +10,10 @@ export function useFloorSafety() {
     [status, setStatus] = useState("");
   useEffect(() => {
     const update = () => {
-      for (const f of dirty.current)
-        if (!f.isConnected) dirty.current.delete(f);
+      for (const f of dirty.current) if (!f.isConnected) dirty.current.delete(f);
       setChanged(dirty.current.size > 0);
     };
-    const form = (e: Event) =>
-      (e.target as HTMLElement)?.closest(
-        ".page form",
-      ) as HTMLFormElement | null;
+    const form = (e: Event) => (e.target as HTMLElement)?.closest(".page form") as HTMLFormElement | null;
     const change = (e: Event) => {
       const f = form(e);
       if (f && !f.hasAttribute("data-no-draft")) {
@@ -53,9 +47,7 @@ export function useFloorSafety() {
       if (state === "failed") {
         pending.current.clear();
         update();
-        setStatus(
-          "Save not confirmed. Your entries remain here; check the error before retrying.",
-        );
+        setStatus("Save not confirmed. Your entries remain here; check the error before retrying.");
       }
     };
     const leave = (e: BeforeUnloadEvent) => {
@@ -68,11 +60,7 @@ export function useFloorSafety() {
     document.addEventListener("input", change);
     const discard = (e: Event) => {
       const button = (e.target as HTMLElement)?.closest(".page button");
-      if (
-        !button ||
-        !/^\s*(Cancel\b|Close editor\b)/i.test(button.textContent || "")
-      )
-        return;
+      if (!button || !/^\s*(Cancel\b|Close editor\b)/i.test(button.textContent || "")) return;
       if ([...dirty.current].some((f) => f.isConnected)) {
         if (!window.confirm("Discard your unsaved entries?")) {
           e.preventDefault();
@@ -86,10 +74,7 @@ export function useFloorSafety() {
       }
     };
     const discardRequest = (e: Event) => {
-      if (
-        [...dirty.current].some((f) => f.isConnected) &&
-        !window.confirm("Discard your unsaved entries?")
-      ) {
+      if ([...dirty.current].some((f) => f.isConnected) && !window.confirm("Discard your unsaved entries?")) {
         e.preventDefault();
         return;
       }
@@ -101,14 +86,8 @@ export function useFloorSafety() {
     window.addEventListener("floorwork:discard", discardRequest);
     document.addEventListener("click", discard, true);
     const buttonChange = (e: Event) => {
-      const b = (e.target as HTMLElement)?.closest(
-        "button",
-      ) as HTMLButtonElement | null;
-      if (
-        b?.type === "button" &&
-        !/^\s*(Cancel\b|Close\b|Refresh\b)/i.test(b.textContent || "")
-      )
-        change(e);
+      const b = (e.target as HTMLElement)?.closest("button") as HTMLButtonElement | null;
+      if (b?.type === "button" && !/^\s*(Cancel\b|Close\b|Refresh\b)/i.test(b.textContent || "")) change(e);
     };
     document.addEventListener("click", buttonChange);
     document.addEventListener("change", change);
@@ -133,9 +112,7 @@ export function useFloorSafety() {
     status,
     confirmLeave: () =>
       ![...dirty.current].some((f) => f.isConnected) ||
-      window.confirm(
-        "You have unsaved entries. Leave this form and discard them?",
-      ),
+      window.confirm("You have unsaved entries. Leave this form and discard them?"),
     clear: () => {
       dirty.current.clear();
       pending.current.clear();

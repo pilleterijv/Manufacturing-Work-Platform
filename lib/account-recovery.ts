@@ -2,23 +2,13 @@ import { randomBytes, createHash } from "node:crypto";
 import nodemailer from "nodemailer";
 import { db } from "./db";
 import { configuredOrigin } from "./request-policy";
-export const resetDigest = (s: string) =>
-  createHash("sha256").update(s).digest("hex");
+export const resetDigest = (s: string) => createHash("sha256").update(s).digest("hex");
 export async function sendRecovery(
   userId: string,
-  transportOverride?: Pick<
-    import("nodemailer").Transporter,
-    "sendMail" | "close"
-  >,
+  transportOverride?: Pick<import("nodemailer").Transporter, "sendMail" | "close">
 ) {
   const u = await db.user.findUnique({ where: { id: userId } });
-  if (
-    !u?.active ||
-    !u.email ||
-    !process.env.SMTP_HOST ||
-    !process.env.SMTP_FROM
-  )
-    return false;
+  if (!u?.active || !u.email || !process.env.SMTP_HOST || !process.env.SMTP_FROM) return false;
   const origin = configuredOrigin(process.env.APP_ORIGIN),
     token = randomBytes(32).toString("hex"),
     tokenHash = resetDigest(token);

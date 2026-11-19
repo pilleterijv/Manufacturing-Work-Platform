@@ -5,14 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import { stats, capabilities, roles, type Capability } from "@/lib/rules";
 import type { Data, Step, Cycle, Standard } from "@/lib/workspace-types";
 import { api } from "@/lib/client-api";
-import {
-  Field,
-  Submit,
-  fmt,
-  Metric,
-  History,
-  EquipmentSelect,
-} from "../shared";
+import { Field, Submit, fmt, Metric, History, EquipmentSelect } from "../shared";
 type Save = (body: unknown) => Promise<boolean>;
 export default function Content({
   data,
@@ -29,9 +22,7 @@ export default function Content({
 }) {
   const [playing, setPlaying] = useState(""),
     [editing, setEditing] = useState(""),
-    [media, setMedia] = useState<
-      { id: string; kind: "photo" | "video"; caption: string }[]
-    >([]),
+    [media, setMedia] = useState<{ id: string; kind: "photo" | "video"; caption: string }[]>([]),
     [photo, setPhoto] = useState<{ src: string; index: number } | null>(null),
     [uploading, setUploading] = useState(false),
     [error, setError] = useState("");
@@ -62,8 +53,7 @@ export default function Content({
     }
     setUploading(true);
     try {
-      if (file.size > 32 * 1024 * 1024)
-        throw Error("Video must be under 32 MB");
+      if (file.size > 32 * 1024 * 1024) throw Error("Video must be under 32 MB");
       const r = await uploadVideo(file);
       setMedia((m) => [...m, { id: r.id, kind: "video", caption: "" }]);
     } catch (e) {
@@ -76,8 +66,7 @@ export default function Content({
   return (
     <>
       <p className="small muted">
-        {items.length} matching{" "}
-        {kind === "video" ? "training resources" : "troubleshooting guides"}
+        {items.length} matching {kind === "video" ? "training resources" : "troubleshooting guides"}
       </p>
       <div className="content-grid">
         {items.map((c) => (
@@ -103,8 +92,7 @@ export default function Content({
                 </button>
               ))}
             <span className="eyebrow">
-              {data.equipment.find((e) => e.id === c.equipmentId)?.name ??
-                "ALL EQUIPMENT"}
+              {data.equipment.find((e) => e.id === c.equipmentId)?.name ?? "ALL EQUIPMENT"}
             </span>
             <h2>{c.title}</h2>
             {(kind === "guide" || kind === "video") && (
@@ -113,11 +101,7 @@ export default function Content({
                 {c.media?.map((m) => (
                   <figure key={m.id}>
                     {m.kind === "photo" ? (
-                      <img
-                        className="photo-preview"
-                        src={`/api/photos/${m.id}`}
-                        alt={m.caption || c.title}
-                      />
+                      <img className="photo-preview" src={`/api/photos/${m.id}`} alt={m.caption || c.title} />
                     ) : (
                       <video
                         controls
@@ -142,21 +126,14 @@ export default function Content({
                   setTimeout(() => {
                     const f = formRef.current;
                     if (!f) return;
-                    (f.elements.namedItem("title") as HTMLInputElement).value =
-                      c.title;
-                    (
-                      f.elements.namedItem("body") as HTMLTextAreaElement
-                    ).value = c.body;
-                    (
-                      f.elements.namedItem("equipmentId") as HTMLSelectElement
-                    ).value = c.equipmentId ?? "";
+                    (f.elements.namedItem("title") as HTMLInputElement).value = c.title;
+                    (f.elements.namedItem("body") as HTMLTextAreaElement).value = c.body;
+                    (f.elements.namedItem("equipmentId") as HTMLSelectElement).value = c.equipmentId ?? "";
                     f.scrollIntoView({ behavior: "smooth" });
                   }, 0);
                 }}
               >
-                {kind === "video"
-                  ? "Edit training video and media"
-                  : "Edit guide and media"}
+                {kind === "video" ? "Edit training video and media" : "Edit guide and media"}
               </button>
             )}
             {manage && (
@@ -165,7 +142,7 @@ export default function Content({
                 onClick={() => {
                   if (
                     confirm(
-                      "Remove this resource from active use? Stored evidence and completed records will remain.",
+                      "Remove this resource from active use? Stored evidence and completed records will remain."
                     )
                   )
                     void save({ action: "archive", id: c.id });
@@ -189,9 +166,7 @@ export default function Content({
       )}
       {manage && (
         <section className="panel narrow">
-          <h2>
-            Add {kind === "video" ? "training video" : "troubleshooting guide"}
-          </h2>
+          <h2>Add {kind === "video" ? "training video" : "troubleshooting guide"}</h2>
           <form
             ref={formRef}
             onSubmit={async (e) => {
@@ -220,31 +195,19 @@ export default function Content({
             </Field>
             <Field label="Equipment">
               <select name="equipmentId">
-                <option value="">
-                  Choose equipment (Admin may share with all)
-                </option>
+                <option value="">Choose equipment (Admin may share with all)</option>
                 {data.equipment.map((e) => (
                   <option key={e.id} value={e.id}>
-                    {[e.plant, e.department, e.area, e.name]
-                      .filter(Boolean)
-                      .join(" / ")}
+                    {[e.plant, e.department, e.area, e.name].filter(Boolean).join(" / ")}
                   </option>
                 ))}
               </select>
             </Field>
             <Field
-              label={
-                kind === "video"
-                  ? "HTTPS YouTube or Vimeo video URL"
-                  : "Troubleshooting instructions"
-              }
+              label={kind === "video" ? "HTTPS YouTube or Vimeo video URL" : "Troubleshooting instructions"}
             >
               {kind === "video" ? (
-                <input
-                  name="body"
-                  type="url"
-                  placeholder="Optional when uploading a video"
-                />
+                <input name="body" type="url" placeholder="Optional when uploading a video" />
               ) : (
                 <textarea name="body" rows={6} maxLength={10000} required />
               )}
@@ -269,9 +232,8 @@ export default function Content({
                   />
                 </Field>
                 <p className="small muted">
-                  Photos up to 8 MB; videos up to 32 MB. MP4 with H.264 is
-                  recommended for iPads. MOV/WebM playback depends on the
-                  device. Video editing is not included.
+                  Photos up to 8 MB; videos up to 32 MB. MP4 with H.264 is recommended for iPads. MOV/WebM
+                  playback depends on the device. Video editing is not included.
                 </p>
                 {media.map((m, i) => (
                   <div className="panel" key={m.id}>
@@ -295,9 +257,7 @@ export default function Content({
                         value={m.caption}
                         onChange={(e) =>
                           setMedia((ms) =>
-                            ms.map((x, j) =>
-                              i === j ? { ...x, caption: e.target.value } : x,
-                            ),
+                            ms.map((x, j) => (i === j ? { ...x, caption: e.target.value } : x))
                           )
                         }
                       />
@@ -305,19 +265,12 @@ export default function Content({
                     {m.kind === "photo" && (
                       <button
                         type="button"
-                        onClick={() =>
-                          setPhoto({ src: `/api/photos/${m.id}`, index: i })
-                        }
+                        onClick={() => setPhoto({ src: `/api/photos/${m.id}`, index: i })}
                       >
                         Edit photo
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setMedia((ms) => ms.filter((_, j) => i !== j))
-                      }
-                    >
+                    <button type="button" onClick={() => setMedia((ms) => ms.filter((_, j) => i !== j))}>
                       Remove attachment
                     </button>
                   </div>
@@ -331,9 +284,7 @@ export default function Content({
                       setMedia((ms) =>
                         photo.index < 0
                           ? [...ms, { id: r.id, kind: "photo", caption: "" }]
-                          : ms.map((m, i) =>
-                              i === photo.index ? { ...m, id: r.id } : m,
-                            ),
+                          : ms.map((m, i) => (i === photo.index ? { ...m, id: r.id } : m))
                       );
                       setPhoto(null);
                     }}
@@ -343,11 +294,7 @@ export default function Content({
               </>
             )}
             <Submit busy={busy || uploading || !!photo}>
-              {editing
-                ? kind === "video"
-                  ? "Save video changes"
-                  : "Save guide changes"
-                : "Add resource"}
+              {editing ? (kind === "video" ? "Save video changes" : "Save guide changes") : "Add resource"}
             </Submit>
             {editing && (
               <button

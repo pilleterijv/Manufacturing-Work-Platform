@@ -8,11 +8,7 @@ import {
   type DashboardPreferences,
 } from "@/lib/dashboard-preferences";
 import { Field } from "../shared";
-export default function DashboardSettings({
-  saved,
-}: {
-  saved: (p: DashboardPreferences) => void;
-}) {
+export default function DashboardSettings({ saved }: { saved: (p: DashboardPreferences) => void }) {
   const [data, setData] = useState<any>(null),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
@@ -28,8 +24,8 @@ export default function DashboardSettings({
     <section className="panel">
       <h2>Personalize my dashboard</h2>
       <p>
-        These choices belong to your account and follow you across devices. They
-        do not change your permissions or anyone else's dashboard.
+        These choices belong to your account and follow you across devices. They do not change your
+        permissions or anyone else's dashboard.
       </p>
       {error && <p role="alert">{error}</p>}
       {notice && <p role="status">{notice}</p>}
@@ -45,7 +41,7 @@ export default function DashboardSettings({
               });
               saved(data.preferences);
               setNotice(
-                "Dashboard choices saved. Your login section applies the next time you sign in or reopen the app.",
+                "Dashboard choices saved. Your login section applies the next time you sign in or reopen the app."
               );
             } catch (e) {
               setError((e as Error).message);
@@ -58,9 +54,7 @@ export default function DashboardSettings({
             <select
               aria-label="Open this section when I log in"
               value={data.preferences.home}
-              onChange={(e) =>
-                patch({ home: e.target.value as DashboardPreferences["home"] })
-              }
+              onChange={(e) => patch({ home: e.target.value as DashboardPreferences["home"] })}
             >
               {data.sections
                 .filter((s: string) => s !== "Dashboard settings")
@@ -98,9 +92,7 @@ export default function DashboardSettings({
                     patch({
                       widgets: e.target.checked
                         ? [...data.preferences.widgets, key]
-                        : data.preferences.widgets.filter(
-                            (k: string) => k !== key,
-                          ),
+                        : data.preferences.widgets.filter((k: string) => k !== key),
                     })
                   }
                 />
@@ -109,29 +101,26 @@ export default function DashboardSettings({
             ))}
           </fieldset>
           <p className="small muted">
-            Selected panels appear in the order shown below.
-            Permission-restricted records remain hidden.
+            Selected panels appear in the order shown below. Permission-restricted records remain hidden.
           </p>
-          {data.preferences.widgets.map(
-            (key: keyof typeof dashboardWidgetLabels, i: number) => (
-              <div className="button-row" key={key}>
-                <span>{dashboardWidgetLabels[key]}</span>
-                <button
-                  type="button"
-                  className="outline"
-                  disabled={!i}
-                  aria-label={`Move ${dashboardWidgetLabels[key]} up`}
-                  onClick={() => {
-                    const order = [...data.preferences.widgets];
-                    [order[i - 1], order[i]] = [order[i], order[i - 1]];
-                    patch({ widgets: order });
-                  }}
-                >
-                  Move up
-                </button>
-              </div>
-            ),
-          )}
+          {data.preferences.widgets.map((key: keyof typeof dashboardWidgetLabels, i: number) => (
+            <div className="button-row" key={key}>
+              <span>{dashboardWidgetLabels[key]}</span>
+              <button
+                type="button"
+                className="outline"
+                disabled={!i}
+                aria-label={`Move ${dashboardWidgetLabels[key]} up`}
+                onClick={() => {
+                  const order = [...data.preferences.widgets];
+                  [order[i - 1], order[i]] = [order[i], order[i - 1]];
+                  patch({ widgets: order });
+                }}
+              >
+                Move up
+              </button>
+            </div>
+          ))}
           {(
             [
               ["showLaunchpad", "Show workspace shortcuts"],

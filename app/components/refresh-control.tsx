@@ -1,10 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 export const SectionRefreshContext = createContext(0);
-export function useSectionRefresh(
-  reload: () => Promise<unknown>,
-  onError: (e: Error) => void,
-) {
+export function useSectionRefresh(reload: () => Promise<unknown>, onError: (e: Error) => void) {
   const revision = useContext(SectionRefreshContext),
     previous = useRef(revision),
     callback = useRef(reload),

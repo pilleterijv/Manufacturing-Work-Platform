@@ -3,13 +3,7 @@ import { sectionLabel } from "@/lib/navigation";
 import { roleHome } from "@/lib/floor-navigation";
 import { canOpenSection } from "@/lib/navigation";
 import type { NavigationUser } from "@/lib/navigation";
-export default function ShiftHome({
-  user,
-  go,
-}: {
-  user: NavigationUser;
-  go: (name: string) => void;
-}) {
+export default function ShiftHome({ user, go }: { user: NavigationUser; go: (name: string) => void }) {
   const home = roleHome(user);
   return (
     <section className="panel shift-home" aria-label="Role home">
@@ -31,22 +25,13 @@ export default function ShiftHome({
       {user.role === "Admin" &&
         canOpenSection(user, "Standard work") &&
         !home.primary.includes("Standard work") && (
-          <button
-            type="button"
-            className="primary"
-            onClick={() => go("Standard work")}
-          >
+          <button type="button" className="primary" onClick={() => go("Standard work")}>
             Open operator tasks →
           </button>
         )}
       <div className="button-row role-shortcuts">
         {home.primary.map((name) => (
-          <button
-            type="button"
-            className="outline"
-            key={name}
-            onClick={() => go(name)}
-          >
+          <button type="button" className="outline" key={name} onClick={() => go(name)}>
             <strong>{sectionLabel(name)}</strong>
             <span>Open →</span>
           </button>

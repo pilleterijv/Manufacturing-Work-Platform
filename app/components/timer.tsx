@@ -24,10 +24,7 @@ export function Timer({
   const start = useRef(0);
   useEffect(() => {
     if (!running) return;
-    const t = setInterval(
-      () => setElapsed((performance.now() - start.current) / 1000),
-      40,
-    );
+    const t = setInterval(() => setElapsed((performance.now() - start.current) / 1000), 40);
     return () => clearInterval(t);
   }, [running]);
   function record() {
@@ -120,15 +117,8 @@ export function Timer({
               </span>
               <strong>{fmt(c.seconds)}s</strong>
               {audit && (
-                <span
-                  className={
-                    "badge " +
-                    (c.seconds > target * (1 + tolerance / 100) ? "warn" : "")
-                  }
-                >
-                  {c.seconds > target * (1 + tolerance / 100)
-                    ? "Over target"
-                    : "Within target"}
+                <span className={"badge " + (c.seconds > target * (1 + tolerance / 100) ? "warn" : "")}>
+                  {c.seconds > target * (1 + tolerance / 100) ? "Over target" : "Within target"}
                 </span>
               )}
               <button

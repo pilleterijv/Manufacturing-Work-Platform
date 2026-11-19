@@ -22,9 +22,7 @@ export const privilegeDefinitions = {
   "schedules.manage": "Manage shift-work schedules",
 } as const;
 export type AdminPrivilege = keyof typeof privilegeDefinitions;
-export const privilegeKeys = Object.keys(
-  privilegeDefinitions,
-) as AdminPrivilege[];
+export const privilegeKeys = Object.keys(privilegeDefinitions) as AdminPrivilege[];
 export const managerAccountPrivileges: AdminPrivilege[] = [
   "accounts.create",
   "accounts.edit",
@@ -35,37 +33,32 @@ export const managerAccountPrivileges: AdminPrivilege[] = [
 export function validPrivileges(raw: unknown): AdminPrivilege[] {
   return Array.isArray(raw)
     ? raw.filter(
-        (v): v is AdminPrivilege =>
-          typeof v === "string" && privilegeKeys.includes(v as AdminPrivilege),
+        (v): v is AdminPrivilege => typeof v === "string" && privilegeKeys.includes(v as AdminPrivilege)
       )
     : [];
 }
 export function effectivePrivileges(
   role: string,
   raw: unknown,
-  inheritManagerDefaults = true,
+  inheritManagerDefaults = true
 ): AdminPrivilege[] {
   return [
     ...new Set(
       role === "Admin"
         ? privilegeKeys
         : [
-            ...(role === "Manager" && inheritManagerDefaults
-              ? managerAccountPrivileges
-              : []),
+            ...(role === "Manager" && inheritManagerDefaults ? managerAccountPrivileges : []),
             ...validPrivileges(raw),
-          ],
+          ]
     ),
   ];
 }
-export const additionalCapabilities = capabilities.filter(
-  (c) => !["users", "permissions"].includes(c),
-);
+export const additionalCapabilities = capabilities.filter((c) => !["users", "permissions"].includes(c));
 export function effectiveGrants(
   role: string,
   raw: unknown,
   extra: unknown,
-  privileges: unknown = [],
+  privileges: unknown = []
 ): Capability[] {
   if (role === "Admin") return [...capabilities];
   return [
@@ -79,19 +72,14 @@ export function effectiveGrants(
               ? ["fiveS" as const]
               : p === "training.manage"
                 ? ["training" as const]
-                : [],
+                : []
       ),
       ...(Array.isArray(raw)
-        ? raw.filter(
-            (v): v is Capability =>
-              typeof v === "string" && capabilities.includes(v as Capability),
-          )
+        ? raw.filter((v): v is Capability => typeof v === "string" && capabilities.includes(v as Capability))
         : []),
       ...(Array.isArray(extra)
         ? extra.filter(
-            (v): v is Capability =>
-              typeof v === "string" &&
-              additionalCapabilities.includes(v as Capability),
+            (v): v is Capability => typeof v === "string" && additionalCapabilities.includes(v as Capability)
           )
         : []),
     ]),
@@ -111,7 +99,7 @@ export const delegationSchema = z
 export function coversWorkspace(
   actor: { role: string; workspaceAccess: unknown },
   raw: unknown,
-  equipment: LocationEquipment[],
+  equipment: LocationEquipment[]
 ) {
   const t = downtimeAccessSchema.safeParse(raw),
     a = downtimeAccessSchema.safeParse(actor.workspaceAccess);
@@ -123,57 +111,44 @@ export function coversWorkspace(
   return (
     t.data.locations.every((l) =>
       a.data.locations.some(
-        (x) =>
-          x.plant === l.plant &&
-          x.department === l.department &&
-          (x.area === null || x.area === l.area),
-      ),
+        (x) => x.plant === l.plant && x.department === l.department && (x.area === null || x.area === l.area)
+      )
     ) &&
     t.data.equipmentIds.every((id) => {
       const e = equipment.find((e) => e.id === id);
-      return (
-        !!e && allowedDowntimeEquipment(actor.role, actor.workspaceAccess, e)
-      );
+      return !!e && allowedDowntimeEquipment(actor.role, actor.workspaceAccess, e);
     })
   );
 }
 export function sharesWorkspace(
   actor: { role: string; workspaceAccess: unknown },
   target: { role: string; workspaceAccess: unknown },
-  equipment: LocationEquipment[],
+  equipment: LocationEquipment[]
 ) {
   if (actor.role === "Admin") return true;
   const a = downtimeAccessSchema.safeParse(actor.workspaceAccess),
     t = downtimeAccessSchema.safeParse(target.workspaceAccess);
   if (!a.success || !t.success) return false;
   if (a.data.mode === "all")
-    return (
-      t.data.mode === "all" ||
-      !!(t.data.locations.length || t.data.equipmentIds.length)
-    );
-  if (t.data.mode === "all")
-    return !!(a.data.locations.length || a.data.equipmentIds.length);
+    return t.data.mode === "all" || !!(t.data.locations.length || t.data.equipmentIds.length);
+  if (t.data.mode === "all") return !!(a.data.locations.length || a.data.equipmentIds.length);
   return (
     a.data.locations.some((l) =>
       t.data.locations.some(
         (x) =>
           l.plant === x.plant &&
           l.department === x.department &&
-          (l.area === null || x.area === null || l.area === x.area),
-      ),
+          (l.area === null || x.area === null || l.area === x.area)
+      )
     ) ||
     equipment.some(
       (e) =>
         allowedDowntimeEquipment(actor.role, actor.workspaceAccess, e) &&
-        allowedDowntimeEquipment(target.role, target.workspaceAccess, e),
+        allowedDowntimeEquipment(target.role, target.workspaceAccess, e)
     )
   );
 }
-export function protectedAccount(target: {
-  role: string;
-  extraGrants?: unknown;
-  adminPrivileges?: unknown;
-}) {
+export function protectedAccount(target: { role: string; extraGrants?: unknown; adminPrivileges?: unknown }) {
   return (
     ["Admin", "Manager"].includes(target.role) ||
     validPrivileges(target.adminPrivileges).length > 0 ||

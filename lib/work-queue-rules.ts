@@ -20,7 +20,7 @@ export function nearbyShifts(config: unknown, now: Date) {
   return endedShiftWindows(
     shiftConfigSchema.parse(config),
     new Date(+now - 3 * 86400000),
-    new Date(+now + 2 * 86400000),
+    new Date(+now + 2 * 86400000)
   ).filter((w) => +w.start <= +now && +w.end > +now - 86400000);
 }
 export function scheduledQueue({
@@ -54,8 +54,7 @@ export function scheduledQueue({
     list.push(r);
     familyRecords.set(r.standard.family, list);
   }
-  for (const list of familyStandards.values())
-    list.sort((a, b) => b.revision - a.revision);
+  for (const list of familyStandards.values()) list.sort((a, b) => b.revision - a.revision);
   const rows: QueueItem[] = [];
   const counts: Record<string, number> = {};
   let truncated = false;
@@ -70,20 +69,11 @@ export function scheduledQueue({
       latest = versions[0];
     if (!latest) continue;
     const configKey = JSON.stringify(schedule.config);
-    if (!windows.has(configKey))
-      windows.set(configKey, nearbyShifts(schedule.config, now));
+    if (!windows.has(configKey)) windows.set(configKey, nearbyShifts(schedule.config, now));
     for (const window of windows.get(configKey)!) {
-      if (
-        +window.start < +schedule.effectiveFrom ||
-        !scheduleWindowMatches(schedule, window)
-      )
-        continue;
-      const expected = versions.find(
-        (s) => +new Date(s.created) <= +window.start,
-      );
-      const assignees: string[] = schedule.assigneeIds.length
-        ? schedule.assigneeIds
-        : ["station"];
+      if (+window.start < +schedule.effectiveFrom || !scheduleWindowMatches(schedule, window)) continue;
+      const expected = versions.find((s) => +new Date(s.created) <= +window.start);
+      const assignees: string[] = schedule.assigneeIds.length ? schedule.assigneeIds : ["station"];
       for (const person of assignees) {
         if (!team && person !== "station" && person !== userId) continue;
         if (
@@ -99,7 +89,7 @@ export function scheduledQueue({
             (!expected || r.standard.revision >= expected.revision) &&
             +new Date(r.created) >= +window.start &&
             +new Date(r.created) < +window.end &&
-            (person === "station" || r.userId === person),
+            (person === "station" || r.userId === person)
         );
         const ended = +window.end <= +now,
           status = completed
@@ -129,19 +119,10 @@ export function scheduledQueue({
           title: schedule.title,
           equipmentId: schedule.equipmentId,
           assignee:
-            person === "station"
-              ? "One completion per machine"
-              : people.get(person) || "Reassignment needed",
+            person === "station" ? "One completion per machine" : people.get(person) || "Reassignment needed",
           due: window.end.toISOString(),
           status,
-          priority:
-            status === "Missed"
-              ? 1
-              : status === "Needs setup"
-                ? 0
-                : status === "Completed"
-                  ? 6
-                  : 3,
+          priority: status === "Missed" ? 1 : status === "Needs setup" ? 0 : status === "Completed" ? 6 : 3,
           tab,
           filters: { equipment: schedule.equipmentId, standard: latest.id },
           canPerform:
@@ -169,9 +150,5 @@ export function scheduledQueue({
   };
 }
 export function queueOrder(a: QueueItem, b: QueueItem) {
-  return (
-    a.priority - b.priority ||
-    a.due.localeCompare(b.due) ||
-    a.id.localeCompare(b.id)
-  );
+  return a.priority - b.priority || a.due.localeCompare(b.due) || a.id.localeCompare(b.id);
 }

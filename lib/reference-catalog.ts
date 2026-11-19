@@ -31,7 +31,7 @@ const commonAreas = [
   "IT",
 ];
 export const referenceAreas: Record<string, string[]> = Object.fromEntries(
-  referenceDepartments.map((d) => [d, [...commonAreas]]),
+  referenceDepartments.map((d) => [d, [...commonAreas]])
 );
 Object.assign(referenceAreas, {
   Tableting: [
@@ -43,34 +43,10 @@ Object.assign(referenceAreas, {
     "Weigh Room",
     "Coordinator's Office",
   ],
-  Packaging: [
-    "Line 1",
-    "Line 2",
-    "Line 3",
-    "Line 4",
-    "Line 5",
-    "Line 6",
-    "Label Cage",
-    "Warehouse Area",
-  ],
+  Packaging: ["Line 1", "Line 2", "Line 3", "Line 4", "Line 5", "Line 6", "Label Cage", "Warehouse Area"],
   Softgel: ["Gelmaking", "Compounding", "Inspection", "Pour Over", "Staging"],
-  Gummies: [
-    "Downstairs Kitchen",
-    "Upstairs Kitchen",
-    "Mogul",
-    "Debuck",
-    "WIP Room",
-    "Tunnels/AGV",
-  ],
-  Warehouse: [
-    "North Dock",
-    "South Dock",
-    "Tableting",
-    "Packaging",
-    "Gummies",
-    "Softgel",
-    "Mass Storage",
-  ],
+  Gummies: ["Downstairs Kitchen", "Upstairs Kitchen", "Mogul", "Debuck", "WIP Room", "Tunnels/AGV"],
+  Warehouse: ["North Dock", "South Dock", "Tableting", "Packaging", "Gummies", "Softgel", "Mass Storage"],
   "Maintenance/Facilities": [
     "Warehouse",
     "Tableting",
@@ -86,96 +62,36 @@ Object.assign(referenceAreas, {
 });
 export const leaderStarter = [
   ["Startup & handoff", "Department walk", "Start of shift"],
-  [
-    "Startup & handoff",
-    "Review previous shift pass-down and major-clean status",
-    "Start of shift",
-  ],
-  [
-    "Startup & handoff",
-    "Assign team members to the rooms or machines",
-    "Start of shift",
-  ],
-  [
-    "Startup & handoff",
-    "Hold shift-change meeting and witness handoff",
-    "Shift change",
-  ],
-  [
-    "Startup & handoff",
-    "Attend daily direction-setting meeting",
-    "Scheduled meeting",
-  ],
-  [
-    "Throughout shift",
-    "Verify approved press parameters, target weights and force",
-    "Throughout shift",
-  ],
-  [
-    "Throughout shift",
-    "Verify process speed against the approved batch record",
-    "Throughout shift",
-  ],
+  ["Startup & handoff", "Review previous shift pass-down and major-clean status", "Start of shift"],
+  ["Startup & handoff", "Assign team members to the rooms or machines", "Start of shift"],
+  ["Startup & handoff", "Hold shift-change meeting and witness handoff", "Shift change"],
+  ["Startup & handoff", "Attend daily direction-setting meeting", "Scheduled meeting"],
+  ["Throughout shift", "Verify approved press parameters, target weights and force", "Throughout shift"],
+  ["Throughout shift", "Verify process speed against the approved batch record", "Throughout shift"],
   [
     "Throughout shift",
     "Verify MES sequence, process card and lot against the current work order",
     "Throughout shift",
   ],
-  [
-    "Throughout shift",
-    "Verify HMI lot matches MES and batch documentation",
-    "Throughout shift",
-  ],
-  [
-    "Throughout shift",
-    "Verify AQL, SPC history, shake and metal-detector checks",
-    "Throughout shift",
-  ],
-  [
-    "Throughout shift",
-    "Reconcile current batch documentation before the next process",
-    "Throughout shift",
-  ],
+  ["Throughout shift", "Verify HMI lot matches MES and batch documentation", "Throughout shift"],
+  ["Throughout shift", "Verify AQL, SPC history, shake and metal-detector checks", "Throughout shift"],
+  ["Throughout shift", "Reconcile current batch documentation before the next process", "Throughout shift"],
   [
     "Throughout shift",
     "Capture unplanned downtime and escalate prolonged stoppages to problem solving",
     "Throughout shift",
   ],
-  [
-    "Throughout shift",
-    "Record defects and verify corrective follow-up",
-    "Each shift",
-  ],
-  [
-    "Throughout shift",
-    "Verify samples and required material supplies",
-    "Each room / machine",
-  ],
-  [
-    "Quality & compliance",
-    "Verify GMP, safety and master-sanitation compliance",
-    "Each shift",
-  ],
-  [
-    "Sustainment & visual management",
-    "Complete the area 5S checklist",
-    "Each shift",
-  ],
-  [
-    "Sustainment & visual management",
-    "Update MDI, changeover board and production schedule",
-    "End of shift",
-  ],
+  ["Throughout shift", "Record defects and verify corrective follow-up", "Each shift"],
+  ["Throughout shift", "Verify samples and required material supplies", "Each room / machine"],
+  ["Quality & compliance", "Verify GMP, safety and master-sanitation compliance", "Each shift"],
+  ["Sustainment & visual management", "Complete the area 5S checklist", "Each shift"],
+  ["Sustainment & visual management", "Update MDI, changeover board and production schedule", "End of shift"],
   [
     "Sustainment & visual management",
     "Verify major-clean changeover checklist and pass-down details",
     "Changeover",
   ],
-  [
-    "Sustainment & visual management",
-    "Verify material charging and close completed batches",
-    "As required",
-  ],
+  ["Sustainment & visual management", "Verify material charging and close completed batches", "As required"],
   [
     "Sustainment & visual management",
     "Check quality issues, lubrication leaks, defects and powder leaks",
@@ -186,14 +102,6 @@ export const leaderStarter = [
     "Verify CIL completion and dust-collection setup against the approved standard",
     "Each shift",
   ],
-  [
-    "Preventive checks",
-    "Verify the next batch record and required signoffs",
-    "Before next batch",
-  ],
-  [
-    "Preventive checks",
-    "Verify press supply and correct blended material staging",
-    "Throughout shift",
-  ],
+  ["Preventive checks", "Verify the next batch record and required signoffs", "Before next batch"],
+  ["Preventive checks", "Verify press supply and correct blended material staging", "Throughout shift"],
 ] as const;

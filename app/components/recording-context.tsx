@@ -13,10 +13,8 @@ export default function RecordingContext({
       <strong>Recording against</strong>
       <p>{equipmentLabel(equipment)}</p>
       <p>
-        {shift
-          ? `Task shift: ${shift}`
-          : "The task's saved timestamps determine its reporting period."}{" "}
-        The reminder at the top does not change this task.
+        {shift ? `Task shift: ${shift}` : "The task's saved timestamps determine its reporting period."} The
+        reminder at the top does not change this task.
       </p>
     </aside>
   );

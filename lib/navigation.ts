@@ -50,21 +50,14 @@ export function canOpenSection(u: NavigationUser, name: string) {
       (u.role === "Manager" && !u.customRole) ||
       p.some((v) => v.startsWith("accounts."))
     );
-  if (name === "Permissions" || name === "Integrations")
-    return u.role === "Admin";
-  if (name === "Locations")
-    return u.role === "Admin" || p.includes("locations.manage");
+  if (name === "Permissions" || name === "Integrations") return u.role === "Admin";
+  if (name === "Locations") return u.role === "Admin" || p.includes("locations.manage");
   if (name === "Manage")
     return (
       u.grants.includes("manage") ||
-      p.some((v) =>
-        ["equipment.manage", "standards.manage", "resources.manage"].includes(
-          v,
-        ),
-      )
+      p.some((v) => ["equipment.manage", "standards.manage", "resources.manage"].includes(v))
     );
-  if (name === "Shift requirements")
-    return u.grants.includes("manage") || p.includes("schedules.manage");
+  if (name === "Shift requirements") return u.grants.includes("manage") || p.includes("schedules.manage");
   const cap = sectionRules[name];
   return !cap || u.grants.includes(cap);
 }

@@ -7,10 +7,7 @@ export function smtpReady() {
   return !!(process.env.SMTP_HOST && process.env.SMTP_FROM);
 }
 export async function deliverShiftEmails(
-  transportOverride?: Pick<
-    import("nodemailer").Transporter,
-    "sendMail" | "close"
-  >,
+  transportOverride?: Pick<import("nodemailer").Transporter, "sendMail" | "close">
 ) {
   if (!smtpReady()) return { sent: 0, configured: false };
   const transport =
@@ -102,9 +99,7 @@ export async function deliverShiftEmails(
         where: { id: row.id },
         data: {
           status: attempts >= 10 ? "Failed" : "Pending",
-          nextAttemptAt: new Date(
-            Date.now() + Math.min(3600000, 60000 * 2 ** Math.min(attempts, 6)),
-          ),
+          nextAttemptAt: new Date(Date.now() + Math.min(3600000, 60000 * 2 ** Math.min(attempts, 6))),
           claimedUntil: null,
           lastError: user.email
             ? "SMTP delivery failed; check server settings and retry"

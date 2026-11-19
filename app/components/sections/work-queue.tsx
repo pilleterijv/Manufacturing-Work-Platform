@@ -5,22 +5,14 @@ import { openWorkflow, roleHome } from "@/lib/floor-navigation";
 import type { User } from "@/lib/workspace-types";
 import { equipmentLabel } from "@/lib/equipment-label";
 import RefreshControl, { useSectionRefresh } from "../refresh-control";
-export default function WorkQueue({
-  user,
-  compact = false,
-}: {
-  user: User;
-  compact?: boolean;
-}) {
+export default function WorkQueue({ user, compact = false }: { user: User; compact?: boolean }) {
   const profile = roleHome(user).profile,
     canTeam =
       ["Admin", "Manager", "DL/TL"].includes(user.role) &&
       (user.grants.includes("dashboard") ||
         user.grants.includes("leadership") ||
         user.grants.includes("analytics"));
-  const [scope, setScope] = useState(
-      canTeam && ["manager", "supervisor"].includes(profile) ? "team" : "my",
-    ),
+  const [scope, setScope] = useState(canTeam && ["manager", "supervisor"].includes(profile) ? "team" : "my"),
     [location, setLocation] = useState(""),
     [filter, setFilter] = useState("action"),
     [search, setSearch] = useState(""),
@@ -56,9 +48,7 @@ export default function WorkQueue({
     };
   }, [scope, location]);
   useSectionRefresh(load, (e) => setError(e.message));
-  const labels = new Map<string, string>(
-      (data?.equipment || []).map((e: any) => [e.id, equipmentLabel(e)]),
-    ),
+  const labels = new Map<string, string>((data?.equipment || []).map((e: any) => [e.id, equipmentLabel(e)])),
     locations = [
       ...new Map(
         (data?.equipment || []).map((e: any) => [
@@ -68,7 +58,7 @@ export default function WorkQueue({
             area: e.area,
           }),
           { plant: e.plant, department: e.department, area: e.area },
-        ]),
+        ])
       ).entries(),
     ] as [string, any][];
   const rows = (data?.items || [])
@@ -81,7 +71,7 @@ export default function WorkQueue({
             ? r.status === "Awaiting validation"
             : filter === "upcoming"
               ? r.status === "Upcoming"
-              : !["Completed", "Upcoming"].includes(r.status),
+              : !["Completed", "Upcoming"].includes(r.status)
     )
     .filter(
       (r: any) =>
@@ -89,7 +79,7 @@ export default function WorkQueue({
         [r.title, r.assignee, r.type, labels.get(r.equipmentId)]
           .join(" ")
           .toLowerCase()
-          .includes(search.toLowerCase()),
+          .includes(search.toLowerCase())
     );
   return (
     <section className="panel work-queue" aria-label="Shift work queue">
@@ -103,8 +93,7 @@ export default function WorkQueue({
                 : "My shift work queue"}
           </h2>
           <p>
-            {data?.currentShift} · {data?.timezone} · shift checks for the
-            current shift and previous 24 hours
+            {data?.currentShift} · {data?.timezone} · shift checks for the current shift and previous 24 hours
           </p>
         </div>
         <RefreshControl onRefresh={load} label="Refresh work queue" />
@@ -119,24 +108,14 @@ export default function WorkQueue({
         <div className="form-grid">
           <label className="field">
             <span>Queue scope</span>
-            <select
-              aria-label="Queue scope"
-              value={scope}
-              onChange={(e) => setScope(e.target.value)}
-            >
+            <select aria-label="Queue scope" value={scope} onChange={(e) => setScope(e.target.value)}>
               <option value="my">My work</option>
-              {canTeam && (
-                <option value="team">Assigned departments / areas</option>
-              )}
+              {canTeam && <option value="team">Assigned departments / areas</option>}
             </select>
           </label>
           <label className="field">
             <span>Queue area</span>
-            <select
-              aria-label="Queue area"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-            >
+            <select aria-label="Queue area" value={location} onChange={(e) => setLocation(e.target.value)}>
               <option value="">All assigned locations</option>
               {locations.map(([key, l]) => (
                 <option key={key} value={key}>
@@ -179,28 +158,24 @@ export default function WorkQueue({
       </details>
       {!data ? (
         <p role="status">
-          {error
-            ? "Queue unavailable; retry before relying on task status."
-            : "Loading assigned work…"}
+          {error ? "Queue unavailable; retry before relying on task status." : "Loading assigned work…"}
         </p>
       ) : (
         <>
           {!data.hasSchedules && (
             <p className="notice">
-              No active shift requirements are configured in this view. This
-              does not mean all checks are complete. Scheduled PM/CIL work and
-              open actions are listed separately below.
+              No active shift requirements are configured in this view. This does not mean all checks are
+              complete. Scheduled PM/CIL work and open actions are listed separately below.
             </p>
           )}
           {data.truncated && (
             <p className="notice">
-              Up to 500 priority items are shown. Narrow the area to review
-              additional work; counts here are for loaded items.
+              Up to 500 priority items are shown. Narrow the area to review additional work; counts here are
+              for loaded items.
             </p>
           )}
           <p>
-            {rows.length} matching loaded items · refreshed{" "}
-            {new Date(data.generatedAt).toLocaleTimeString()}
+            {rows.length} matching loaded items · refreshed {new Date(data.generatedAt).toLocaleTimeString()}
           </p>
           {rows.slice(0, compact ? 12 : 500).map((r: any) => (
             <article className="queue-row" key={r.id}>
@@ -208,11 +183,7 @@ export default function WorkQueue({
                 <span
                   className={
                     "badge " +
-                    (["Missed", "Overdue", "Urgent", "Needs setup"].includes(
-                      r.status,
-                    )
-                      ? "warn"
-                      : "")
+                    (["Missed", "Overdue", "Urgent", "Needs setup"].includes(r.status) ? "warn" : "")
                   }
                 >
                   {r.status}
@@ -237,28 +208,18 @@ export default function WorkQueue({
                   <button
                     type="button"
                     className="primary"
-                    onClick={() =>
-                      openWorkflow({ tab: r.tab, filters: r.filters })
-                    }
+                    onClick={() => openWorkflow({ tab: r.tab, filters: r.filters })}
                   >
                     Perform task
                   </button>
                 ) : r.status !== "Completed" &&
                   r.status !== "Missed" &&
                   r.status !== "Needs setup" &&
-                  ![
-                    "Operator check",
-                    "Leader check",
-                    "Process audit",
-                    "PM",
-                    "CIL",
-                  ].includes(r.type) ? (
+                  !["Operator check", "Leader check", "Process audit", "PM", "CIL"].includes(r.type) ? (
                   <button
                     type="button"
                     className="outline"
-                    onClick={() =>
-                      openWorkflow({ tab: r.tab, filters: r.filters })
-                    }
+                    onClick={() => openWorkflow({ tab: r.tab, filters: r.filters })}
                   >
                     Review item
                   </button>
@@ -290,24 +251,18 @@ export default function WorkQueue({
           ))}
           {!rows.length && (
             <p>
-              No matching work in this view. Check the scope, area and filter;
-              this is not a blanket shift-completion sign-off.
+              No matching work in this view. Check the scope, area and filter; this is not a blanket
+              shift-completion sign-off.
             </p>
           )}
           {compact && rows.length > 12 && (
-            <button
-              type="button"
-              className="primary"
-              onClick={() => openWorkflow({ tab: "Work queue" })}
-            >
+            <button type="button" className="primary" onClick={() => openWorkflow({ tab: "Work queue" })}>
               View full work queue ({rows.length} loaded)
             </button>
           )}
           {!!data.handovers?.length && (
             <details className="handover-list">
-              <summary>
-                Recent handover notes · last 24 hours ({data.handovers.length})
-              </summary>
+              <summary>Recent handover notes · last 24 hours ({data.handovers.length})</summary>
               {data.handovers.map((h: any) => (
                 <article className="queue-row" key={h.id}>
                   <div>
@@ -323,8 +278,7 @@ export default function WorkQueue({
                       .filter((r: any) => r.issues || r.remaining)
                       .map((r: any, i: number) => (
                         <p key={i}>
-                          {r.room}: {r.issues}{" "}
-                          {r.remaining ? `Remaining: ${r.remaining}` : ""}
+                          {r.room}: {r.issues} {r.remaining ? `Remaining: ${r.remaining}` : ""}
                         </p>
                       ))}
                   </div>

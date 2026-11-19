@@ -5,19 +5,13 @@ import { readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { streamWorkbook } from "../lib/excel-stream";
 const staged = async () =>
-  new Set(
-    (await readdir(tmpdir())).filter((n) => n.startsWith("floorwork-export-")),
-  );
+  new Set((await readdir(tmpdir())).filter((n) => n.startsWith("floorwork-export-")));
 const waitCleanup = async (before: Set<string>) => {
   for (let i = 0; i < 100; i++) {
     if ((await staged()).size === before.size) return;
     await new Promise((r) => setTimeout(r, 10));
   }
-  assert.deepEqual(
-    await staged(),
-    before,
-    "Private export files were not removed",
-  );
+  assert.deepEqual(await staged(), before, "Private export files were not removed");
 };
 test("disk-backed multi-sheet exports retain every row and typed dates, and clean up after slow reads", async () => {
   const before = await staged();
@@ -32,10 +26,7 @@ test("disk-backed multi-sheet exports retain every row and typed dates, and clea
     }
   });
   assert.equal(response.headers.get("cache-control"), "private, no-store");
-  await assert.rejects(
-    () => streamWorkbook("busy.xlsx", async () => {}),
-    /already running/,
-  );
+  await assert.rejects(() => streamWorkbook("busy.xlsx", async () => {}), /already running/);
   const chunks: Uint8Array[] = [];
   const reader = response.body!.getReader();
   while (true) {
@@ -60,7 +51,7 @@ test("cancelled and failed exports release their slot and private temporary file
         await book.addWorksheet("Data").addRow(["private"]);
         throw Error("fixture");
       }),
-    /fixture/,
+    /fixture/
   );
   await waitCleanup(before);
   const cancelled = new AbortController();
@@ -72,9 +63,9 @@ test("cancelled and failed exports release their slot and private temporary file
         async (book) => {
           await book.addWorksheet("Data").addRow([1]);
         },
-        cancelled.signal,
+        cancelled.signal
       ),
-    /cancelled/,
+    /cancelled/
   );
   const response = await streamWorkbook("close.xlsx", async (book) => {
     await book.addWorksheet("Data").addRow([1]);

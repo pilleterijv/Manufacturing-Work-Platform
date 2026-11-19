@@ -32,7 +32,7 @@ async function main() {
           mustChange: false,
           workspaceAccess: { mode: "all", locations: [], equipmentIds: [] },
         },
-      }),
+      })
     );
   for (const [name, plant, department, area] of [
     ["Packer 01", "North", "Assembly", "Packing"],
@@ -44,7 +44,7 @@ async function main() {
     equipment.push(
       await db.equipment.create({
         data: { name, plant, department, area, line: "Line A" },
-      }),
+      })
     );
   for (const e of equipment)
     await db.location.upsert({
@@ -67,9 +67,7 @@ async function main() {
   reason = await db.downtimeReason.create({
     data: { name: "Location verification " + suffix },
   });
-  managerPolicy = (
-    await db.policy.findUniqueOrThrow({ where: { role: "Manager" } })
-  ).grants;
+  managerPolicy = (await db.policy.findUniqueOrThrow({ where: { role: "Manager" } })).grants;
   await db.policy.update({
     where: { role: "Manager" },
     data: { grants: [...new Set([...managerPolicy, "users"])] },
@@ -123,8 +121,7 @@ async function main() {
       equipmentId: eq.id,
       reasonId: reason.id,
     });
-  const stop = (id, c = operator) =>
-    post(c, "/api/operations", { action: "stop", id });
+  const stop = (id, c = operator) => post(c, "/api/operations", { action: "stop", id });
   const empty = { mode: "restricted", locations: [], equipmentIds: [] };
   assert.equal((await assign(empty, manager)).status, 403);
   assert.equal(
@@ -138,25 +135,19 @@ async function main() {
         active: true,
       })
     ).status,
-    403,
+    403
   );
-  assert.equal(
-    (await assign({ ...empty, equipmentIds: [randomUUID()] })).status,
-    400,
-  );
+  assert.equal((await assign({ ...empty, equipmentIds: [randomUUID()] })).status, 400);
   assert.equal((await assign(empty)).status, 200);
   assert.equal((await start(equipment[0])).status, 403);
   let ops = await get(operator, "/api/operations?view=downtime");
   assert.equal(ops.equipment.length, 0);
   assert.equal(ops.downtime.length, 0);
-  assert.equal(
-    (await assign({ ...empty, equipmentIds: [equipment[0].id] })).status,
-    200,
-  );
+  assert.equal((await assign({ ...empty, equipmentIds: [equipment[0].id] })).status, 200);
   ops = await get(operator, "/api/operations?view=downtime");
   assert.deepEqual(
     ops.equipment.map((e) => e.id),
-    [equipment[0].id],
+    [equipment[0].id]
   );
   assert.equal((await start(equipment[1])).status, 403);
   assert.equal((await start(equipment[3])).status, 403);
@@ -172,25 +163,14 @@ async function main() {
     .locator("nav")
     .getByRole("button", { name: /Downtime$/ })
     .click();
-  await page
-    .getByRole("heading", { name: "Track a stoppage", exact: true })
-    .waitFor();
+  await page.getByRole("heading", { name: "Track a stoppage", exact: true }).waitFor();
   assert(await page.getByLabel("Recording area", { exact: true }).isDisabled());
   assert(await page.getByLabel("Machine", { exact: true }).isDisabled());
   await selectDowntimeMachine(page, equipment[0]);
-  assert.equal(
-    await page.getByLabel("Machine", { exact: true }).locator("option").count(),
-    2,
-  );
-  await page
-    .getByLabel("Downtime reason", { exact: true })
-    .selectOption(reason.id);
-  await page
-    .getByRole("button", { name: "Start downtime", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Stop downtime", exact: true })
-    .waitFor();
+  assert.equal(await page.getByLabel("Machine", { exact: true }).locator("option").count(), 2);
+  await page.getByLabel("Downtime reason", { exact: true }).selectOption(reason.id);
+  await page.getByRole("button", { name: "Start downtime", exact: true }).click();
+  await page.getByRole("button", { name: "Stop downtime", exact: true }).waitFor();
   let event = await db.downtime.findFirstOrThrow({
     where: { equipmentId: equipment[0].id, endedAt: null },
   });
@@ -199,15 +179,12 @@ async function main() {
   const live = await get(operator, "/api/operations?view=live");
   assert.deepEqual(
     live.active.map((d) => d.id),
-    [event.id],
+    [event.id]
   );
   // Access revocation takes effect without logging the operator out.
   assert.equal((await assign(empty)).status, 200);
   assert.equal((await stop(event.id)).status, 403);
-  assert.equal(
-    (await get(operator, "/api/operations?view=live")).active.length,
-    0,
-  );
+  assert.equal((await get(operator, "/api/operations?view=live")).active.length, 0);
   assert.equal((await stop(event.id, admin)).status, 200);
   assert.equal((await stop(foreign.id, admin)).status, 200);
   // Area grants are scoped by plant, and allow future machines in the area.
@@ -215,12 +192,10 @@ async function main() {
     (
       await assign({
         ...empty,
-        locations: [
-          { plant: "North", department: "Assembly", area: "Packing" },
-        ],
+        locations: [{ plant: "North", department: "Assembly", area: "Packing" }],
       })
     ).status,
-    200,
+    200
   );
   const added = await db.equipment.create({
     data: {
@@ -235,7 +210,7 @@ async function main() {
   ops = await get(operator, "/api/operations?view=downtime");
   assert.deepEqual(
     new Set(ops.equipment.map((e) => e.id)),
-    new Set([equipment[0].id, equipment[1].id, added.id]),
+    new Set([equipment[0].id, equipment[1].id, added.id])
   );
   assert.equal((await start(equipment[2])).status, 403);
   assert.equal((await start(equipment[3])).status, 403);
@@ -246,7 +221,7 @@ async function main() {
         locations: [{ plant: "North", department: "Assembly", area: null }],
       })
     ).status,
-    200,
+    200
   );
   assert.equal((await start(equipment[2])).status, 200);
   const weldingEvent = await db.downtime.findFirstOrThrow({
@@ -259,21 +234,10 @@ async function main() {
     .getByRole("button", { name: /Downtime$/ })
     .click();
   await selectDowntimeMachine(page, equipment[0]);
-  await page
-    .getByLabel("Recording area", { exact: true })
-    .selectOption(JSON.stringify("Welding"));
-  assert.equal(
-    await page.getByLabel("Machine", { exact: true }).inputValue(),
-    "",
-  );
-  assert.equal(
-    await page.getByLabel("Downtime reason", { exact: true }).inputValue(),
-    "",
-  );
-  assert.equal(
-    await page.getByLabel("Machine", { exact: true }).locator("option").count(),
-    2,
-  );
+  await page.getByLabel("Recording area", { exact: true }).selectOption(JSON.stringify("Welding"));
+  assert.equal(await page.getByLabel("Machine", { exact: true }).inputValue(), "");
+  assert.equal(await page.getByLabel("Downtime reason", { exact: true }).inputValue(), "");
+  assert.equal(await page.getByLabel("Machine", { exact: true }).locator("option").count(), 2);
   // Native admin editor round-trip, with only one machine assigned.
   const ap = await admin.newPage();
   await ap.goto(origin);
@@ -283,9 +247,7 @@ async function main() {
     .getByRole("button", { name: /Accounts$/ })
     .click();
   await ap.getByLabel("Account", { exact: true }).selectOption(users[1].id);
-  await ap
-    .getByLabel("Downtime access", { exact: true })
-    .selectOption("restricted");
+  await ap.getByLabel("Downtime access", { exact: true }).selectOption("restricted");
   await ap
     .getByRole("checkbox", {
       name: "Allow department Assembly at North",
@@ -298,16 +260,9 @@ async function main() {
       exact: true,
     })
     .check();
-  await ap
-    .getByRole("button", { name: "Save downtime access", exact: true })
-    .click();
-  await ap
-    .getByRole("status")
-    .filter({ hasText: "Saved to the database." })
-    .waitFor();
-  const saved = (
-    await db.user.findUniqueOrThrow({ where: { id: users[1].id } })
-  ).downtimeAccess;
+  await ap.getByRole("button", { name: "Save downtime access", exact: true }).click();
+  await ap.getByRole("status").filter({ hasText: "Saved to the database." }).waitFor();
+  const saved = (await db.user.findUniqueOrThrow({ where: { id: users[1].id } })).downtimeAccess;
   assert.deepEqual(saved, {
     mode: "restricted",
     locations: [],
@@ -333,9 +288,7 @@ async function main() {
     .getByRole("button", { name: /Downtime$/ })
     .click();
   await selectDowntimeMachine(page, equipment[0]);
-  await page
-    .getByLabel("Downtime reason", { exact: true })
-    .selectOption(reason.id);
+  await page.getByLabel("Downtime reason", { exact: true }).selectOption(reason.id);
   await page.screenshot({
     path: "docs/screenshots/downtime-access/operator-hierarchy.png",
     fullPage: true,
@@ -348,7 +301,7 @@ async function main() {
       .locator("nav")
       .getByRole("button", { name: /Accounts$/ })
       .count(),
-    1,
+    1
   );
   // Managers now have scoped account administration; global administration
   // remains protected by the account/delegation regression suite.
@@ -356,13 +309,9 @@ async function main() {
     .locator("nav")
     .getByRole("button", { name: /Accounts$/ })
     .click();
-  await mp
-    .getByRole("heading", { name: "Department accounts", exact: false })
-    .waitFor();
+  await mp.getByRole("heading", { name: "Department accounts", exact: false }).waitFor();
   // Operational exports use the same assignment filter, even with export rights.
-  const originalOperator = (
-    await db.policy.findUniqueOrThrow({ where: { role: "Operator" } })
-  ).grants;
+  const originalOperator = (await db.policy.findUniqueOrThrow({ where: { role: "Operator" } })).grants;
   try {
     await db.policy.update({
       where: { role: "Operator" },
@@ -389,7 +338,7 @@ async function main() {
   const adminOps = await get(admin, "/api/operations?view=downtime");
   assert(adminOps.equipment.some((e) => e.id === equipment[3].id));
   console.log(
-    "PASS: hierarchical selection/reset, plant isolation, per-machine/area/department access, future machines, Admin controls, no-access default, immediate revocation, forbidden starts/stops, scoped history/live/export, and admin assignment UI.",
+    "PASS: hierarchical selection/reset, plant isolation, per-machine/area/department access, future machines, Admin controls, no-access default, immediate revocation, forbidden starts/stops, scoped history/live/export, and admin assignment UI."
   );
 }
 main()
@@ -411,6 +360,10 @@ main()
       where: { id: { in: equipment.map((e) => e.id) } },
     });
     if (reason) await db.downtimeReason.delete({ where: { id: reason.id } });
+    await db.notification.deleteMany({
+      where: { userId: { in: users.map((u) => u.id) }, kind: "assignment" },
+    });
+    await db.assignmentDelivery.deleteMany({ where: { userId: { in: users.map((u) => u.id) } } });
     await db.user.deleteMany({ where: { id: { in: users.map((u) => u.id) } } });
     await db.$disconnect();
   });

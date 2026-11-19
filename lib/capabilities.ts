@@ -27,9 +27,6 @@ export async function grants(user: { role: string; id?: string }) {
 export async function adminPrivileges(user: { id: string; role: string }) {
   return (await authority(user)).privileges;
 }
-export async function canAdminister(
-  user: { id: string; role: string },
-  key: AdminPrivilege,
-) {
+export async function canAdminister(user: { id: string; role: string }, key: AdminPrivilege) {
   return (await adminPrivileges(user)).includes(key);
 }

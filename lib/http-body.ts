@@ -1,11 +1,7 @@
 import { HttpError } from "./http-error";
 // Bound the bytes actually received, including bodies with missing/false lengths.
 // Cancellation releases the upstream reader and deadline even for slow clients.
-export async function readBodyBytes(
-  message: Request | Response,
-  max: number,
-  timeoutMs = 15000,
-) {
+export async function readBodyBytes(message: Request | Response, max: number, timeoutMs = 15000) {
   const reader = message.body?.getReader();
   if (!reader) throw new HttpError(400, "Missing request body");
   let timedOut = false,
@@ -34,9 +30,6 @@ export async function readBodyBytes(
     reader.releaseLock();
   }
 }
-export async function readBoundedResponseJson(
-  response: Response,
-  max = 100000,
-) {
+export async function readBoundedResponseJson(response: Response, max = 100000) {
   return JSON.parse((await readBodyBytes(response, max)).toString("utf8"));
 }

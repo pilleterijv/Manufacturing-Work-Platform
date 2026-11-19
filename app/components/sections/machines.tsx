@@ -43,22 +43,9 @@ export default function Machines({ user }: { user: User }) {
     "Instructions",
     ...(g.includes("work") || g.includes("audits") ? ["Checks"] : []),
     ...(g.includes("maintenance") ? ["Maintenance"] : []),
-    ...(g.includes("defects") ||
-    g.includes("problems") ||
-    g.includes("downtime")
-      ? ["Issues"]
-      : []),
+    ...(g.includes("defects") || g.includes("problems") || g.includes("downtime") ? ["Issues"] : []),
     ...(g.includes("centerlines") ? ["Centerlines"] : []),
-    ...(g.some((c) =>
-      [
-        "analytics",
-        "work",
-        "audits",
-        "studies",
-        "maintenance",
-        "centerlines",
-      ].includes(c),
-    )
+    ...(g.some((c) => ["analytics", "work", "audits", "studies", "maintenance", "centerlines"].includes(c))
       ? ["History"]
       : []),
   ];
@@ -71,11 +58,7 @@ export default function Machines({ user }: { user: User }) {
     const paths: { path: string; type: string; tab: string }[] = [];
     const add = (path: string, type: string, tab: string) =>
       paths.push({
-        path:
-          path +
-          (path.includes("?") ? "&" : "?") +
-          "equipment=" +
-          encodeURIComponent(selected),
+        path: path + (path.includes("?") ? "&" : "?") + "equipment=" + encodeURIComponent(selected),
         type,
         tab,
       });
@@ -84,55 +67,23 @@ export default function Machines({ user }: { user: User }) {
       add("/api/platform?view=training", "content", "Training");
     }
     if (view === "Checks") {
-      if (g.includes("work"))
-        add("/api/platform?view=work", "standards", "Standard work");
-      if (g.includes("work"))
-        add(
-          "/api/platform?view=changeovers",
-          "standards",
-          "Changeover standards",
-        );
-      if (g.includes("audits"))
-        add("/api/platform?view=leaders", "standards", "DL/TL Standard Work");
-      if (g.includes("audits"))
-        add("/api/platform?view=audits", "standards", "Standard work audits");
+      if (g.includes("work")) add("/api/platform?view=work", "standards", "Standard work");
+      if (g.includes("work")) add("/api/platform?view=changeovers", "standards", "Changeover standards");
+      if (g.includes("audits")) add("/api/platform?view=leaders", "standards", "DL/TL Standard Work");
+      if (g.includes("audits")) add("/api/platform?view=audits", "standards", "Standard work audits");
     }
-    if (
-      view === "Maintenance" ||
-      (view === "History" && g.includes("maintenance"))
-    ) {
-      add(
-        "/api/maintenance?kind=pm",
-        view === "History" ? "records" : "plans",
-        "Preventive maintenance",
-      );
-      add(
-        "/api/maintenance?kind=cil",
-        view === "History" ? "records" : "plans",
-        "TPM / CIL",
-      );
+    if (view === "Maintenance" || (view === "History" && g.includes("maintenance"))) {
+      add("/api/maintenance?kind=pm", view === "History" ? "records" : "plans", "Preventive maintenance");
+      add("/api/maintenance?kind=cil", view === "History" ? "records" : "plans", "TPM / CIL");
     }
     if (view === "Issues") {
-      if (g.includes("defects"))
-        add("/api/defects?focus=open", "defects", "Defect reporting");
-      if (g.includes("problems"))
-        add("/api/problems?focus=open", "items", "Problem solving");
-      if (g.includes("downtime"))
-        add("/api/operations?view=downtime", "downtime", "Downtime");
+      if (g.includes("defects")) add("/api/defects?focus=open", "defects", "Defect reporting");
+      if (g.includes("problems")) add("/api/problems?focus=open", "items", "Problem solving");
+      if (g.includes("downtime")) add("/api/operations?view=downtime", "downtime", "Downtime");
     }
-    if (
-      view === "Centerlines" ||
-      (view === "History" && g.includes("centerlines"))
-    )
-      add(
-        "/api/centerlines",
-        view === "History" ? "records" : "plans",
-        "Centerlines",
-      );
-    if (
-      view === "History" &&
-      g.some((c) => ["analytics", "work", "audits", "studies"].includes(c))
-    )
+    if (view === "Centerlines" || (view === "History" && g.includes("centerlines")))
+      add("/api/centerlines", view === "History" ? "records" : "plans", "Centerlines");
+    if (view === "History" && g.some((c) => ["analytics", "work", "audits", "studies"].includes(c)))
       add("/api/platform?view=records", "records", "Analytics");
     Promise.all(
       paths.map(async (p) => {
@@ -172,11 +123,9 @@ export default function Machines({ user }: { user: User }) {
                     : "Standard work"
               : p.tab,
           standard: p.type === "standards" ? r.id : undefined,
-          item: ["defects", "items", "plans"].includes(p.type)
-            ? r.id
-            : undefined,
+          item: ["defects", "items", "plans"].includes(p.type) ? r.id : undefined,
         }));
-      }),
+      })
     )
       .then((groups) => {
         if (!c.signal.aborted) setRows(groups.flat());
@@ -236,10 +185,7 @@ export default function Machines({ user }: { user: User }) {
             >
               Work queue for this machine
             </button>
-            <a
-              className="outline"
-              href={"?machine=" + encodeURIComponent(selected)}
-            >
+            <a className="outline" href={"?machine=" + encodeURIComponent(selected)}>
               Machine label link
             </a>
           </div>
@@ -257,8 +203,8 @@ export default function Machines({ user }: { user: User }) {
             ))}
           </div>
           <p>
-            Current access only. Lists show the first page of each source; open
-            the section for full history, evidence and filters.
+            Current access only. Lists show the first page of each source; open the section for full history,
+            evidence and filters.
           </p>
           {loading ? (
             <p role="status">Loading machine records…</p>
@@ -279,9 +225,7 @@ export default function Machines({ user }: { user: User }) {
                         equipment: selected,
                         ...(r.standard ? { standard: r.standard } : {}),
                         ...(r.item ? { item: r.item } : {}),
-                        ...(!r.standard && !r.item && view === "Instructions"
-                          ? { search: r.title }
-                          : {}),
+                        ...(!r.standard && !r.item && view === "Instructions" ? { search: r.title } : {}),
                       },
                     })
                   }
@@ -293,16 +237,15 @@ export default function Machines({ user }: { user: User }) {
           )}
           {!loading && !rows.length && !error && (
             <p>
-              No permitted {view.toLowerCase()} records for this machine. Choose
-              another section or contact your leader if instructions are
-              missing.
+              No permitted {view.toLowerCase()} records for this machine. Choose another section or contact
+              your leader if instructions are missing.
             </p>
           )}
         </>
       ) : (
         <p>
-          Search and select an assigned machine to see its instructions, checks,
-          maintenance, issues and history together.
+          Search and select an assigned machine to see its instructions, checks, maintenance, issues and
+          history together.
         </p>
       )}
     </section>

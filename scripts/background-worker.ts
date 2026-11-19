@@ -19,8 +19,7 @@ const jobs = [
   {
     name: "expired-password-links",
     interval: 1800000,
-    run: () =>
-      db.passwordReset.deleteMany({ where: { expires: { lt: new Date() } } }),
+    run: () => db.passwordReset.deleteMany({ where: { expires: { lt: new Date() } } }),
   },
   { name: "external-data", interval: 30000, run: pollExternalData },
   { name: "sql", interval: 10000, run: pollCompanySql },
@@ -35,9 +34,7 @@ async function runJob(job: (typeof jobs)[number]) {
   } catch (error) {
     const issue = serviceIssue(error);
     health[job.name] = { checkedAt: new Date().toISOString(), ok: false };
-    console.error(
-      `Background ${job.name} failed [${issue.code}]: ${issue.message} Other services continue.`,
-    );
+    console.error(`Background ${job.name} failed [${issue.code}]: ${issue.message} Other services continue.`);
   }
 }
 async function saveHealth() {
@@ -61,17 +58,14 @@ async function main() {
             () => runJob(job),
             job.interval,
             () => stopping,
-            () => console.error(`Background ${job.name} service will retry.`),
-          ),
+            () => console.error(`Background ${job.name} service will retry.`)
+          )
         ),
         periodicJob(
           saveHealth,
           10000,
           () => stopping,
-          () =>
-            console.error(
-              "Worker health could not be saved; check PostgreSQL.",
-            ),
+          () => console.error("Worker health could not be saved; check PostgreSQL.")
         ),
       ]);
     }
