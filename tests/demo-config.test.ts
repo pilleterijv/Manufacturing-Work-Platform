@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateDemoUrl, demoEnvironment, demoOrigin } from "../scripts/demo-config.cjs";
+import { validateDemoUrl, demoEnvironment, demoOrigin, demoSourceFile, demoSetupError } from "../scripts/demo-config.cjs";
 import { requestAllowed, requestOriginAllowed } from "../lib/request-policy";
 test("demo targets fail closed and secret-bearing integrations are stripped", () => {
   const url = "postgresql://demo:demo@localhost/floorwork_demo_0123456789ab";
@@ -63,4 +63,21 @@ test("Codespaces demo forwarding trusts only the explicitly configured port and 
     requestAllowed(new Headers({ host: "localhost:3001" }), "/", origin, { ...tunnel, PORT: "3000" }),
     false
   );
+});
+
+test("demo follows the Codespaces private settings without replacing explicit configuration", () => {
+  const exists = (p: import("node:fs").PathLike) => p === "/pilot/.env.codespaces";
+  assert.equal(demoSourceFile("/pilot", { CODESPACES: "true" }, exists), "/pilot/.env.codespaces");
+  assert.equal(demoSourceFile("/pilot", {}, exists), "/pilot/.env");
+  assert.equal(demoSourceFile("/pilot", { CODESPACES: "true" }, () => false), "/pilot/.env");
+  assert.equal(demoSourceFile("/pilot", { CODESPACES: "true", FLOORWORK_ENV_FILE: "/custom/private" }, exists), "/custom/private");
+});
+test("demo failures explain recovery without exposing raw PostgreSQL details", () => {
+  for (const code of ["ECONNREFUSED", "ENOTFOUND", "28P01", "42501", "3D000", "55006"]) {
+    const message = demoSetupError({ code, message: "secret-connection-details" });
+    assert(!message.includes("secret-connection-details"));
+    assert(!message.includes("could not finish"));
+  }
+  assert.match(demoSetupError({ errors: [{ code: "ECONNREFUSED" }]}), /cannot reach/);
+  assert.match(demoSetupError({ message: "secret-connection-details" }), /could not finish/);
 });

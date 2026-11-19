@@ -1,4 +1,25 @@
 const path = require("node:path");
+function demoSourceFile(root, env, exists = require("node:fs").existsSync) {
+  if (env.FLOORWORK_ENV_FILE) return env.FLOORWORK_ENV_FILE;
+  const codespaces = path.join(root, ".env.codespaces");
+  return env.CODESPACES === "true" && exists(codespaces) ? codespaces : path.join(root, ".env");
+}
+function demoSetupError(error) {
+  const codes = new Set([error?.code, ...(error?.errors || []).map((e) => e.code)]);
+  if (["ECONNREFUSED", "ENOTFOUND", "EAI_AGAIN", "ETIMEDOUT", "57P03"].some((c) => codes.has(c)))
+    return "Demo cannot reach local PostgreSQL. Check that the Codespaces database service is running and the selected private environment file targets that service.";
+  if (codes.has("28P01") || codes.has("28000"))
+    return "Demo PostgreSQL login was rejected. Review the selected private environment file locally; do not paste credentials into chat.";
+  if (codes.has("42501"))
+    return "Demo PostgreSQL account needs permission to create a separate database. Ask your administrator for a local pilot account with CREATEDB; do not alter the operational database.";
+  if (codes.has("3D000"))
+    return "Demo cannot connect to the configured local pilot database because it does not exist. Check the selected private environment file with your administrator.";
+  if (codes.has("55006"))
+    return "Demo database is still in use. Stop the demo app with Ctrl+C before resetting it.";
+  return error.message && /^(Demo|Use |Run |Refusing|Ask )/.test(error.message)
+    ? error.message
+    : "Demo setup could not finish. Check local PostgreSQL permissions/service availability; do not change the operational database to fix the demo.";
+}
 function validateDemoUrl(value) {
   const u = new URL(value);
   if (
@@ -46,4 +67,4 @@ function demoEnvironment(base, url, folder) {
     AZURE_STORAGE_CONNECTION_STRING: "",
   };
 }
-module.exports = { validateDemoUrl, demoEnvironment, demoOrigin };
+module.exports = { validateDemoUrl, demoEnvironment, demoOrigin, demoSourceFile, demoSetupError };

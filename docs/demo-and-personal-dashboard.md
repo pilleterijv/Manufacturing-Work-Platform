@@ -18,6 +18,8 @@ npm run demo:start
 
 Run one command at a time and stop if one fails. Demo setup requires the existing local pilot PostgreSQL service to be running and the local database account to be allowed to create another database. If needed, use the normal Codespaces setup to start its database first. The demo command does not install Docker Desktop and does not seed the normal database. It deliberately refuses company-hosted PostgreSQL connections; IT can provide a local pilot target if your app uses a remote database.
 
+Demo setup now uses `.env.codespaces` automatically when running inside Codespaces and that file exists, matching the Codespaces launcher. An explicitly supplied `FLOORWORK_ENV_FILE` takes precedence; otherwise local runs use `.env`. No existing private file is rewritten. If setup fails, it reports missing settings, an unreachable service, rejected database login, missing create-database permission, or an in-use demo database without printing the connection string. Fix the reported service/configuration problem before retrying; do not delete database volumes or reset the operational database.
+
 Leave the demo terminal running. In **Ports**, forward **3001** if it is absent, keep it **Private**, and choose **Open in Browser**. Use the current URL printed by `demo:start`; do not reuse port 3000’s address. Local desktop users can open `http://localhost:3001`. A private Codespaces port may first require GitHub sign-in in your regular browser.
 
 In another terminal, read the generated fictional login details:
