@@ -188,7 +188,7 @@ export default function Submissions({ user }: { user: User }) {
         </p>
       )}
       {detail && (
-        <div ref={detailAnchor}>
+        <div ref={detailAnchor} style={{ scrollMarginTop: "12rem" }}>
           <SubmissionDetail
             key={detail.record.id}
             data={detail}
