@@ -2454,3 +2454,46 @@ button {
     position: static;
   }
 }
+
+.problem-report {
+  scroll-margin-top: 24px;
+  border-top: 5px solid var(--orange);
+}
+.problem-report-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+  background: #faf7f2;
+  padding: 20px;
+}
+.problem-report dt {
+  font-weight: 700;
+  color: #374957;
+  margin-bottom: 5px;
+}
+.problem-report dd {
+  margin: 0 0 16px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.problem-report-section {
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  margin-top: 24px;
+}
+.problem-report-section > h3 {
+  background: #fff0e4;
+  padding: 12px;
+  margin-bottom: 18px;
+  font-size: 20px;
+}
+.problem-summary {
+  margin: 8px 0;
+  max-width: 65ch;
+}
+.problem-form-body {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}

@@ -118,7 +118,7 @@ export async function currentAssignment(type: string, id: string) {
           equipmentId: r.equipmentId,
           title: r.title,
           due: r.dueDate,
-          people: [r.ownerId, r.reviewerId],
+          people: [r.ownerId, r.reviewerId, ...(r.participantIds as string[])],
           cap: "problems",
           tab: "Problem solving",
         }

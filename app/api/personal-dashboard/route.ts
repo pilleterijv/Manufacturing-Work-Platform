@@ -64,6 +64,7 @@ export async function GET(req: Request) {
             OR: [
               { ownerId: u.id },
               { reviewerId: u.id },
+              { participantIds: { array_contains: [u.id] } },
               {
                 actions: {
                   some: { ownerId: u.id, status: { not: "Completed" } },

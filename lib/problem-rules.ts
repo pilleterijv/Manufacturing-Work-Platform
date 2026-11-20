@@ -303,6 +303,7 @@ export const problemSchema = z.object({
   ownerId: z.string().uuid(),
   reviewerId: z.string().uuid(),
   team: z.string().max(2000),
+  participantIds: z.array(z.string().uuid()).max(100).default([]),
   dueDate: z.iso.date(),
   previousId: z.string().uuid().nullable(),
   answers: answersSchema,

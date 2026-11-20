@@ -95,7 +95,26 @@ export default function SectionDashboard({
             </thead>
             <tbody>
               {snapshot.rows.slice(0, 12).map((r) => (
-                <tr key={r.id}>
+                <tr
+                  key={r.id}
+                  className={section === "Problem solving" ? "record-row" : undefined}
+                  tabIndex={section === "Problem solving" ? 0 : undefined}
+                  aria-label={section === "Problem solving" ? `View problem ${r.title}` : undefined}
+                  onClick={() => {
+                    if (section === "Problem solving")
+                      openWorkflow({ tab: section, filters: { item: r.id } });
+                  }}
+                  onKeyDown={(e) => {
+                    if (
+                      section === "Problem solving" &&
+                      e.target === e.currentTarget &&
+                      ["Enter", " "].includes(e.key)
+                    ) {
+                      e.preventDefault();
+                      openWorkflow({ tab: section, filters: { item: r.id } });
+                    }
+                  }}
+                >
                   <td>{r.title}</td>
                   <td>{r.equipment}</td>
                   <td>{r.person}</td>

@@ -69,6 +69,7 @@ export async function workflowFocus(url: string, kind: string, userId: string): 
                 OR: [
                   { ownerId: userId },
                   { reviewerId: userId },
+                  { participantIds: { array_contains: [userId] } },
                   {
                     actions: {
                       some: { ownerId: userId, status: { not: "Completed" } },

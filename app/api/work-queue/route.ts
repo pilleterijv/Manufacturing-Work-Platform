@@ -193,7 +193,19 @@ export async function GET(req: Request) {
             where: {
               equipmentId: { in: ids },
               status: { not: "Closed" },
-              ...(!team ? { AND: [{ OR: [{ ownerId: u.id }, { reviewerId: u.id }] }] } : {}),
+              ...(!team
+                ? {
+                    AND: [
+                      {
+                        OR: [
+                          { ownerId: u.id },
+                          { reviewerId: u.id },
+                          { participantIds: { array_contains: [u.id] } },
+                        ],
+                      },
+                    ],
+                  }
+                : {}),
             },
             orderBy: [{ dueDate: "asc" }, { id: "asc" }],
             take: 501,

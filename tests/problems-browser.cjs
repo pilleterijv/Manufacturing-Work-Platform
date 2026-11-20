@@ -259,8 +259,14 @@ async function main() {
   assert.equal(book.getWorksheet("Actions and checkpoints").rowCount, 2);
   const page = await operator.newPage();
   await page.goto(origin);
-  await page.getByText("More tools and workspace settings", { exact: true }).click();
-  await page.getByRole("button", { name: "Open Problem solving section", exact: true }).click();
+  await page.getByRole("button", { name: "Sign out", exact: true }).waitFor();
+  const more = page.getByRole("button", { name: "More tools and history", exact: true });
+  if (await more.isVisible()) await more.click();
+  await page
+    .locator("nav")
+    .getByRole("button", { name: /Problem solving/ })
+    .first()
+    .click();
   await page.getByRole("heading", { name: "Problem-solving records", exact: true }).waitFor();
   await page.getByLabel("Problem department").selectOption(eq.department);
   await page.getByRole("row").filter({ hasText: input.title }).first().waitFor();
