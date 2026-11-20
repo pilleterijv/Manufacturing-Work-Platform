@@ -11,11 +11,13 @@
   "portsAttributes": {
     "3000": {
       "label": "Floorwork",
-      "onAutoForward": "notify"
+      "onAutoForward": "notify",
+      "protocol": "http"
     },
     "3001": {
       "label": "Floorwork DEMO",
-      "onAutoForward": "notify"
+      "onAutoForward": "notify",
+      "protocol": "http"
     }
   },
   "otherPortsAttributes": {

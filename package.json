@@ -39,7 +39,8 @@
     "test:contextual-search": "node tests/contextual-search-browser.cjs",
     "demo:setup": "node scripts/demo.cjs setup",
     "demo:start": "node scripts/demo.cjs start",
-    "demo:reset": "node scripts/demo.cjs reset"
+    "demo:reset": "node scripts/demo.cjs reset",
+    "demo:doctor": "node scripts/demo-doctor.cjs"
   },
   "dependencies": {
     "@azure/storage-blob": "^12.29.1",
