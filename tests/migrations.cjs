@@ -19,7 +19,7 @@ function setup(url) {
   assert.equal(result.status, 0, "Temporary migration verification failed: " + result.stderr);
 }
 async function main() {
-  for (const mode of ["fresh", "upgrade", "upgrade003"]) {
+  for (const mode of ["fresh", "upgrade", "upgrade003", "upgrade020"]) {
     const name = "floorwork_test_" + randomUUID().replaceAll("-", "");
     names.push(name);
     await parent.query(`CREATE DATABASE "${name}"`);
@@ -82,8 +82,42 @@ async function main() {
           ]
         );
       }
+      if (mode === "upgrade020") {
+        for (let n = 2; n <= 20; n++) {
+          const version = String(n).padStart(3, "0"),
+            sql = readFileSync(`prisma/${version}.sql`, "utf8");
+          await pool.query(sql);
+          await pool.query('INSERT INTO "Migration" VALUES ($1,$2)', [
+            version,
+            createHash("sha256").update(sql).digest("hex"),
+          ]);
+        }
+        await pool.query(
+          `INSERT INTO "User" (id,username,name,password,role) VALUES ('case-user','case-user','Preserved user','non-login-fixture','Operator')`
+        );
+        await pool.query(
+          `INSERT INTO "Equipment" (id,name,plant,department,area,line) VALUES ('case-machine','Preserved machine','Plant','Dept','Area','')`
+        );
+        await pool.query(
+          `INSERT INTO "Problem" (id,reference,method,title,"equipmentId","equipmentSnapshot","occurredOn","reportedBy","ownerId","reviewerId",team,"dueDate",answers,"createdBy",history) VALUES ('preserved-case','2D-PRESERVED','2D','Preserved case','case-machine','{}','2026-11-18','Preserved user','case-user','case-user','Typed team','2026-11-20','{"problem":"Historical evidence"}','case-user','[{"event":"Created"}]')`
+        );
+      }
       setup(url.toString());
       setup(url.toString());
+      if (mode === "upgrade020") {
+        const record = (
+          await pool.query(
+            `SELECT title,answers,history,"participantIds",team FROM "Problem" WHERE id='preserved-case'`
+          )
+        ).rows[0];
+        assert.deepEqual(record, {
+          title: "Preserved case",
+          answers: { problem: "Historical evidence" },
+          history: [{ event: "Created" }],
+          participantIds: [],
+          team: "Typed team",
+        });
+      }
       if (mode === "upgrade003") {
         assert.deepEqual(
           (await pool.query(`SELECT data FROM "Record" WHERE id='preserved-record'`)).rows[0].data,
@@ -110,7 +144,11 @@ async function main() {
           1
         );
       }
-      assert.equal((await pool.query('SELECT count(*)::int AS n FROM "Migration"')).rows[0].n, 20);
+      assert.equal((await pool.query('SELECT count(*)::int AS n FROM "Migration"')).rows[0].n, 21);
+      const participantColumn = await pool.query(
+        `SELECT column_default FROM information_schema.columns WHERE table_name='Problem' AND column_name='participantIds'`
+      );
+      assert.match(participantColumn.rows[0].column_default, /\[\]/);
       const roleMetadata = await pool.query('SELECT role,"baseRole" FROM "Policy" ORDER BY role');
       for (const row of roleMetadata.rows) assert.equal(row.baseRole, row.role);
       assert.equal((await pool.query('SELECT count(*)::int AS n FROM "RoleAudit"')).rows[0].n, 0);
@@ -127,11 +165,14 @@ async function main() {
       assert.equal(standardColumns.length, 2);
       assert.match(standardColumns[0].column_default, /false/);
       assert.match(standardColumns[1].column_default, /process/);
-      assert.equal((await pool.query('SELECT count(*)::int AS n FROM "Problem"')).rows[0].n, 0);
+      assert.equal(
+        (await pool.query('SELECT count(*)::int AS n FROM "Problem"')).rows[0].n,
+        mode === "upgrade020" ? 1 : 0
+      );
       assert.equal((await pool.query('SELECT count(*)::int AS n FROM "ProblemAction"')).rows[0].n, 0);
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "User"')).rows[0].n,
-        mode === "upgrade003" ? 1 : 0
+        ["upgrade003", "upgrade020"].includes(mode) ? 1 : 0
       );
       assert.equal(
         (await pool.query('SELECT count(*)::int AS n FROM "Equipment"')).rows[0].n,
@@ -176,7 +217,7 @@ async function main() {
     }
   }
   console.log(
-    "PASS: fresh installation, upgrades from 001 and 003, preserved accounts/raw records/photos/ideas, checksummed repeatability, custom grants, and no default user accounts."
+    "PASS: fresh installation, upgrades from 001, 003 and 020, preserved cases/answers/teams/history plus accounts/raw records/photos/ideas, checksummed repeatability, custom grants, and no default user accounts."
   );
 }
 main()

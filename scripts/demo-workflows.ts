@@ -43,11 +43,21 @@ export async function addDemoWorkflowExamples() {
           const completed = actions.map((a) => ({ ...a, status: closed ? "Completed" : "In progress" }));
           if (closed && closureErrors(method, answers, completed).length)
             throw Error("Demo closed example does not satisfy its required evidence.");
-          const { id, createdAt, updatedAt, version, requirements, media, equipmentSnapshot, ...source } =
-            template;
+          const {
+            id,
+            createdAt,
+            updatedAt,
+            version,
+            requirements,
+            media,
+            equipmentSnapshot,
+            participantIds,
+            ...source
+          } = template;
           const problem = await tx.problem.create({
             data: {
               ...source,
+              participantIds: (participantIds as string[]) || [],
               media: media!,
               equipmentSnapshot: equipmentSnapshot!,
               ...(requirements ? { requirements } : {}),

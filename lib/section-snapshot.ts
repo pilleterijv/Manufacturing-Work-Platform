@@ -82,7 +82,8 @@ export function sectionSnapshot(section: string, d: any): SectionSnapshot {
       (d.people || []).find((p: any) => p.id === (r.userId || r.ownerId || r.reportedBy || r.assigneeId))
         ?.name ||
       "—",
-    date: r.createdAt || r.created || r.occurredAt || r.startedAt || r.nextDue || "",
+    date:
+      r.createdAt || r.created || r.occurredAt || r.startedAt || r.nextDue || r.occurredOn || r.dueDate || "",
   }));
   let metrics = [
     {

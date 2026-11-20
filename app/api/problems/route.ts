@@ -1,3 +1,4 @@
+import { problemAccess, sameRequirements } from "@/lib/problem-access";
 import { queueAssignments } from "@/lib/assignment-notifications";
 import { readFilters } from "@/lib/filters";
 import { workflowFocus } from "@/lib/workflow-focus";
@@ -44,7 +45,23 @@ export async function GET(req: Request) {
       });
       if (!record) throw new HttpError(404, "Problem-solving record not found");
       await assertEquipmentAccess(u, record.equipmentId);
-      return Response.json(record);
+      const casePeople = await db.user.findMany({
+        where: {
+          id: {
+            in: [
+              ...new Set([
+                record.createdBy,
+                record.ownerId,
+                record.reviewerId,
+                ...(record.participantIds as string[]),
+                ...record.actions.map((a) => a.ownerId),
+              ]),
+            ],
+          },
+        },
+        select: { id: true, name: true, active: true },
+      });
+      return Response.json({ ...record, casePeople, permissions: problemAccess(u, record) });
     }
     const department = z
       .string()
@@ -62,8 +79,18 @@ export async function GET(req: Request) {
       .string()
       .max(150)
       .parse(p.get("search") ?? "");
+    const machine = z
+      .string()
+      .uuid()
+      .optional()
+      .parse(p.get("machine") || p.get("equipment") || undefined);
+    const textMatches = search
+      ? await db.$queryRaw<{ id: string }[]>(Prisma.sql`
+      SELECT id FROM "Problem" WHERE "equipmentId"=ANY(${ids}::text[])
+      AND answers::text ILIKE ${"%" + search.replace(/[\\%_]/g, "\\$&") + "%"}`)
+      : [];
     const scope: Prisma.ProblemWhereInput = {
-      equipmentId: { in: ids },
+      equipmentId: { in: machine ? ids.filter((id) => id === machine) : ids },
       AND: [
         await workflowFocus(req.url, "problems", u.id),
         ...(person
@@ -74,6 +101,7 @@ export async function GET(req: Request) {
                   { reviewerId: person },
                   { createdBy: person },
                   { actions: { some: { ownerId: person } } },
+                  { participantIds: { array_contains: [person] } },
                 ],
               },
             ]
@@ -102,6 +130,7 @@ export async function GET(req: Request) {
               },
               { reference: { contains: search, mode: "insensitive" } },
               { title: { contains: search, mode: "insensitive" } },
+              { id: { in: textMatches.map((r) => r.id) } },
             ],
           }
         : {}),
@@ -245,6 +274,8 @@ export async function GET(req: Request) {
             status: true,
             dueDate: true,
             equipmentSnapshot: true,
+            occurredOn: true,
+            answers: true,
             ownerId: true,
             reviewerId: true,
             version: true,
@@ -282,6 +313,7 @@ export async function GET(req: Request) {
     const departments = equipment.map((e) => ({ department: e.department }));
     return Response.json({
       items: rows.slice(0, 100),
+      canManageRequirements: u.role === "Admin",
       hasMore: rows.length > 100,
       cursor: rows[99]?.id ?? null,
       equipment,
@@ -312,6 +344,12 @@ export async function POST(req: Request) {
     const entry = { at: new Date().toISOString(), by: u.id, name: u.name };
     if (action === "create") {
       const input = problemSchema.parse(body);
+      if (
+        u.role !== "Admin" &&
+        input.requirements &&
+        !sameRequirements(input.requirements, defaultRequirements(input.method))
+      )
+        throw new HttpError(403, "Only Admin can change required fields or closure rules");
       await ownEvidence(u.id, input.media);
       const [equipment, people, previous] = await Promise.all([
         db.equipment.findUnique({ where: { id: input.equipmentId } }),
@@ -331,7 +369,7 @@ export async function POST(req: Request) {
       )
         throw new HttpError(400, "Link a lower-level record when escalating");
       await assertEquipmentAccess(u, input.equipmentId);
-      await eligiblePeople(input.equipmentId, [input.ownerId, input.reviewerId]);
+      await eligiblePeople(input.equipmentId, [input.ownerId, input.reviewerId, ...input.participantIds]);
       if (previous) {
         await assertEquipmentAccess(u, previous.equipmentId);
         if (previous.equipmentId !== input.equipmentId)
@@ -355,7 +393,7 @@ export async function POST(req: Request) {
           type: "problem",
           id: saved.id,
           equipmentId: input.equipmentId,
-          assignees: [input.ownerId, input.reviewerId],
+          assignees: [input.ownerId, input.reviewerId, ...input.participantIds],
           revision: 1,
         });
         return { id: saved.id, reference: saved.reference };
@@ -374,17 +412,19 @@ export async function POST(req: Request) {
       });
       if (!r) throw new HttpError(404, "Record not found");
       await assertEquipmentAccess(u, r.equipmentId, tx);
-      const lead = u.role === "Admin" || u.id === r.ownerId || u.id === r.createdBy || u.id === r.reviewerId;
-      const manager = g.includes("manage");
+      const access = problemAccess(u, r);
       if (action === "editAction") {
-        if (!lead && !manager)
-          throw new HttpError(403, "Only the problem leader or manager can edit action requirements");
+        if (!access.editCase)
+          throw new HttpError(403, "Only assigned case contributors can edit action details");
         if (r.status === "Closed") throw new HttpError(409, "Reopen the record before editing actions");
         const aid = idSchema.parse(body.actionId),
           old = r.actions.find((a) => a.id === aid);
         if (!old) throw new HttpError(404, "Action not found");
         if (old.version !== version) throw new HttpError(409, "Action changed; refresh before saving");
         const input = actionSchema.parse(body);
+        if (body.required === undefined) input.required = old.required;
+        if (!access.requirements && input.required !== old.required)
+          throw new HttpError(403, "Only Admin can change whether an action is required");
         if (input.type === "Checkpoint" && r.method === "2D")
           throw new HttpError(400, "Checkpoints apply to 4D and 8D");
         if (body.media === undefined) input.media = old.media as any;
@@ -427,7 +467,7 @@ export async function POST(req: Request) {
         const aid = idSchema.parse(body.actionId),
           a = r.actions.find((a) => a.id === aid);
         if (!a) throw new HttpError(404, "Action not found");
-        if (!lead && !manager && a.ownerId !== u.id)
+        if (!access.updateActionIds.includes(a.id))
           throw new HttpError(403, "Only the owner or problem team leader can update this action");
         if (a.version !== version) throw new HttpError(409, "This action changed. Reload before updating");
         if (r.status === "Closed") throw new HttpError(409, "Reopen the record before changing its actions");
@@ -453,16 +493,18 @@ export async function POST(req: Request) {
           },
         });
       }
-      if (!lead && !manager)
+      if (!access.editCase)
         throw new HttpError(
           403,
-          "Only the record creator, facilitator, reviewer or manager can edit this record"
+          "Only the creator, assigned participants or action owners can edit this record"
         );
       if (r.version !== version) throw new HttpError(409, "This record changed. Reload before saving");
       if (action === "addAction") {
         if (r.status === "Closed") throw new HttpError(409, "Reopen the record before adding actions");
         if (r.actions.length >= 100) throw new HttpError(400, "Maximum 100 actions per record");
         const input = actionSchema.parse(body);
+        if (!access.requirements && !input.required)
+          throw new HttpError(403, "Only Admin can make an action optional");
         await ownEvidence(u.id, input.media, [], tx);
         await eligiblePeople(r.equipmentId, [input.ownerId], tx);
         if (
@@ -501,6 +543,18 @@ export async function POST(req: Request) {
       }
       const input = problemSchema.parse(body),
         status = z.enum(problemStatuses).parse(body.status);
+      if (body.participantIds === undefined) input.participantIds = (r.participantIds as string[]) ?? [];
+      if (
+        !access.assignTeam &&
+        (input.ownerId !== r.ownerId ||
+          input.reviewerId !== r.reviewerId ||
+          JSON.stringify([...input.participantIds].sort()) !==
+            JSON.stringify([...(r.participantIds as string[])].sort()))
+      )
+        throw new HttpError(403, "Only the creator, facilitator or Admin can change the assigned team");
+      const requirements = (r.requirements as any) ?? defaultRequirements(r.method as Method);
+      if (!access.requirements && input.requirements && !sameRequirements(input.requirements, requirements))
+        throw new HttpError(403, "Only Admin can change required fields or closure rules");
       if (body.media === undefined) input.media = r.media as any;
       await ownEvidence(u.id, input.media, r.media, tx);
       if (
@@ -524,7 +578,7 @@ export async function POST(req: Request) {
       });
       if (people !== new Set([input.ownerId, input.reviewerId]).size)
         throw new HttpError(400, "Choose active facilitators and reviewers");
-      await eligiblePeople(r.equipmentId, [input.ownerId, input.reviewerId], tx);
+      await eligiblePeople(r.equipmentId, [input.ownerId, input.reviewerId, ...input.participantIds], tx);
       if (status === "Closed") {
         const missing = closureErrors(
           r.method as Method,
@@ -539,8 +593,8 @@ export async function POST(req: Request) {
           type: "problem",
           id,
           equipmentId: r.equipmentId,
-          assignees: [input.ownerId, input.reviewerId],
-          previous: [r.ownerId, r.reviewerId],
+          assignees: [input.ownerId, input.reviewerId, ...input.participantIds],
+          previous: [r.ownerId, r.reviewerId, ...(r.participantIds as string[])],
           revision: r.version + 1,
         });
       return tx.problem.update({

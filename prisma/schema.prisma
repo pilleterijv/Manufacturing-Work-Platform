@@ -223,6 +223,7 @@ model Notification {
 }
 
 model Problem {
+ participantIds Json @default("[]")
  media Json @default("[]")
  id String @id @default(uuid())
  reference String @unique

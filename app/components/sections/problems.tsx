@@ -1,4 +1,6 @@
 "use client";
+import { openWorkflow } from "@/lib/floor-navigation";
+import ProblemReport from "../problem-report";
 import { referenceDepartments } from "@/lib/reference-catalog";
 import RefreshControl, { useSectionRefresh } from "../refresh-control";
 import PersonSelect from "../person-select";
@@ -7,7 +9,7 @@ import RecordingContext from "../recording-context";
 import { confirmDraftChange } from "../floor-safety";
 import EvidenceInput from "../evidence-input";
 import { useEffect, useState, useRef } from "react";
-import { api, filterUrl } from "@/lib/client-api";
+import { api, filterUrl, getSectionFilters } from "@/lib/client-api";
 import {
   methods,
   secondCauseFields,
@@ -58,6 +60,9 @@ type Action = {
   history: any[];
 };
 type Problem = ProblemInput & {
+  createdBy: string;
+  casePeople?: Person[];
+  permissions: { editCase: boolean; requirements: boolean; assignTeam: boolean; updateActionIds: string[] };
   id: string;
   reference: string;
   status: string;
@@ -79,9 +84,10 @@ type Item = Pick<
   | "ownerId"
   | "reviewerId"
   | "version"
->;
+> & { occurredOn: string; answers: Record<string, string> };
 type QueueItem = Action & { problem: Item };
 type List = {
+  canManageRequirements: boolean;
   items: Item[];
   hasMore: boolean;
   cursor: string | null;
@@ -110,6 +116,7 @@ const empty: ProblemInput = {
   dueDate: "",
   previousId: null,
   answers: {},
+  participantIds: [],
 };
 export default function Problems({
   userId,
@@ -124,6 +131,9 @@ export default function Problems({
 }) {
   const requestKey = useRef(crypto.randomUUID());
   const [data, setData] = useState<List | null>(null),
+    [editing, setEditing] = useState(false),
+    [machine, setMachine] = useState(""),
+    [issue, setIssue] = useState(""),
     [department, setDepartment] = useState(""),
     [method, setMethod] = useState(""),
     [status, setStatus] = useState(""),
@@ -143,7 +153,14 @@ export default function Problems({
     [loading, setLoading] = useState(false);
   const generation = useRef(0),
     queueGeneration = useRef(0);
-  const params = () => new URLSearchParams({ department, method, status });
+  const params = () =>
+    new URLSearchParams({
+      department,
+      method,
+      status,
+      machine,
+      ...(issue.trim() ? { search: issue.trim() } : {}),
+    });
   async function load(more = false) {
     const current = ++generation.current;
     setLoading(true);
@@ -193,13 +210,17 @@ export default function Problems({
     return () => {
       generation.current++;
     };
-  }, [department, method, status, searchKey]);
+  }, [department, method, status, machine, issue, searchKey]);
   useEffect(() => {
     if (view === "queue") void loadQueue();
     return () => {
       queueGeneration.current++;
     };
-  }, [view, department, method, status, searchKey]);
+  }, [view, department, method, status, machine, issue, searchKey]);
+  useEffect(() => {
+    const id = getSectionFilters().item;
+    if (id) void open(id);
+  }, [searchKey]);
   async function open(id: string) {
     if (!confirmDraftChange()) return;
     setError("");
@@ -209,6 +230,10 @@ export default function Problems({
       const r = await api("/api/problems?id=" + id);
       setSelected(r);
       setDraft(r);
+      setEditing(false);
+      requestAnimationFrame(() =>
+        document.getElementById("problem-case-detail")?.scrollIntoView({ block: "start", behavior: "smooth" })
+      );
       setCaseStatus(r.status);
       setView("records");
     } catch (e) {
@@ -249,13 +274,14 @@ export default function Problems({
     if (!confirmDraftChange()) return;
     requestKey.current = crypto.randomUUID();
     setSelected(null);
+    setEditing(true);
     setCaseStatus("Open");
     setNotice("");
     setError("");
     setDraft({
       ...empty,
       method: m,
-      requirements: { ...defaultRequirements(m), actionTypes: [] },
+      requirements: defaultRequirements(m),
       occurredOn: data!.today,
       dueDate: data!.today,
       ownerId: userId,
@@ -340,6 +366,27 @@ export default function Problems({
                 <option key={d}>{d}</option>
               ))}
             </select>
+          </Field>
+          <Field label="Machine history">
+            <select aria-label="Machine history" value={machine} onChange={(e) => setMachine(e.target.value)}>
+              <option value="">All assigned machines</option>
+              {data?.equipment
+                .filter((e) => !department || e.department === department)
+                .map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.department} · {e.area} · {e.name}
+                  </option>
+                ))}
+            </select>
+          </Field>
+          <Field label="Find past problems or root causes">
+            <input
+              aria-label="Find past problems or root causes"
+              value={issue}
+              maxLength={150}
+              placeholder="Search the problem, cause, fix, title or reference"
+              onChange={(e) => setIssue(e.target.value)}
+            />
           </Field>
           <Field label="Method filter">
             <select
@@ -487,8 +534,28 @@ export default function Problems({
             </section>
           ) : (
             <>
-              {draft && (
-                <section className="panel problem-editor">
+              {selected && !editing && (
+                <div id="problem-case-detail">
+                  <ProblemReport
+                    record={selected}
+                    people={selected.casePeople ?? data.people}
+                    edit={() => setEditing(true)}
+                    close={() => {
+                      setSelected(null);
+                      setDraft(null);
+                    }}
+                    machineHistory={() => {
+                      setMachine(selected.equipmentId);
+                      setMethod("");
+                      setStatus("");
+                      setIssue("");
+                      openWorkflow({ tab: "Problem solving", filters: { equipment: selected.equipmentId } });
+                    }}
+                  />
+                </div>
+              )}
+              {draft && (!selected || editing) && (
+                <section className="panel problem-editor" id="problem-case-detail">
                   <div className="section-title">
                     <h2>{selected ? selected.reference : `New ${draft.method} problem-solving record`}</h2>
                     <button
@@ -527,266 +594,296 @@ export default function Problems({
                       if (r && !selected) await open(r.id);
                     }}
                   >
-                    {!selected && <RelatedOpen equipment={draft.equipmentId} />}
-                    <div className="form-grid">
-                      <Field label="Problem title">
-                        <input
-                          required
-                          value={draft.title}
-                          maxLength={150}
-                          onChange={(e) => patch({ title: e.target.value })}
-                        />
-                      </Field>
-                      <Field label="Problem equipment">
-                        <select
-                          required
-                          disabled={!!selected}
-                          value={draft.equipmentId}
-                          onChange={(e) => patch({ equipmentId: e.target.value })}
-                        >
-                          <option value="">Choose equipment / department</option>
-                          {data.equipment.map((eq) => (
-                            <option key={eq.id} value={eq.id}>
-                              {[eq.plant, eq.department, eq.area, eq.line, eq.name]
-                                .filter(Boolean)
-                                .join(" / ")}
-                            </option>
-                          ))}
-                        </select>
-                      </Field>
-                      <Field label="Date occurred">
-                        <input
-                          type="date"
-                          required
-                          value={draft.occurredOn}
-                          onChange={(e) => patch({ occurredOn: e.target.value })}
-                        />
-                      </Field>
-                      <Field label="Reported by">
-                        <input
-                          required
-                          value={draft.reportedBy}
-                          maxLength={150}
-                          onChange={(e) => patch({ reportedBy: e.target.value })}
-                        />
-                      </Field>
-                      <Field label="Facilitator / owner">
-                        <PersonSelect
-                          people={data?.people ?? []}
-                          aria-label="Facilitator / owner"
-                          required
-                          value={draft.ownerId}
-                          onChange={(e) => patch({ ownerId: e.target.value })}
-                        />
-                      </Field>
-                      <Field label="Reviewer">
-                        <PersonSelect
-                          people={data?.people ?? []}
-                          aria-label="Reviewer"
-                          required
-                          value={draft.reviewerId}
-                          onChange={(e) => patch({ reviewerId: e.target.value })}
-                        />
-                      </Field>
-                      <Field label="Record due date">
-                        <input
-                          type="date"
-                          required
-                          value={draft.dueDate}
-                          onChange={(e) => patch({ dueDate: e.target.value })}
-                        />
-                      </Field>
-                      <Field label="Add team member from employee directory">
-                        <PersonSelect
-                          aria-label="Add team member from employee directory"
-                          people={data?.people ?? []}
-                          value=""
-                          onChange={(e) => {
-                            const p = data?.people.find((p) => p.id === e.target.value);
-                            if (p)
-                              patch({
-                                team: [draft.team, p.name].filter(Boolean).join(", "),
-                              });
-                          }}
-                        />
-                      </Field>
-                      <Field label="Team / participants">
-                        <textarea
-                          value={draft.team}
-                          maxLength={2000}
-                          onChange={(e) => patch({ team: e.target.value })}
-                          placeholder="Names and roles of the people working on this problem"
-                        />
-                      </Field>
-                    </div>
-                    <p className="small muted">
-                      Save incomplete work as an open record. Choose the required fields and action categories
-                      below. Required tracked actions must be completed before closure; optional actions can
-                      remain open.
-                    </p>
-                    <fieldset>
-                      <legend>Closure requirements</legend>
-                      <label className="check">
-                        <input
-                          type="checkbox"
-                          checked={(draft.requirements ?? defaultRequirements(draft.method)).requireAction}
-                          onChange={(e) =>
-                            patch({
-                              requirements: {
-                                ...defaultRequirements(draft.method),
-                                ...draft.requirements,
-                                actionTypes: draft.requirements?.actionTypes ?? [],
-                                requireAction: e.target.checked,
-                              },
-                            })
-                          }
-                        />
-                        At least one tracked action required
-                      </label>
-                      <p>Require a completed action in these categories:</p>
-                      {actionTypes
-                        .filter((t) => t !== "Checkpoint" || draft.method !== "2D")
-                        .map((t) => (
-                          <label className="check" key={t}>
-                            <input
-                              type="checkbox"
-                              checked={draft.requirements?.actionTypes.includes(t) ?? false}
-                              onChange={(e) =>
-                                patch({
-                                  requirements: {
-                                    ...defaultRequirements(draft.method),
-                                    ...draft.requirements,
-                                    actionTypes: e.target.checked
-                                      ? [...(draft.requirements?.actionTypes ?? []), t]
-                                      : (draft.requirements?.actionTypes ?? []).filter((x) => x !== t),
-                                  },
-                                })
-                              }
-                            />
-                            {t}
-                          </label>
-                        ))}
-                    </fieldset>
-                    {draft.method !== "2D" && (
-                      <label className="check">
-                        <input
-                          type="checkbox"
-                          checked={draft.answers.secondRootCauseEnabled === "Yes"}
-                          onChange={(e) =>
-                            patch({
-                              answers: {
-                                ...draft.answers,
-                                secondRootCauseEnabled: e.target.checked ? "Yes" : "No",
-                              },
-                              requirements: {
-                                ...(draft.requirements ?? defaultRequirements(draft.method)),
-                                fields: e.target.checked
-                                  ? [
-                                      ...(draft.requirements ?? defaultRequirements(draft.method)).fields,
-                                      "rootCause2",
-                                    ]
-                                  : (draft.requirements ?? defaultRequirements(draft.method)).fields.filter(
-                                      (k) => !secondCauseFields.some(([field]) => field === k)
-                                    ),
-                              },
-                            })
-                          }
-                        />
-                        Use a second 5-Why root cause path
-                      </label>
-                    )}
-                    {methodology[draft.method].sections
-                      .filter(
-                        (section) =>
-                          section.title !== "Second root cause path (optional)" ||
-                          draft.answers.secondRootCauseEnabled === "Yes"
-                      )
-                      .map((section) => (
-                        <fieldset className="problem-discipline" key={section.title}>
-                          <legend>{section.title}</legend>
-                          <div className="form-grid">
-                            {section.fields.map(([key, label]) => (
-                              <Field key={key} label={label}>
-                                <label className="check">
-                                  <input
-                                    type="checkbox"
-                                    checked={(
-                                      draft.requirements ?? defaultRequirements(draft.method)
-                                    ).fields.includes(key)}
-                                    onChange={(e) => {
-                                      const r = draft.requirements ?? {
-                                        ...defaultRequirements(draft.method),
-                                        actionTypes: [],
-                                      };
-                                      patch({
-                                        requirements: {
-                                          ...r,
-                                          fields: e.target.checked
-                                            ? [...r.fields, key]
-                                            : r.fields.filter((k) => k !== key),
-                                        },
-                                      });
-                                    }}
-                                  />
-                                  Required for closure
-                                </label>
-                                {answerChoices(key).length ? (
-                                  <select
-                                    value={draft.answers[key] ?? ""}
-                                    onChange={(e) =>
-                                      patch({
-                                        answers: {
-                                          ...draft.answers,
-                                          [key]: e.target.value,
-                                        },
-                                      })
-                                    }
-                                  >
-                                    <option value="">Choose an answer</option>
-                                    {answerChoices(key).map((value) => (
-                                      <option key={value}>{value}</option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <textarea
-                                    rows={3}
-                                    maxLength={5000}
-                                    value={draft.answers[key] ?? ""}
-                                    onChange={(e) =>
-                                      patch({
-                                        answers: {
-                                          ...draft.answers,
-                                          [key]: e.target.value,
-                                        },
-                                      })
-                                    }
-                                    placeholder={label}
-                                  />
-                                )}
-                              </Field>
+                    <fieldset
+                      disabled={!!selected && !selected.permissions.editCase}
+                      className="problem-form-body"
+                    >
+                      {!selected && <RelatedOpen equipment={draft.equipmentId} />}
+                      <div className="form-grid">
+                        <Field label="Problem title">
+                          <input
+                            required
+                            value={draft.title}
+                            maxLength={150}
+                            onChange={(e) => patch({ title: e.target.value })}
+                          />
+                        </Field>
+                        <Field label="Problem equipment">
+                          <select
+                            required
+                            disabled={!!selected}
+                            value={draft.equipmentId}
+                            onChange={(e) => patch({ equipmentId: e.target.value })}
+                          >
+                            <option value="">Choose equipment / department</option>
+                            {data.equipment.map((eq) => (
+                              <option key={eq.id} value={eq.id}>
+                                {[eq.plant, eq.department, eq.area, eq.line, eq.name]
+                                  .filter(Boolean)
+                                  .join(" / ")}
+                              </option>
                             ))}
-                          </div>
-                        </fieldset>
-                      ))}
-                    <EvidenceInput
-                      label="Problem photo or video evidence"
-                      onBusy={setCaseUploading}
-                      value={draft.media ?? []}
-                      onChange={(media) => patch({ media })}
-                    />
-                    {selected && (
-                      <Field label="Problem status">
-                        <select value={caseStatus} onChange={(e) => setCaseStatus(e.target.value)}>
-                          {problemStatuses.map((s) => (
-                            <option key={s}>{s}</option>
+                          </select>
+                        </Field>
+                        <Field label="Date occurred">
+                          <input
+                            type="date"
+                            required
+                            value={draft.occurredOn}
+                            onChange={(e) => patch({ occurredOn: e.target.value })}
+                          />
+                        </Field>
+                        <Field label="Reported by">
+                          <input
+                            required
+                            value={draft.reportedBy}
+                            maxLength={150}
+                            onChange={(e) => patch({ reportedBy: e.target.value })}
+                          />
+                        </Field>
+                        <Field label="Facilitator / owner">
+                          <PersonSelect
+                            people={data?.people ?? []}
+                            aria-label="Facilitator / owner"
+                            disabled={!!selected && !selected.permissions.assignTeam}
+                            required
+                            value={draft.ownerId}
+                            onChange={(e) => patch({ ownerId: e.target.value })}
+                          />
+                        </Field>
+                        <Field label="Reviewer">
+                          <PersonSelect
+                            people={data?.people ?? []}
+                            aria-label="Reviewer"
+                            disabled={!!selected && !selected.permissions.assignTeam}
+                            required
+                            value={draft.reviewerId}
+                            onChange={(e) => patch({ reviewerId: e.target.value })}
+                          />
+                        </Field>
+                        <Field label="Record due date">
+                          <input
+                            type="date"
+                            required
+                            value={draft.dueDate}
+                            onChange={(e) => patch({ dueDate: e.target.value })}
+                          />
+                        </Field>
+                        <Field label="Add team member from employee directory">
+                          <PersonSelect
+                            aria-label="Add team member from employee directory"
+                            disabled={!!selected && !selected.permissions.assignTeam}
+                            people={data?.people ?? []}
+                            value=""
+                            onChange={(e) => {
+                              const p = data?.people.find((p) => p.id === e.target.value);
+                              if (p)
+                                patch({
+                                  team: [draft.team, p.name].filter(Boolean).join(", "),
+                                  participantIds: [...new Set([...(draft.participantIds || []), p.id])],
+                                });
+                            }}
+                          />
+                        </Field>
+                        <div className="button-row">
+                          {(draft.participantIds || []).map((id) => (
+                            <button
+                              type="button"
+                              key={id}
+                              disabled={!!selected && !selected.permissions.assignTeam}
+                              onClick={() =>
+                                patch({ participantIds: draft.participantIds.filter((p) => p !== id) })
+                              }
+                            >
+                              Remove {person(id)}
+                            </button>
                           ))}
-                        </select>
-                      </Field>
-                    )}
-                    <RecordingContext equipment={data?.equipment.find((e) => e.id === draft.equipmentId)} />
-                    <button className="primary" disabled={busy || caseUploading}>
-                      {busy ? "Saving…" : selected ? "Save record" : "Create record & assign ID"}
-                    </button>
+                        </div>
+                        <Field label="Team notes (names here do not grant editing access)">
+                          <textarea
+                            value={draft.team}
+                            maxLength={2000}
+                            onChange={(e) => patch({ team: e.target.value })}
+                            placeholder="Names and roles of the people working on this problem"
+                          />
+                        </Field>
+                      </div>
+                      <p className="small muted">
+                        Save incomplete work as an open record. Required fields and closure rules are
+                        controlled by Admin.
+                      </p>
+                      <fieldset disabled={!data.canManageRequirements}>
+                        <legend>Closure requirements · Admin controlled</legend>
+                        <label className="check">
+                          <input
+                            type="checkbox"
+                            checked={(draft.requirements ?? defaultRequirements(draft.method)).requireAction}
+                            onChange={(e) =>
+                              patch({
+                                requirements: {
+                                  ...defaultRequirements(draft.method),
+                                  ...draft.requirements,
+                                  actionTypes: draft.requirements?.actionTypes ?? [],
+                                  requireAction: e.target.checked,
+                                },
+                              })
+                            }
+                          />
+                          At least one tracked action required
+                        </label>
+                        <p>Require a completed action in these categories:</p>
+                        {actionTypes
+                          .filter((t) => t !== "Checkpoint" || draft.method !== "2D")
+                          .map((t) => (
+                            <label className="check" key={t}>
+                              <input
+                                type="checkbox"
+                                checked={draft.requirements?.actionTypes.includes(t) ?? false}
+                                onChange={(e) =>
+                                  patch({
+                                    requirements: {
+                                      ...defaultRequirements(draft.method),
+                                      ...draft.requirements,
+                                      actionTypes: e.target.checked
+                                        ? [...(draft.requirements?.actionTypes ?? []), t]
+                                        : (draft.requirements?.actionTypes ?? []).filter((x) => x !== t),
+                                    },
+                                  })
+                                }
+                              />
+                              {t}
+                            </label>
+                          ))}
+                      </fieldset>
+                      {draft.method !== "2D" && (
+                        <label className="check">
+                          <input
+                            type="checkbox"
+                            checked={draft.answers.secondRootCauseEnabled === "Yes"}
+                            onChange={(e) =>
+                              patch({
+                                answers: {
+                                  ...draft.answers,
+                                  secondRootCauseEnabled: e.target.checked ? "Yes" : "No",
+                                },
+                                ...(data.canManageRequirements
+                                  ? {
+                                      requirements: {
+                                        ...(draft.requirements ?? defaultRequirements(draft.method)),
+                                        fields: e.target.checked
+                                          ? [
+                                              ...(draft.requirements ?? defaultRequirements(draft.method))
+                                                .fields,
+                                              "rootCause2",
+                                            ]
+                                          : (
+                                              draft.requirements ?? defaultRequirements(draft.method)
+                                            ).fields.filter(
+                                              (k) => !secondCauseFields.some(([field]) => field === k)
+                                            ),
+                                      },
+                                    }
+                                  : {}),
+                              })
+                            }
+                          />
+                          Use a second 5-Why root cause path
+                        </label>
+                      )}
+                      {methodology[draft.method].sections
+                        .filter(
+                          (section) =>
+                            section.title !== "Second root cause path (optional)" ||
+                            draft.answers.secondRootCauseEnabled === "Yes"
+                        )
+                        .map((section) => (
+                          <fieldset className="problem-discipline" key={section.title}>
+                            <legend>{section.title}</legend>
+                            <div className="form-grid">
+                              {section.fields.map(([key, label]) => (
+                                <Field key={key} label={label}>
+                                  <label className="check">
+                                    <input
+                                      disabled={!data.canManageRequirements}
+                                      type="checkbox"
+                                      checked={(
+                                        draft.requirements ?? defaultRequirements(draft.method)
+                                      ).fields.includes(key)}
+                                      onChange={(e) => {
+                                        const r = draft.requirements ?? {
+                                          ...defaultRequirements(draft.method),
+                                          actionTypes: [],
+                                        };
+                                        patch({
+                                          requirements: {
+                                            ...r,
+                                            fields: e.target.checked
+                                              ? [...r.fields, key]
+                                              : r.fields.filter((k) => k !== key),
+                                          },
+                                        });
+                                      }}
+                                    />
+                                    Required for closure
+                                  </label>
+                                  {answerChoices(key).length ? (
+                                    <select
+                                      value={draft.answers[key] ?? ""}
+                                      onChange={(e) =>
+                                        patch({
+                                          answers: {
+                                            ...draft.answers,
+                                            [key]: e.target.value,
+                                          },
+                                        })
+                                      }
+                                    >
+                                      <option value="">Choose an answer</option>
+                                      {answerChoices(key).map((value) => (
+                                        <option key={value}>{value}</option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <textarea
+                                      rows={3}
+                                      maxLength={5000}
+                                      value={draft.answers[key] ?? ""}
+                                      onChange={(e) =>
+                                        patch({
+                                          answers: {
+                                            ...draft.answers,
+                                            [key]: e.target.value,
+                                          },
+                                        })
+                                      }
+                                      placeholder={label}
+                                    />
+                                  )}
+                                </Field>
+                              ))}
+                            </div>
+                          </fieldset>
+                        ))}
+                      <EvidenceInput
+                        label="Problem photo or video evidence"
+                        onBusy={setCaseUploading}
+                        value={draft.media ?? []}
+                        onChange={(media) => patch({ media })}
+                      />
+                      {selected && (
+                        <Field label="Problem status">
+                          <select value={caseStatus} onChange={(e) => setCaseStatus(e.target.value)}>
+                            {problemStatuses.map((s) => (
+                              <option key={s}>{s}</option>
+                            ))}
+                          </select>
+                        </Field>
+                      )}
+                      <RecordingContext equipment={data?.equipment.find((e) => e.id === draft.equipmentId)} />
+                      <button className="primary" disabled={busy || caseUploading}>
+                        {busy ? "Saving…" : selected ? "Save record" : "Create record & assign ID"}
+                      </button>
+                    </fieldset>
                   </form>
                   {selected && (
                     <>
@@ -811,72 +908,85 @@ export default function Problems({
                             {a.completedAt ? " · completed " + new Date(a.completedAt).toLocaleString() : ""}
                           </p>
                           <details>
-                            <summary>Edit action details, assignment and requirement</summary>
-                            <form
-                              onSubmit={async (e) => {
-                                e.preventDefault();
-                                const f = new FormData(e.currentTarget);
-                                await post({
-                                  action: "editAction",
-                                  id: selected.id,
-                                  actionId: a.id,
-                                  version: a.version,
-                                  title: f.get("title"),
-                                  type: f.get("type"),
-                                  ownerId: f.get("ownerId"),
-                                  dueDate: f.get("dueDate"),
-                                  checkpoint: f.get("checkpoint") ?? "",
-                                  required: f.get("required") === "on",
-                                });
-                              }}
-                            >
-                              <Field label="Action description">
-                                <input name="title" required maxLength={500} defaultValue={a.title} />
-                              </Field>
-                              <Field label="Action type">
-                                <select name="type" defaultValue={a.type}>
-                                  {actionTypes
-                                    .filter((t) => t !== "Checkpoint" || selected.method !== "2D")
-                                    .map((t) => (
-                                      <option key={t}>{t}</option>
-                                    ))}
-                                </select>
-                              </Field>
-                              <Field label="Action owner">
-                                <PersonSelect
-                                  people={data?.people ?? []}
-                                  aria-label="Action owner"
-                                  name="ownerId"
-                                  defaultValue={a.ownerId}
-                                  required
-                                />
-                              </Field>
-                              <Field label="Action due date">
-                                <input name="dueDate" type="date" defaultValue={a.dueDate} required />
-                              </Field>
-                              {selected.method !== "2D" && (
-                                <Field label="Checkpoint category">
-                                  <select name="checkpoint" defaultValue={a.checkpoint}>
-                                    <option value="">Not a checkpoint</option>
-                                    {checkpoints.map((t) => (
-                                      <option key={t}>{t}</option>
-                                    ))}
+                            <summary>Edit action details and assignment</summary>
+                            <fieldset disabled={!selected.permissions.editCase}>
+                              <form
+                                onSubmit={async (e) => {
+                                  e.preventDefault();
+                                  const f = new FormData(e.currentTarget);
+                                  await post({
+                                    action: "editAction",
+                                    id: selected.id,
+                                    actionId: a.id,
+                                    version: a.version,
+                                    title: f.get("title"),
+                                    type: f.get("type"),
+                                    ownerId: f.get("ownerId"),
+                                    dueDate: f.get("dueDate"),
+                                    checkpoint: f.get("checkpoint") ?? "",
+                                    required: data.canManageRequirements
+                                      ? f.get("required") === "on"
+                                      : a.required,
+                                  });
+                                }}
+                              >
+                                <Field label="Action description">
+                                  <input name="title" required maxLength={500} defaultValue={a.title} />
+                                </Field>
+                                <Field label="Action type">
+                                  <select name="type" defaultValue={a.type}>
+                                    {actionTypes
+                                      .filter((t) => t !== "Checkpoint" || selected.method !== "2D")
+                                      .map((t) => (
+                                        <option key={t}>{t}</option>
+                                      ))}
                                   </select>
                                 </Field>
-                              )}
-                              <label className="check">
-                                <input name="required" type="checkbox" defaultChecked={a.required} />
-                                Required for closure
-                              </label>
-                              <button className="outline" disabled={busy || selected.status === "Closed"}>
-                                Save action details
-                              </button>
-                            </form>
+                                <Field label="Action owner">
+                                  <PersonSelect
+                                    people={data?.people ?? []}
+                                    aria-label="Action owner"
+                                    name="ownerId"
+                                    defaultValue={a.ownerId}
+                                    required
+                                  />
+                                </Field>
+                                <Field label="Action due date">
+                                  <input name="dueDate" type="date" defaultValue={a.dueDate} required />
+                                </Field>
+                                {selected.method !== "2D" && (
+                                  <Field label="Checkpoint category">
+                                    <select name="checkpoint" defaultValue={a.checkpoint}>
+                                      <option value="">Not a checkpoint</option>
+                                      {checkpoints.map((t) => (
+                                        <option key={t}>{t}</option>
+                                      ))}
+                                    </select>
+                                  </Field>
+                                )}
+                                <label className="check">
+                                  <input
+                                    name="required"
+                                    disabled={!data.canManageRequirements}
+                                    type="checkbox"
+                                    defaultChecked={a.required}
+                                  />
+                                  Required for closure
+                                </label>
+                                <button className="outline" disabled={busy || selected.status === "Closed"}>
+                                  Save action details
+                                </button>
+                              </form>
+                            </fieldset>
                           </details>
                           <ActionUpdate
                             key={a.id + ":" + a.version}
                             a={a}
-                            busy={busy || selected.status === "Closed"}
+                            busy={
+                              busy ||
+                              selected.status === "Closed" ||
+                              !selected.permissions.updateActionIds.includes(a.id)
+                            }
                             save={(s, c) =>
                               post({
                                 action: "updateAction",
@@ -902,7 +1012,7 @@ export default function Problems({
                       {!selected.actions.length && (
                         <p className="muted">Add an action with an owner and due date to begin follow-up.</p>
                       )}
-                      {selected.status !== "Closed" && (
+                      {selected.permissions.editCase && selected.status !== "Closed" && (
                         <form
                           className="problem-action"
                           onSubmit={async (e) => {
@@ -912,8 +1022,8 @@ export default function Problems({
                             if (
                               await post({
                                 action: "addAction",
-                                required: f.required === "on",
                                 ...f,
+                                required: data.canManageRequirements ? f.required === "on" : true,
                                 id: selected.id,
                                 version: selected.version,
                               })
@@ -962,7 +1072,12 @@ export default function Problems({
                             )}
                           </div>
                           <label className="check">
-                            <input type="checkbox" name="required" defaultChecked />
+                            <input
+                              type="checkbox"
+                              name="required"
+                              disabled={!data.canManageRequirements}
+                              defaultChecked
+                            />
                             Required for closure
                           </label>
                           <button className="primary" disabled={busy}>
@@ -998,13 +1113,31 @@ export default function Problems({
                   </thead>
                   <tbody>
                     {data.items.map((r) => (
-                      <tr key={r.id}>
+                      <tr
+                        key={r.id}
+                        className="record-row"
+                        tabIndex={0}
+                        aria-label={`View problem ${r.reference}`}
+                        onClick={(e) => {
+                          if (!(e.target as HTMLElement).closest("button,a,input")) void open(r.id);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.target === e.currentTarget && ["Enter", " "].includes(e.key)) {
+                            e.preventDefault();
+                            void open(r.id);
+                          }
+                        }}
+                      >
                         <td>
                           <strong>{r.reference}</strong>
                           <small>{r.method}</small>
                         </td>
                         <td>
-                          {r.title}
+                          <strong>{r.title}</strong>
+                          <p className="problem-summary">
+                            {r.answers?.problem || "No problem description recorded"}
+                          </p>
+                          <small>Occurred {r.occurredOn}</small>
                           <small>
                             {r.equipmentSnapshot.department} · {r.equipmentSnapshot.name}
                           </small>
@@ -1022,7 +1155,7 @@ export default function Problems({
                         </td>
                         <td>
                           <button className="outline" disabled={busy} onClick={() => void open(r.id)}>
-                            View / update
+                            View report
                           </button>
                         </td>
                       </tr>

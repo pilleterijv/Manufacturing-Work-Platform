@@ -43,7 +43,7 @@ export async function overdueEntity(type: string, id: string, today: string): Pr
           equipmentId: r.equipmentId,
           title: r.reference + " · " + r.title,
           due: r.dueDate,
-          personal: [r.ownerId, r.reviewerId],
+          personal: [r.ownerId, r.reviewerId, ...(r.participantIds as string[])],
         }
       : null;
   }
