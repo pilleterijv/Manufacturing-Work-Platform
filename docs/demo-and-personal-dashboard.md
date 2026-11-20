@@ -18,6 +18,8 @@ npm run demo:start
 
 Run one command at a time and stop if one fails. Demo setup requires the existing local pilot PostgreSQL service to be running and the local database account to be allowed to create another database. If needed, use the normal Codespaces setup to start its database first. The demo command does not install Docker Desktop and does not seed the normal database. It deliberately refuses company-hosted PostgreSQL connections; IT can provide a local pilot target if your app uses a remote database.
 
+Demo setup now uses `.env.codespaces` automatically when running inside Codespaces and that file exists, matching the Codespaces launcher. An explicitly supplied `FLOORWORK_ENV_FILE` takes precedence; otherwise local runs use `.env`. No existing private file is rewritten. If setup fails, it reports missing settings, an unreachable service, rejected database login, missing create-database permission, or an in-use demo database without printing the connection string. Fix the reported service/configuration problem before retrying; do not delete database volumes or reset the operational database.
+
 Leave the demo terminal running. In **Ports**, forward **3001** if it is absent, keep it **Private**, and choose **Open in Browser**. Use the current URL printed by `demo:start`; do not reuse port 3000’s address. Local desktop users can open `http://localhost:3001`. A private Codespaces port may first require GitHub sign-in in your regular browser.
 
 In another terminal, read the generated fictional login details:
@@ -67,3 +69,17 @@ A protected dashboard read can fail after the account response succeeds. Previou
 The fix covers reproducible transient/stale-response cases. If a warning persists even after Refresh section, investigate the failing request, current host/session and server configuration rather than disabling security checks.
 
 Verification includes 88 unit checks, production build/type checking, simulated transient/stale authentication reads, actual expired-session behavior, Admin/personal assignment visibility, shift/crew and role regressions, isolated seeding/repeatability, 21 demo section APIs, browser navigation through eight populated sections, protected demo image/video access, and all five demo-role logins. The actual `demo:setup` / `demo:start` commands were also smoke-tested on port 3001. Generated credentials, `.env.demo`, database files and `.floorwork/demo/uploads` remain outside Git/source downloads. The small fictional starter image/video in `scripts/demo-assets` are intentionally included.
+
+## Shared demo records, readable history and attachments
+
+Run `demo:setup` again after pulling the latest code; no reset is needed. The upgrade repairs the original fictional department grants, preserves practice records, adds two more cases for each of 2D and 4D (In progress and Closed), and creates deduplicated in-app overdue notifications using the application's real assignee and scope rules. Closed examples have completed actions and the required fictional closure evidence. Email remains disabled.
+
+`demo-operator` sees Compressing in Tableting. `demo-leader`, `demo-manager` and `demo-maintenance` see Tableting across its areas, subject to their module permissions. `demo-admin` sees the entire demo. Shared history is visible across people within that scope; the personal assignment dashboard still lists personal/station work rather than every departmental task. No access restriction has been removed. The previous department grants accidentally omitted `area:null`, so the server correctly rejected them; the demo upgrade fixes those grants.
+
+Photos open in a viewer with zoom, fit, Close and Open original. Videos keep inline playback and offer a larger viewer with native playback/fullscreen controls where supported. Protected media URLs still require an authorized signed-in session. Closing the larger viewer pauses its video. Guide, evidence and task-history attachments use the same viewer. Unsupported video formats depend on the device; MP4/H.264 is recommended.
+
+The shipped photo is an AI-generated, realistic fictional equipment example, visibly labeled DEMO. It replaces only the original sample illustration in existing demos; user-uploaded practice images are preserved. The short training clip remains synthetic. These are sample navigation aids, not actual plant findings or approved procedures.
+
+History tables now have larger body text, bolder titles/headers and clearer badges, with at least 14px supporting text throughout the interface. Click a history row, or focus it and press Enter/Space, to expand its full record in a full-width panel beneath the row. Task types and completion labels use plain language, and equipment names remain visible alongside each revision. Existing View record controls still work. Photos, videos and other controls inside a row keep their own actions.
+
+Tablet machine reminders scroll with the page so they do not cover task answers or history while reviewing records. This update improves the supported floor workflows; readiness to replace a specific paper process still needs a pilot with the people who use that process.

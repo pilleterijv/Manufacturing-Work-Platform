@@ -36,7 +36,18 @@ async function main() {
   run("scripts/demo-seed.ts");
   demo = new Pool({ connectionString: url.toString() });
   const before = (await demo.query('SELECT count(*)::int AS n FROM "User"')).rows[0].n;
+  // Reproduce the old invalid department grant, then verify non-destructive upgrade.
+  await demo.query(`UPDATE "User" SET "workspaceAccess"=$1::jsonb WHERE username='demo-manager'`, [
+    JSON.stringify({
+      mode: "restricted",
+      locations: [{ plant: "DEMO Plant — fictional", department: "Tableting" }],
+      equipmentIds: [],
+    }),
+  ]);
+  await demo.query(`UPDATE "Setting" SET value=jsonb_set(value, '{version}', '1') WHERE key='demo-dataset'`);
+  const examplesBefore = (await demo.query('SELECT count(*)::int AS n FROM "Problem"')).rows[0].n;
   run("scripts/demo-seed.ts");
+  assert.equal((await demo.query('SELECT count(*)::int AS n FROM "Problem"')).rows[0].n, examplesBefore);
   assert.equal(
     (await demo.query('SELECT count(*)::int AS n FROM "User"')).rows[0].n,
     before,
@@ -150,6 +161,32 @@ async function main() {
     video = (await demo.query('SELECT id FROM "GuideMedia" LIMIT 1')).rows[0].id;
   assert.equal((await c.request.get(origin + "/api/photos/" + photo)).status(), 200);
   assert.equal((await c.request.get(origin + "/api/guide-media/" + video)).status(), 200);
+  await page
+    .getByRole("button", { name: /^View photo:/ })
+    .first()
+    .click();
+  const viewer = page.getByRole("dialog");
+  await viewer.waitFor();
+  await viewer.getByRole("button", { name: "Zoom photo", exact: true }).click();
+  await viewer.locator("img.media-zoom").waitFor();
+  await page.keyboard.press("Escape");
+  await viewer.waitFor({ state: "hidden" });
+  await page
+    .getByRole("button", { name: /^View video:/ })
+    .first()
+    .click();
+  await viewer.waitFor();
+  assert.equal(await viewer.locator("video").count(), 1);
+  await viewer.getByRole("button", { name: "Close viewer" }).click();
+  // A submitted record outside the demo operator's area remains inaccessible.
+  const coating = (await demo.query(`SELECT id FROM "Equipment" WHERE name='DEMO coater 01'`)).rows[0].id;
+  const pressId = (await demo.query(`SELECT id FROM "Equipment" WHERE name='DEMO tablet press 01'`)).rows[0]
+    .id;
+  const author = (await demo.query(`SELECT id FROM "User" WHERE username='demo-leader'`)).rows[0].id;
+  await demo.query(
+    `INSERT INTO "Defect" (id,"equipmentId",title,description,priority,"reportedBy","equipmentSnapshot",media,history,"updatedAt") VALUES ($1,$2,'DEMO coating-area-only finding','Fictional scope test','Normal',$3,'{}','[]','[]',NOW())`,
+    [randomUUID(), coating, author]
+  );
   for (const username of ["demo-operator", "demo-leader", "demo-manager", "demo-maintenance"]) {
     const ctx = await browser.newContext({ serviceWorkers: "block" });
     const login = await ctx.request.post(origin + "/api/account", {
@@ -159,12 +196,100 @@ async function main() {
     assert.equal(login.status(), 200, username);
     const q = await ctx.request.get(origin + "/api/work-queue");
     assert.equal(q.status(), 200, username);
+    const problems = await (await ctx.request.get(origin + "/api/problems")).json();
+    for (const method of ["2D", "4D"])
+      for (const status of ["In progress", "Closed"])
+        assert(
+          problems.items.some((p) => p.method === method && p.status === status),
+          username + " shares " + method + " " + status
+        );
+    const defects = await (await ctx.request.get(origin + "/api/defects")).json();
+    assert(
+      defects.defects.some((d) => d.title === "DEMO worn label guide"),
+      username + " sees another user's submission"
+    );
+    assert.equal(
+      defects.defects.some((d) => d.title === "DEMO coating-area-only finding"),
+      username !== "demo-operator"
+    );
+    const equipment = (await (await ctx.request.get(origin + "/api/platform?view=work")).json()).equipment;
+    assert(
+      equipment.some((e) => e.id === pressId),
+      username + " sees Compressing"
+    );
+    assert(!equipment.some((e) => e.department !== "Tableting"), username + " stays in Tableting");
+    assert.equal(
+      (await ctx.request.get(origin + "/api/photos/" + photo)).status(),
+      200,
+      username + " reads shared photo"
+    );
+    assert.equal(
+      (await ctx.request.get(origin + "/api/guide-media/" + video)).status(),
+      200,
+      username + " reads shared video"
+    );
+    const notices = await (await ctx.request.get(origin + "/api/operations?view=summary")).json();
+    assert(
+      notices.notifications.some((n) => n.kind === "overdue"),
+      username + " gets overdue notifications"
+    );
     await ctx.close();
   }
+  await page
+    .locator("nav")
+    .getByRole("button", { name: /Operator tasks/ })
+    .first()
+    .click();
+  const row = page.locator("tr.record-row").first();
+  await row.waitFor();
+  await row.locator("td").first().click();
+  const detail = page.getByRole("region", { name: "Expanded record" });
+  assert(
+    await row.getAttribute("aria-expanded").then((v) => v === "true"),
+    "Clicking anywhere on record summary opens its full data"
+  );
+  await detail
+    .getByRole("button", { name: /^View photo:/ })
+    .first()
+    .click();
+  await viewer.waitFor();
+  assert(
+    await viewer.locator("img").evaluate((img) => img.complete && img.naturalWidth > 1000),
+    "Realistic demo image loads"
+  );
+  await viewer.getByRole("button", { name: "Close viewer" }).click();
+  assert(
+    await row.getAttribute("aria-expanded").then((v) => v === "true"),
+    "Media controls do not collapse the record"
+  );
+  await row.focus();
+  await page.keyboard.press("Enter");
+  assert.equal(await row.getAttribute("aria-expanded").then((v) => v === "true"), false);
+  await page.keyboard.press("Space");
+  assert(await row.getAttribute("aria-expanded").then((v) => v === "true"));
+  assert(
+    await row
+      .locator("td")
+      .first()
+      .evaluate((td) => parseFloat(getComputedStyle(td).fontSize) >= 16)
+  );
+  await page.setViewportSize({ width: 768, height: 1024 });
+  assert(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 2),
+    "Tablet page avoids document overflow"
+  );
+  await page.screenshot({ path: "docs/screenshots/demo/readable-history-tablet.png", fullPage: false });
+  await detail
+    .getByRole("button", { name: /^View photo:/ })
+    .first()
+    .click();
+  await viewer.waitFor();
+  await page.screenshot({ path: "docs/screenshots/demo/photo-viewer-tablet.png", fullPage: false });
+  await viewer.getByRole("button", { name: "Close viewer" }).click();
   assert.deepEqual(errors, []);
   assert(!serverErrors.includes("PrismaClientKnownRequestError"));
   console.log(
-    "PASS: isolated demo seeds all feature datasets, setup is repeatable, all five roles sign in, 21 section APIs load, production results are visible, demo banner renders and live email/SQL/AI stay disabled. Temporary demo database/media are removed."
+    "PASS: isolated demo seeds all feature datasets, setup is repeatable, all five roles sign in, 21 section APIs load, department sharing and area denials hold, in-progress/closed cases and overdue notices are visible, expanded rows and photo/video viewers work on tablet, and live email/SQL/AI stay disabled. Temporary demo database/media are removed."
   );
 }
 main()

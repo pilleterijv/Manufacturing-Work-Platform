@@ -1,6 +1,7 @@
 "use client";
+import MediaPreview from "./media-preview";
 import RefreshControl from "./refresh-control";
-import { createContext, useContext } from "react";
+import { createContext, useContext, useState } from "react";
 export const HistoryPagingContext = createContext({
   loadMore: async () => {},
   refresh: async () => {},
@@ -59,6 +60,139 @@ export function Metric({
     <section className={"metric " + (accent ? "accent" : "")}>{content}</section>
   );
 }
+function HistoryRecordRow({ r, data }: { r: Entry; data: Data }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <tr
+        className="record-row"
+        tabIndex={0}
+        aria-expanded={open}
+        aria-label={`View record: ${r.data.snapshot?.title ?? r.data.title ?? r.kind}`}
+        onClick={(event) => {
+          if ((event.target as HTMLElement).closest("button, a, input, select, textarea")) return;
+          setOpen(!open);
+        }}
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget || !["Enter", " "].includes(event.key)) return;
+          event.preventDefault();
+          setOpen(!open);
+        }}
+      >
+        <td>
+          <strong>{r.data.snapshot?.title ?? r.data.title}</strong>
+          <small>
+            {r.data.snapshot?.equipment?.name ??
+              data.equipment.find((e) => e.id === (r.data.equipmentId ?? r.data.snapshot?.equipmentId))?.name}
+          </small>
+          <small>
+            {r.data.snapshot
+              ? `Revision ${r.data.snapshot.revision}`
+              : data.equipment.find((e) => e.id === r.data.equipmentId)?.name}
+          </small>
+        </td>
+        <td>
+          {r.kind === "audit"
+            ? r.data.snapshot?.workflow === "leader"
+              ? "DL/TL Standard Work"
+              : "Process verification"
+            : r.kind === "run"
+              ? "Task completion"
+              : r.kind === "study"
+                ? "Time study"
+                : r.kind}
+        </td>
+        <td>{r.user.name}</td>
+        <td>{new Date(r.created).toLocaleString()}</td>
+        <td>
+          <span className={"badge " + (r.data.followUp ? "warn" : "")}>
+            {r.data.followUp ? "Needs follow-up" : "Completed"}
+          </span>
+        </td>
+        <td>
+          <button type="button" aria-expanded={open} onClick={() => setOpen(!open)}>
+            {open ? "Hide record" : "View record"}
+          </button>
+        </td>
+      </tr>
+      {open && (
+        <tr className="record-expanded">
+          <td colSpan={6}>
+            <section className="record-detail" aria-label="Expanded record">
+              <h3>{r.data.snapshot?.title ?? r.data.title}</h3>
+              {r.data.operator && <p>Operator: {r.data.operator}</p>}
+              {r.data.changeover && (
+                <p>
+                  Changeover: {r.data.changeover.fromProduct} → {r.data.changeover.toProduct} ·{" "}
+                  {r.data.changeover.type} · {r.data.changeover.notes}
+                </p>
+              )}
+              {r.data.handoff && (
+                <div>
+                  <p>Shift: {r.data.handoff.shift}</p>
+                  <p>Pass-down: {r.data.handoff.notes}</p>
+                  {r.data.handoff.rooms.map((room: any, i: number) => (
+                    <p key={i}>
+                      {room.room} · item {room.item} · lot {room.lot} · target {room.targetSpeed} / actual{" "}
+                      {room.actualSpeed} · remaining {room.remaining} · issues {room.issues} · next order{" "}
+                      {room.nextOrder}
+                      {(
+                        [
+                          ["status", "Work order status"],
+                          ["materialsSplit", "Materials split correctly"],
+                          ["weighsLeft", "Weighs left"],
+                          ["cleanBins", "Clean bins"],
+                          ["inspectingFor", "Inspecting for"],
+                          ["requiresYielding", "Requires charging / yielding"],
+                          ["yielded", "Yielded"],
+                          ["round", "Current round"],
+                          ["totalRounds", "Total rounds"],
+                          ["solutionMixed", "Current solution mixed"],
+                          ["nextSolutionReady", "Next solution ready"],
+                          ["lastFourRecalculated", "Last four rounds recalculated"],
+                        ] as const
+                      )
+                        .filter(([key]) => room[key])
+                        .map(([key, label]) => (
+                          <span key={key}>
+                            {" "}
+                            · {label}: {room[key]}
+                          </span>
+                        ))}
+                    </p>
+                  ))}
+                </div>
+              )}
+              {r.data.snapshot && r.data.snapshot.workflow !== "leader" && (
+                <p>
+                  Target {r.data.snapshot.target}s · tolerance {r.data.snapshot.tolerance}%
+                </p>
+              )}
+              {r.data.responses?.map((a: any) => (
+                <div className="record-step" key={a.stepId}>
+                  <strong>{a.answer ? "✓ Yes" : "✕ No"}</strong>{" "}
+                  {r.data.snapshot.steps.find((s: Step) => s.id === a.stepId)?.text}
+                  <p>{a.comment}</p>
+                  {a.video && (
+                    <MediaPreview kind="video" src={`/api/guide-media/${a.video}`} label="Saved task video" />
+                  )}
+                  {a.photo && (
+                    <MediaPreview kind="photo" src={`/api/photos/${a.photo}`} label="Saved task evidence" />
+                  )}
+                </div>
+              ))}
+              {r.data.cycles?.map((c: Cycle, i: number) => (
+                <p key={i}>
+                  {c.element}: {fmt(c.seconds)}s · {new Date(c.at).toLocaleString()}
+                </p>
+              ))}
+            </section>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
 export function History({ data, records }: { data: Data; records: Entry[] }) {
   const paging = useContext(HistoryPagingContext);
   return (
@@ -67,8 +201,8 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
       {!records.length ? (
         <div className="empty">
           <span>◇</span>
-          <h3>Your first observation starts here</h3>
-          <p>Completed work, time studies, and DL/TL Standard Work will appear here.</p>
+          <h3>No completed work yet</h3>
+          <p>Complete a task or audit to see who did it, their answers, and any attached evidence here.</p>
         </div>
       ) : (
         <div className="table-wrap">
@@ -85,115 +219,7 @@ export function History({ data, records }: { data: Data; records: Entry[] }) {
             </thead>
             <tbody>
               {records.map((r) => (
-                <tr key={r.id}>
-                  <td>
-                    <strong>{r.data.snapshot?.title ?? r.data.title}</strong>
-                    <small>
-                      {r.data.snapshot
-                        ? `Revision ${r.data.snapshot.revision}`
-                        : data.equipment.find((e) => e.id === r.data.equipmentId)?.name}
-                    </small>
-                  </td>
-                  <td>
-                    {r.kind === "audit"
-                      ? r.data.snapshot?.workflow === "leader"
-                        ? "DL/TL Standard Work"
-                        : "Standard work audit"
-                      : r.kind}
-                  </td>
-                  <td>{r.user.name}</td>
-                  <td>{new Date(r.created).toLocaleString()}</td>
-                  <td>
-                    <span className={"badge " + (r.data.followUp ? "warn" : "")}>
-                      {r.data.followUp ? "Follow up" : "Recorded"}
-                    </span>
-                  </td>
-                  <td>
-                    <details>
-                      <summary>View record</summary>
-                      {r.data.operator && <p>Operator: {r.data.operator}</p>}
-                      {r.data.changeover && (
-                        <p>
-                          Changeover: {r.data.changeover.fromProduct} → {r.data.changeover.toProduct} ·{" "}
-                          {r.data.changeover.type} · {r.data.changeover.notes}
-                        </p>
-                      )}
-                      {r.data.handoff && (
-                        <div>
-                          <p>Shift: {r.data.handoff.shift}</p>
-                          <p>Pass-down: {r.data.handoff.notes}</p>
-                          {r.data.handoff.rooms.map((room: any, i: number) => (
-                            <p key={i}>
-                              {room.room} · item {room.item} · lot {room.lot} · target {room.targetSpeed} /
-                              actual {room.actualSpeed} · remaining {room.remaining} · issues {room.issues} ·
-                              next order {room.nextOrder}
-                              {(
-                                [
-                                  ["status", "Work order status"],
-                                  ["materialsSplit", "Materials split correctly"],
-                                  ["weighsLeft", "Weighs left"],
-                                  ["cleanBins", "Clean bins"],
-                                  ["inspectingFor", "Inspecting for"],
-                                  ["requiresYielding", "Requires charging / yielding"],
-                                  ["yielded", "Yielded"],
-                                  ["round", "Current round"],
-                                  ["totalRounds", "Total rounds"],
-                                  ["solutionMixed", "Current solution mixed"],
-                                  ["nextSolutionReady", "Next solution ready"],
-                                  ["lastFourRecalculated", "Last four rounds recalculated"],
-                                ] as const
-                              )
-                                .filter(([key]) => room[key])
-                                .map(([key, label]) => (
-                                  <span key={key}>
-                                    {" "}
-                                    · {label}: {room[key]}
-                                  </span>
-                                ))}
-                            </p>
-                          ))}
-                        </div>
-                      )}
-                      {r.data.snapshot && r.data.snapshot.workflow !== "leader" && (
-                        <p>
-                          Target {r.data.snapshot.target}s · tolerance {r.data.snapshot.tolerance}%
-                        </p>
-                      )}
-                      {r.data.responses?.map((a: any) => (
-                        <div className="record-step" key={a.stepId}>
-                          <strong>{a.answer ? "✓ Yes" : "✕ No"}</strong>{" "}
-                          {r.data.snapshot.steps.find((s: Step) => s.id === a.stepId)?.text}
-                          <p>{a.comment}</p>
-                          {a.video && (
-                            <video
-                              controls
-                              playsInline
-                              preload="metadata"
-                              style={{ maxWidth: "100%", maxHeight: 320 }}
-                              src={`/api/guide-media/${a.video}`}
-                            />
-                          )}
-                          {a.photo && (
-                            <a href={`/api/photos/${a.photo}`} target="_blank" rel="noreferrer">
-                              <img
-                                className="photo-preview"
-                                loading="lazy"
-                                src={`/api/photos/${a.photo}`}
-                                alt="Saved task evidence"
-                              />
-                              View full evidence photo →
-                            </a>
-                          )}
-                        </div>
-                      ))}
-                      {r.data.cycles?.map((c: Cycle, i: number) => (
-                        <p key={i}>
-                          {c.element}: {fmt(c.seconds)}s · {new Date(c.at).toLocaleString()}
-                        </p>
-                      ))}
-                    </details>
-                  </td>
-                </tr>
+                <HistoryRecordRow key={r.id} r={r} data={data} />
               ))}
             </tbody>
           </table>
