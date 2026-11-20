@@ -1,6 +1,8 @@
 import "dotenv/config";
+import { addDemoWorkflowExamples } from "./demo-workflows";
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { readFile, writeFile } from "node:fs/promises";
 import { db } from "../lib/db";
 import { hashPassword } from "../lib/passwords";
 import { defaults } from "../lib/rules";
@@ -10,6 +12,7 @@ import { localToday } from "../lib/operations-rules";
 import { Temporal } from "@js-temporal/polyfill";
 import { storePhoto, storeVideo } from "../lib/storage";
 import { queueAssignments } from "../lib/assignment-notifications";
+import { downtimeAccessSchema } from "../lib/downtime-access-rules";
 import { validateDemoUrl } from "./demo-config.cjs";
 
 const json = (value: unknown): any => JSON.parse(JSON.stringify(value));
@@ -18,6 +21,32 @@ async function seed() {
   if (process.env.FLOORWORK_DEMO_MODE !== "true") throw Error("Refusing to seed outside explicit demo mode.");
   const marker = await db.setting.findUnique({ where: { key: "demo-dataset" } });
   if ((marker?.value as any)?.synthetic) {
+    // Upgrade only the named fictional accounts in a marked, guarded demo database.
+    // Version 1 omitted area:null for department-wide access; the server rejected it.
+    if (((marker!.value as any).version || 1) < 2) {
+      const plant = (marker!.value as any).plant;
+      if (plant !== "DEMO Plant — fictional") throw Error("Refusing to upgrade an unknown demo plant.");
+      await db.$transaction(async (tx) => {
+        for (const key of ["operator", "leader", "manager", "maintenance"]) {
+          const access = downtimeAccessSchema.parse({
+            mode: "restricted",
+            locations: [{ plant, department: "Tableting", area: key === "operator" ? "Compressing" : null }],
+            equipmentIds: [],
+          });
+          await tx.user.updateMany({
+            where: { username: "demo-" + key },
+            data: { workspaceAccess: access, downtimeAccess: access },
+          });
+        }
+        await tx.setting.update({
+          where: { key: "demo-dataset" },
+          data: { value: { ...(marker!.value as any), version: 2 } },
+        });
+      });
+      console.log(
+        "Repaired fictional department/area assignments; existing practice records were preserved."
+      );
+    }
     if (process.env.FLOORWORK_DEMO_PASSWORD) {
       const password = await hashPassword(process.env.FLOORWORK_DEMO_PASSWORD);
       const accounts = (marker!.value as any).accounts as string[];
@@ -30,6 +59,28 @@ async function seed() {
         db.session.deleteMany({ where: { userId: { in: users.map((u) => u.id) } } }),
       ]);
     }
+    if (((marker!.value as any).mediaVersion || 1) < 2) {
+      const guide = await db.content.findFirst({
+        where: { title: "DEMO visual troubleshooting guide", kind: "guide" },
+      });
+      const photo = (guide?.media as any[])?.find(
+        (m) => m.kind === "photo" && m.caption === "Synthetic example evidence"
+      );
+      if (photo && /^[a-f0-9-]{36}$/.test(photo.id)) {
+        // Only replace the shipped fictional illustration, never a practice upload.
+        await writeFile(
+          path.join(process.env.UPLOADS_DIR!, photo.id + ".webp"),
+          await readFile("scripts/demo-assets/equipment.webp"),
+          { mode: 0o600, flag: "r+" }
+        );
+      }
+      const current = await db.setting.findUniqueOrThrow({ where: { key: "demo-dataset" } });
+      await db.setting.update({
+        where: { key: "demo-dataset" },
+        data: { value: { ...(current.value as any), mediaVersion: 2 } },
+      });
+    }
+    await addDemoWorkflowExamples();
     console.log("Demo examples already exist; preserving your practice edits. Use demo:reset to start over.");
     return;
   }
@@ -65,7 +116,7 @@ async function seed() {
             : {
                 mode: "restricted",
                 locations: [
-                  { plant, department: "Tableting", ...(key === "operator" ? { area: "Compressing" } : {}) },
+                  { plant, department: "Tableting", area: key === "operator" ? "Compressing" : null },
                 ],
                 equipmentIds: [],
               };
@@ -80,7 +131,8 @@ async function seed() {
               password: hash,
               mustChange: false,
               email: `demo-${key}@example.invalid`,
-              workspaceAccess: access,
+              workspaceAccess: downtimeAccessSchema.parse(access),
+              downtimeAccess: downtimeAccessSchema.parse(access),
               dashboardDepartment: ["manager", "admin"].includes(key)
                 ? { plant, department: "Tableting" }
                 : undefined,
@@ -616,7 +668,8 @@ async function seed() {
           key: "demo-dataset",
           value: {
             synthetic: true,
-            version: 1,
+            version: 2,
+            mediaVersion: 2,
             seededAt: now.toISOString(),
             accounts: users.map((u) => u.username),
             plant,
@@ -626,6 +679,7 @@ async function seed() {
     },
     { timeout: 120000, maxWait: 10000 }
   );
+  await addDemoWorkflowExamples();
   console.log(
     "Fictional examples seeded across all application sections. No live company system was contacted."
   );

@@ -1,4 +1,5 @@
 "use client";
+import MediaPreview from "./media-preview";
 import { useState } from "react";
 import { mediaMime, readMediaFile, uploadVideo } from "@/lib/client-media";
 import { api } from "@/lib/client-api";
@@ -9,17 +10,11 @@ export function EvidenceView({ media }: { media: Evidence[] }) {
     <div className="content-grid">
       {media.map((m) => (
         <figure key={m.id}>
-          {m.kind === "photo" ? (
-            <img className="photo-preview" src={`/api/photos/${m.id}`} alt={m.caption || "Evidence"} />
-          ) : (
-            <video
-              controls
-              playsInline
-              preload="metadata"
-              style={{ maxWidth: "100%", maxHeight: 360 }}
-              src={`/api/guide-media/${m.id}`}
-            />
-          )}
+          <MediaPreview
+            kind={m.kind}
+            src={m.kind === "photo" ? `/api/photos/${m.id}` : `/api/guide-media/${m.id}`}
+            label={m.caption || "Evidence"}
+          />
           <figcaption>{m.caption}</figcaption>
         </figure>
       ))}

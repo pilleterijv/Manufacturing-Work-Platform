@@ -1,4 +1,5 @@
 "use client";
+import MediaPreview from "../media-preview";
 import { mediaMime, readMediaFile, uploadVideo } from "@/lib/client-media";
 import PhotoEditor from "../photo-editor";
 import { useState, useEffect, useRef } from "react";
@@ -100,17 +101,11 @@ export default function Content({
                 <p className="guide-body">{c.body}</p>
                 {c.media?.map((m) => (
                   <figure key={m.id}>
-                    {m.kind === "photo" ? (
-                      <img className="photo-preview" src={`/api/photos/${m.id}`} alt={m.caption || c.title} />
-                    ) : (
-                      <video
-                        controls
-                        playsInline
-                        preload="metadata"
-                        style={{ width: "100%" }}
-                        src={`/api/guide-media/${m.id}`}
-                      />
-                    )}
+                    <MediaPreview
+                      kind={m.kind}
+                      src={m.kind === "photo" ? `/api/photos/${m.id}` : `/api/guide-media/${m.id}`}
+                      label={m.caption || c.title}
+                    />
                     <figcaption>{m.caption}</figcaption>
                   </figure>
                 ))}
@@ -237,20 +232,11 @@ export default function Content({
                 </p>
                 {media.map((m, i) => (
                   <div className="panel" key={m.id}>
-                    {m.kind === "photo" ? (
-                      <img
-                        className="photo-preview"
-                        src={`/api/photos/${m.id}`}
-                        alt={m.caption || "Guide photo"}
-                      />
-                    ) : (
-                      <video
-                        style={{ maxWidth: "100%" }}
-                        controls
-                        playsInline
-                        src={`/api/guide-media/${m.id}`}
-                      />
-                    )}
+                    <MediaPreview
+                      kind={m.kind}
+                      src={m.kind === "photo" ? `/api/photos/${m.id}` : `/api/guide-media/${m.id}`}
+                      label={m.caption || "Guide attachment"}
+                    />
                     <Field label="Caption: issue / fix">
                       <input
                         maxLength={500}
